@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhythm Training App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="controls">
+  <label>
+    BPM:
+    <input type="number" id="bpm" value="40" min="10" max="250" />
+  </label>
+  <label>
+    Tact Size:
+    <input type="number" id="tact" value="8" min="1" max="12" />
+  </label>
+  <label>
+    Rhythm:
+    <select id="subdivision">
+      <option value="quarter">Eighth Notes</option>
+      <option value="eighth">Eighth Notes</option>
+      <option value="sixteenth" selected>Sixteenths</option>
+      <option value="triplet">Eighth Triplets</option>
+    </select>
+  </label>
+  <label>
+    Clack Volume:
+    <select id="clackVolume">
+      <option value="0.1">Easy</option>
+      <option value="0.05">Medium</option>
+      <option value="0.01">Optimal</option>
+      <option value="0.003" selected>Challenging</option>
+      <option value="0">Zero</option>
+    </select>
+  </label>
+  <button id="startStop">Start</button>
+</div>
+
+<div id="timeline">
+  <!-- The moving progress bar -->
+  <div id="progress"></div>
+  <!-- Container for tap markers -->
+  <div id="markers"></div>
+  <!-- Beat markers and subdivision markers will be generated dynamically -->
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
