@@ -19,7 +19,7 @@
   <label>
     Rhythm:
     <select id="subdivision">
-      <option value="quarter">Eighth Notes</option>
+      <option value="quarter">Quarter Notes</option>
       <option value="eighth">Eighth Notes</option>
       <option value="sixteenth" selected>Sixteenths</option>
       <option value="triplet">Eighth Triplets</option>
@@ -35,9 +35,16 @@
       <option value="0">Zero</option>
     </select>
   </label>
+  <label>
+    Input Method:
+    <select id="inputMethod">
+      <option value="keyboard" selected>Keyboard (Space)</option>
+      <option value="midi-keyboard">MIDI Keyboard</option>
+      <option value="midi-drums">MIDI Drums</option>
+    </select>
+  </label>
   <button id="startStop">Start</button>
 </div>
-
 <div id="timeline">
   <!-- The moving progress bar -->
   <div id="progress"></div>
@@ -45,7 +52,6 @@
   <div id="markers"></div>
   <!-- Beat markers and subdivision markers will be generated dynamically -->
 </div>
-
 <script src="script.js"></script>
 </body>
 </html>

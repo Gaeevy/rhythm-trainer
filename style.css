@@ -4,7 +4,6 @@
     margin: 0;
     padding: 0;
 }
-
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #f0f2f5;
@@ -15,45 +14,41 @@ body {
     flex-direction: column;
     align-items: center;
 }
-
 #controls {
     margin-bottom: 40px;
-    padding: 30px;  /* Increased padding */
+    padding: 30px;
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
-    gap: 30px;      /* Increased gap between items */
+    gap: 30px;
     flex-wrap: wrap;
     justify-content: center;
     max-width: 1000px;
     width: 100%;
 }
-
 #controls label {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;      /* Increased gap between label and input */
+    gap: 10px;
     font-size: 1rem;
     color: #333;
     font-weight: 500;
-    min-width: 150px; /* Ensure minimum width for labels */
+    min-width: 150px;
 }
-
 #controls input[type="number"],
 #controls select {
     padding: 8px 12px;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
     font-size: 1rem;
-    width: 140px;    /* Increased width */
+    width: 140px;
     transition: border-color 0.2s;
     background: white;
 }
-
 #startStop {
-    padding: 12px 32px;  /* Increased padding */
+    padding: 12px 32px;
     background: #4a90e2;
     color: white;
     border: none;
@@ -62,14 +57,12 @@ body {
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s;
-    min-width: 120px;    /* Increased minimum width */
-    align-self: flex-end; /* Align with inputs */
+    min-width: 120px;
+    align-self: flex-end;
 }
-
 #startStop:hover {
     background: #357abd;
 }
-
 /* Timeline container */
 #timeline {
     position: relative;
@@ -82,7 +75,6 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
-
 /* The moving progress bar */
 #progress {
     position: absolute;
@@ -93,7 +85,6 @@ body {
     background: rgba(74, 144, 226, 0.3);
     z-index: 1;
 }
-
 /* Container for tap markers */
 #markers {
     position: absolute;
@@ -104,7 +95,6 @@ body {
     pointer-events: none;
     z-index: 2;
 }
-
 /* Tap marker: a thin red vertical line */
 .tap-marker {
     position: absolute;
@@ -113,7 +103,6 @@ body {
     height: 100%;
     background: #ff4757;
 }
-
 /* Beat (quarter) markers */
 .beat-marker {
     position: absolute;
@@ -124,7 +113,6 @@ body {
     opacity: 0.3;
     z-index: 3;
 }
-
 /* Subdivision markers */
 .subdivision-marker {
     position: absolute;
