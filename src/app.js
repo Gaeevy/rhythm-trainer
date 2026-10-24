@@ -3,12 +3,17 @@ import { DrumAudio } from "./audio.js";
 import { Playback } from "./playback.js";
 import { Track } from "./track.js";
 import { BEATS_PER_BAR } from "./music-time.js";
+import { Assessment } from "./assessment.js";
+import { audioTimeForEvent } from "./clock.js";
+import { keyboardInstrument, instrumentKeyLabel } from "./input.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
 const startButton = element("start-stop");
 const bpmInput = element("bpm");
 const countInInput = element("count-in");
+const toleranceInput = element("tolerance");
+const latencyInput = element("latency-offset");
 const status = element("status");
 const position = element("position");
 let lesson;
@@ -20,6 +25,25 @@ let starting = false;
 let startRequest = 0;
 let lessonRequest = 0;
 let loading = true;
+let assessment = null;
+
+function updateSummary() {
+    for (const state of ["on_time", "early", "late", "missed", "extra"]) {
+        element(`score-${state}`).textContent = assessment?.counts[state] ?? 0;
+    }
+    const meanError = assessment?.meanAbsoluteErrorMs;
+    element("mean-error").textContent = meanError == null ? "—" : `${meanError.toFixed(1)} ms`;
+}
+
+function updateAssessment() {
+    if (assessment && playback?.running) {
+        const now = audioTimeForEvent(audio.context, performance.now());
+        for (const result of assessment.advance(now)) {
+            tracks.find(track => track.data.instrument === result.instrument)?.showFeedback(result);
+        }
+    }
+    updateSummary();
+}
 
 function showStatus(message, error = false) {
     if (status.textContent !== message) status.textContent = message;
@@ -36,8 +60,10 @@ function updateVolumes() {
 }
 
 function draw() {
-    const beat = playback?.beat ?? 0;
-    for (const track of tracks) track.render(beat);
+    updateAssessment();
+    const beat = playback?.running
+        ? playback.beatAt(audioTimeForEvent(audio.context, performance.now())) : 0;
+    for (const track of tracks) track.render(beat, playback?.running ? assessment : null);
     const positiveBeat = Math.max(0, beat);
     const loopBeats = lesson.bars * BEATS_PER_BAR;
     position.textContent = [
@@ -54,6 +80,7 @@ function draw() {
 function stop(message = "Stopped · Ready when you are") {
     startRequest++;
     starting = false;
+    updateAssessment();
     playback?.stop();
     if (animation !== null) cancelAnimationFrame(animation);
     animation = null;
@@ -74,7 +101,10 @@ async function loadLesson() {
         const nextLesson = parseLesson(await response.text());
         if (request !== lessonRequest) return;
         lesson = nextLesson;
-        tracks = lesson.tracks.map(track => new Track(track, lesson.bars * BEATS_PER_BAR));
+        assessment = null;
+        tracks = lesson.tracks.map(track => new Track(
+            track, lesson.bars * BEATS_PER_BAR, instrumentKeyLabel(track.instrument),
+        ));
         element("tracks").replaceChildren(...tracks.map(track => track.element));
         element("lesson-title").textContent = lesson.title;
         element("lesson-detail").textContent = `4/4 · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
@@ -98,7 +128,7 @@ startButton.addEventListener("click", async () => {
         return;
     }
     if (loading || !lesson) return;
-    if (!bpmInput.reportValidity()) return;
+    if (![bpmInput, toleranceInput, latencyInput].every(input => input.reportValidity())) return;
     const request = ++startRequest;
     starting = true;
     startButton.textContent = "Stop ■";
@@ -122,6 +152,14 @@ startButton.addEventListener("click", async () => {
         if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
         updateVolumes();
         playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked });
+        assessment = new Assessment(lesson, {
+            origin: playback.origin,
+            bpm: Number(bpmInput.value),
+            toleranceMs: Number(toleranceInput.value),
+            latencyOffsetMs: Number(latencyInput.value),
+        });
+        for (const track of tracks) track.showFeedback(null);
+        element("timeline").focus({ preventScroll: true });
         starting = false;
         draw();
     } catch (error) {
@@ -144,6 +182,21 @@ for (const bus of ["guide", "metronome"]) {
 }
 bpmInput.addEventListener("input", () => stop("Tempo changed · Press Start to restart"));
 countInInput.addEventListener("change", () => stop("Count-in changed · Press Start to restart"));
+for (const input of [toleranceInput, latencyInput]) {
+    input.addEventListener("input", () => stop("Timing settings changed · Press Start to restart"));
+}
+document.addEventListener("keydown", event => {
+    if (!playback?.running || !assessment) return;
+    const instrument = keyboardInstrument(event);
+    if (!instrument || !assessment.tracks.has(instrument)) return;
+    event.preventDefault();
+    const result = assessment.recordHit({
+        instrument, originalTimeStamp: event.timeStamp,
+        audioTime: audioTimeForEvent(audio.context, event.timeStamp),
+    });
+    if (result) tracks.find(track => track.data.instrument === instrument).showFeedback(result);
+    updateSummary();
+});
 lessonSelect.addEventListener("change", loadLesson);
 window.addEventListener("resize", () => { if (lesson && !playback?.running) draw(); });
 document.addEventListener("visibilitychange", () => {

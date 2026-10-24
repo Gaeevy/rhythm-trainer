@@ -1,6 +1,6 @@
 # Rhythm Trainer MVP
 
-Status: milestones 1–2 complete; milestone 3 next, 2026-10-24.
+Status: milestones 1–3 complete; milestone 4 next, 2026-10-24.
 This document specifies the next version; it does not describe features already
 implemented in the current metronome.
 
@@ -148,15 +148,33 @@ Do not add per-note objects until a concrete requirement needs extra fields.
   results so later analysis can express errors in milliseconds or beat fractions.
   Keep these session records in memory for MVP; durable history is later work.
 - Use a configurable on-time tolerance and a separate bounded matching window.
-  Choose and document initial values during implementation.
+  Default tolerance is ±30 ms; the maximum matching window is ±150 ms.
+  Each note's early/late window is additionally capped at half the distance to
+  its previous/next note on the same track, including across loops.
+- Choose the nearest expected note on that track, with exact midpoint ties going
+  to the earlier note. If that note already has a hit, record an extra hit rather
+  than falling through to a different unmatched note. A valid hit is on time
+  when its absolute error is within the configured tolerance; other valid hits
+  are early or late. All comparisons retain timestamp precision.
 - Account for adjacent notes at high tempos so matching does not assign one
   hit twice or match implausibly distant notes.
 - Treat loop iterations as distinct expected notes, including near tick 0.
   Keep the prior iteration eligible until its matching window closes.
 - Finalize missed notes only after their late matching window closes.
+- A delayed input event can correct a missed result if its original timestamp
+  lies within the note's window. Browser delivery delay must not worsen timing.
+- Ignore count-in taps except eligible early hits for the first expected note.
 - Support simultaneous hits on different instruments.
 - Provide a documented latency-offset setting with an explicit sign convention.
+- Prefer `AudioContext.getOutputTimestamp()` for event/audio clock conversion;
+  fall back to contemporaneous performance/audio clock readings before output
+  timestamps are available. Positive latency offset subtracts milliseconds from
+  the converted hit time; negative adds them. Apply the same offset when deciding
+  which note windows have elapsed. UI range is −500 to +500 ms.
 - Reset pending events and assessment state correctly on stop/restart.
+- Stop freezes current totals without marking future notes missed. Start creates
+  a new session; loading a new lesson clears the prior session. The summary shows
+  counts of each result and mean absolute error across matched hits only.
 - Show session totals and timing feedback; do not persist activity to a server.
 
 ## Implementation plan and tracker
@@ -175,7 +193,7 @@ metronome does not count as completion of the new practice engine.
 | --- | --- | --- |
 | 1. Lesson model and development setup | done | Validated JSON lessons and repeatable checks |
 | 2. Playback and dynamic lanes | done | A visible, audible lesson that loops |
-| 3. Keyboard input and timing assessment | not started | A playable trainer with precise feedback |
+| 3. Keyboard input and timing assessment | done | A playable trainer with precise feedback |
 | 4. MIDI input and device setup | not started | Configurable kit input with MIDI learn |
 | 5. Practice controls and custom lessons | not started | Complete everyday practice flow |
 | 6. Browser verification and deployment | not started | Verified GitHub Pages release candidate |
@@ -346,8 +364,36 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   in their Chrome session after the timer fix. Preserve the metronome sound.
   Improving the synthesized guide drums with licensed samples is deferred until
   after timing assessment. Hardware MIDI acceptance remains pending.
+- **2026-10-24 — Checkpoint:** committed milestones 1–2 and the verified native
+  timer fix as `3901742` (`Build lesson model and looping drum playback`).
+  Unrelated IDE files were excluded. No changes were pushed or deployed.
+- **2026-10-24 — Milestone 3 done:** added timestamp-based keyboard input,
+  audio output clock conversion, one-to-one note matching, and per-lane feedback
+  with actual-hit markers and signed milliseconds. Added early/on-time/late,
+  missed and extra totals, mean absolute error, tolerance and latency controls.
+  Default keys are Space/F/J/K. Start focuses the lanes; held keys, shortcuts,
+  typing, and focused controls do not generate unintended hits. Matching rules,
+  count-in behavior, latency sign, delayed-event corrections, and session reset
+  behavior are specified above and in the README. Animation follows the audio
+  output clock; hit assessment uses original event times, not animation time.
+  Original timestamps and unrounded results remain in memory. The metronome
+  and synthesized drum voices are unchanged.
+  **Verification:** `npm test` passed all 66 tests, including clock conversion,
+  signed/tolerance boundaries, dense thirty-second and triplet notes, simultaneous
+  hits, duplicate hits, misses/extras, loop boundaries, positive/negative latency,
+  delayed event delivery, and new-session reset. An isolated browser with native
+  timers verified real keyboard event handling plus precisely timestamped test
+  hits through the full DOM input path, count-in exclusion, signed feedback,
+  totals, repeat/control filtering, latency/tolerance changes, mute behavior,
+  stop/freeze/restart/reset, and bundled lesson loading. Desktop/mobile screenshots
+  were inspected; no horizontal overflow at 390 px and no browser errors.
+  **Remaining:** user practice feedback, MIDI input/setup, persistent settings,
+  live deployment, and real-kit acceptance. Milestone 3 changes are separate from
+  the earlier checkpoint commit. **Next:** milestone 4, MIDI input and device setup.
 
 ## Verification and acceptance
+
+Milestone 3 user check: keyboard practice confirmed working on 2026-10-24.
 
 - One documented startup command; no account, backend, or cloud service required.
 - Deterministic tests for JSON validation and timing assessment, including

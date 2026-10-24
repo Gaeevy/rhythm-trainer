@@ -36,15 +36,31 @@
       </div>
       <div class="lesson-info">
         <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p></div>
-        <span class="mode-badge">LISTEN & FOLLOW</span>
+        <span class="mode-badge">KEYBOARD PRACTICE</span>
       </div>
-      <div class="timeline" aria-label="Scrolling drum lanes">
+      <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: kick. F: snare. J: hi-hat. K: ride.">
         <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
         <div id="tracks"></div>
       </div>
       <div class="transport-info">
         <p id="status" role="status">Loading lesson…</p>
         <p id="position">Bar 1 / 1 · Beat 1 · Loop 1</p>
+      </div>
+      <div class="feedback-legend" aria-label="Timing feedback legend">
+        <span class="on-time">● On time</span><span class="early">◀ Early</span><span class="late">▶ Late</span><span class="missed">× Missed</span><span class="extra">+ Extra</span>
+      </div>
+      <div class="session-summary" aria-label="Session totals">
+        <div><span>On time</span><output id="score-on_time">0</output></div>
+        <div><span>Early</span><output id="score-early">0</output></div>
+        <div><span>Late</span><output id="score-late">0</output></div>
+        <div><span>Missed</span><output id="score-missed">0</output></div>
+        <div><span>Extra</span><output id="score-extra">0</output></div>
+        <div><span>Mean absolute error</span><output id="mean-error">—</output></div>
+      </div>
+      <div class="timing-controls">
+        <label>On-time tolerance (±ms)<input id="tolerance" type="number" min="0" max="150" step="1" value="30" required></label>
+        <label>Latency offset (ms)<input id="latency-offset" type="number" min="-500" max="500" step="1" value="0" required></label>
+        <p>Match window: up to ±150 ms, narrower between close notes.<br>Positive offset subtracts delay from hit times. Changing settings stops the loop.</p>
       </div>
       <div class="mixer" aria-label="Playback volume">
         <fieldset><legend>GUIDE DRUMS</legend>
@@ -57,7 +73,7 @@
         </fieldset>
       </div>
     </section>
-    <footer><p><span class="footer-dot" aria-hidden="true"></span> Playback preview · Keyboard and MIDI scoring come next.</p><p>Changing tempo, count-in, or lesson stops the loop.</p></footer>
+    <footer><p><span class="footer-dot" aria-hidden="true"></span> Click the lanes to play · Space: kick · F: snare · J: hi-hat · K: ride</p><p>Session totals reset on Start. MIDI setup comes next.</p></footer>
     <noscript>This drum trainer needs JavaScript enabled.</noscript>
   </main>
   <script type="module" src="src/app.js"></script>

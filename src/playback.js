@@ -50,8 +50,13 @@ export class Playback {
     }
 
     get beat() {
+        return this.beatAt(this.clock());
+    }
+
+    /** Return position at an audio timestamp, including output-clock readings. */
+    beatAt(audioTime) {
         if (!this.running) return 0;
-        return Math.max(-this.countInBeats, (this.clock() - this.origin) / this.secondsPerBeat);
+        return Math.max(-this.countInBeats, (audioTime - this.origin) / this.secondsPerBeat);
     }
 
     pump() {

@@ -66,6 +66,16 @@ test("count-in plays four metronome beats before the first lesson note", () => {
     assert.ok(h.playback.beat > 0);
 });
 
+test("display can follow the audio output timestamp independently of the render clock", () => {
+    const h = harness();
+    h.playback.start(lesson, { countIn: false });
+    h.advance(h.playback.origin + 0.52);
+    assert.ok(Math.abs(h.playback.beat - 1.04) < 1e-10);
+    assert.ok(Math.abs(h.playback.beatAt(h.playback.origin + 0.5) - 1) < 1e-10);
+    h.playback.stop();
+    assert.equal(h.playback.beatAt(100), 0);
+});
+
 test("adjacent scheduling windows do not duplicate a note on their boundary", () => {
     const h = harness();
     h.playback.start(lesson, { countIn: false });

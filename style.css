@@ -33,16 +33,30 @@ h2 { margin: 0 0 7px; font-size: 16px; font-weight: 550; }
 .lesson-info p { color: var(--muted); font-size: 12px; margin: 0; }
 .mode-badge { color: #bbca9b; font-size: 9px; letter-spacing: 1.1px; border: 1px solid #4b5b41; background: #2b3728; padding: 7px 9px; border-radius: 4px; white-space: nowrap; }
 .timeline { margin: 0 26px; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: #18231c; }
-.timeline-heading { display: grid; grid-template-columns: 145px 1fr; font-size: 9px; color: #869587; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+.timeline-heading { display: grid; grid-template-columns: 170px 1fr; font-size: 9px; color: #869587; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
 .timeline-heading > span { padding: 13px 15px; }
 .timeline-heading .lane-heading { position: relative; min-height: 37px; padding: 0; }
 .lane-heading > span { position: absolute; top: 13px; }
 .past-label { left: 20px; }
 .upcoming-label { left: 35%; }
 .now-label { left: 22%; transform: translateX(-50%); color: #efe2b6; }
-.track { display: grid; grid-template-columns: 145px minmax(0, 1fr); border-bottom: 1px solid #303b31; }
+.track { display: grid; grid-template-columns: 170px minmax(0, 1fr); border-bottom: 1px solid #303b31; }
 .track:last-child { border-bottom: 0; }
-.track-label { display: flex; align-items: center; gap: 11px; padding: 0 15px; font-size: 13px; border-right: 1px solid var(--border); background: #202b23; }
+.track-label { display: grid; grid-template-columns: 29px minmax(0, 1fr); align-items: center; gap: 11px; padding: 0 15px; font-size: 13px; border-right: 1px solid var(--border); background: #202b23; }
+.track-name { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.track-feedback { display: block; font-size: 10px; color: var(--muted); margin-top: 7px; line-height: 1.5; }
+kbd { font-size: 9px; font-family: inherit; padding: 2px 4px; border: 1px solid #56614e; border-radius: 3px; color: #c8d2bb; }
+.timeline:focus { outline: 1px solid #879663; outline-offset: 3px; }
+.feedback-legend { display: flex; flex-wrap: wrap; gap: 17px; padding: 0 26px 18px; font-size: 10px; }
+.on-time { color: #b8d88b; } .early { color: #79c3e0; } .late { color: #e8b35a; } .missed { color: #df908b; } .extra { color: #c2aacd; }
+.session-summary { display: grid; grid-template-columns: repeat(5, 1fr) 1.7fr; gap: 10px; padding: 18px 26px; border-top: 1px solid var(--border); background: #202c23; }
+.session-summary > div { display: flex; flex-direction: column; gap: 7px; }
+.session-summary span { color: var(--muted); font-size: 10px; }
+.session-summary output { font-size: 22px; font-weight: 500; }
+.timing-controls { display: flex; align-items: center; gap: 22px; padding: 18px 26px; border-top: 1px solid var(--border); }
+.timing-controls label { display: flex; flex-direction: column; gap: 8px; font-size: 10px; color: var(--muted); }
+.timing-controls input { width: 100%; max-width: 130px; }
+.timing-controls p { font-size: 10px; color: var(--muted); line-height: 1.7; }
 .instrument-symbol { display: grid; place-items: center; color: var(--track-color); border: 1px solid color-mix(in srgb, var(--track-color) 35%, transparent); background: color-mix(in srgb, var(--track-color) 7%, transparent); width: 29px; height: 29px; border-radius: 50%; font-size: 11px; font-weight: 700; }
 canvas { display: block; width: 100%; height: 85px; min-width: 0; }
 .transport-info { display: flex; justify-content: space-between; gap: 10px; padding: 14px 27px 18px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -71,12 +85,19 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #8e9c8
   .timeline { margin: 0 18px; }
   .track, .timeline-heading { grid-template-columns: 108px minmax(0, 1fr); }
   .track-label { gap: 7px; padding: 0 9px; font-size: 12px; }
+  .track-label { grid-template-columns: 23px minmax(0, 1fr); }
   .instrument-symbol { width: 23px; height: 23px; }
   .past-label, .upcoming-label { display: none; }
   .mixer { gap: 24px; padding: 20px 18px; }
   .volume-row { gap: 10px; flex-wrap: wrap; }
   .mute-button { min-width: 100%; }
   .transport-info { padding: 14px 19px; font-size: 10px; }
+  .feedback-legend { padding: 0 18px 16px; gap: 12px; }
+  .session-summary { grid-template-columns: repeat(3, 1fr); padding: 18px; row-gap: 20px; }
+  .session-summary output { font-size: 19px; }
+  .timing-controls { flex-wrap: wrap; padding: 18px; gap: 16px; }
+  .timing-controls label { flex: 1; min-width: 100px; }
+  .timing-controls p { margin: 0; }
   footer { flex-direction: column; gap: 0; }
   footer p { margin: 6px 0 0; }
 }
