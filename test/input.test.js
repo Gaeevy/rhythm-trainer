@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_KEY_BINDINGS, keyboardInstrument, instrumentKeyLabel, remapKey } from "../src/input.js";
+import { DEFAULT_KEY_BINDINGS, keyboardInstrument, keyboardTransport, instrumentKeyLabel, remapKey } from "../src/input.js";
 import { feedbackText } from "../src/feedback.js";
 
 test("keyboard bindings and labels agree for all four instruments", () => {
-    for (const [code, instrument, label] of [["Space", "kick", "Space"], ["KeyF", "snare", "F"], ["KeyJ", "hi_hat", "J"], ["KeyK", "ride", "K"]]) {
+    for (const [code, instrument, label] of [["KeyD", "kick", "D"], ["KeyF", "snare", "F"], ["KeyJ", "hi_hat", "J"], ["KeyK", "ride", "K"]]) {
         assert.equal(keyboardInstrument({ code }), instrument);
         assert.equal(instrumentKeyLabel(instrument), label);
     }
@@ -37,10 +37,10 @@ test("feedback uses signed milliseconds and text as well as distinct symbols", (
 });
 
 test("remapping to an occupied key swaps assignments without changing the original", () => {
-    const swapped = remapKey(DEFAULT_KEY_BINDINGS, "snare", "Space");
-    assert.equal(keyboardInstrument({ code: "Space" }, swapped), "snare");
+    const swapped = remapKey(DEFAULT_KEY_BINDINGS, "snare", "KeyD");
+    assert.equal(keyboardInstrument({ code: "KeyD" }, swapped), "snare");
     assert.equal(keyboardInstrument({ code: "KeyF" }, swapped), "kick");
-    assert.equal(DEFAULT_KEY_BINDINGS.Space, "kick");
+    assert.equal(DEFAULT_KEY_BINDINGS.KeyD, "kick");
     assert.equal(Object.keys(swapped).length, 4);
     assert.deepEqual(remapKey(DEFAULT_KEY_BINDINGS, "snare", "KeyF"), DEFAULT_KEY_BINDINGS);
 });
@@ -52,4 +52,15 @@ test("letters and digits can replace a key; unsupported keys and instruments fai
     assert.equal(instrumentKeyLabel("ride", bindings), "1");
     assert.throws(() => remapKey(bindings, "ride", "Escape"), RangeError);
     assert.throws(() => remapKey(bindings, "tom", "KeyT"), RangeError);
+});
+
+test("Space is reserved for start/stop and cannot be assigned to a drum", () => {
+    assert.equal(keyboardTransport({ code: "Space" }), true);
+    assert.equal(keyboardTransport({ code: "KeyD" }), false);
+    assert.equal(keyboardInstrument({ code: "Space" }, { Space: "kick" }), null);
+    assert.throws(() => remapKey(DEFAULT_KEY_BINDINGS, "kick", "Space"), RangeError);
+    for (const flag of ["repeat", "defaultPrevented", "ctrlKey", "metaKey", "altKey"]) {
+        assert.equal(keyboardTransport({ code: "Space", [flag]: true }), false);
+    }
+    assert.equal(keyboardTransport({ code: "Space", target: { closest: () => true } }), false);
 });

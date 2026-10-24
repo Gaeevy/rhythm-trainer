@@ -7,7 +7,7 @@ export const PLAYHEAD_POSITION = 0.22;
 
 /** One lesson track and its lane, regardless of instrument or note density. */
 export class Track {
-    constructor(track, loopBeats, keyLabel = "") {
+    constructor(track, loopBeats, keyLabel = "", onToggle = () => {}) {
         this.data = track;
         this.loopBeats = loopBeats;
         this.element = document.createElement("div");
@@ -35,11 +35,26 @@ export class Track {
         this.feedback.setAttribute("aria-label", `${instrument.label} timing`);
         this.showFeedback(null);
         details.append(name, this.feedback);
-        label.append(symbol, details);
+        this.toggle = document.createElement("button");
+        this.toggle.type = "button";
+        this.toggle.className = "track-toggle";
+        this.toggle.addEventListener("click", onToggle);
+        label.append(symbol, details, this.toggle);
+        this.setEnabled(true);
         this.canvas = document.createElement("canvas");
         this.canvas.setAttribute("role", "img");
         this.canvas.setAttribute("aria-label", `${instrument.label}: ${track.notes.length} notes per loop`);
         this.element.append(label, this.canvas);
+    }
+
+    setEnabled(enabled) {
+        this.enabled = enabled;
+        this.element.dataset.disabled = String(!enabled);
+        this.toggle.setAttribute("aria-label", `${enabled ? "Disable" : "Enable"} ${INSTRUMENTS[this.data.instrument].label} track`);
+        this.toggle.setAttribute("aria-pressed", String(!enabled));
+        this.toggle.title = `${enabled ? "Disable" : "Enable"} track`;
+        this.toggle.textContent = enabled ? "−" : "+";
+        this.showFeedback(null);
     }
 
     setKeyLabel(label) {
@@ -47,12 +62,12 @@ export class Track {
     }
 
     showFeedback(result) {
-        this.feedback.textContent = result ? feedbackText(result) : "Waiting";
+        this.feedback.textContent = !this.enabled ? "Disabled" : result ? feedbackText(result) : "Waiting";
         this.feedback.dataset.status = result?.status ?? "waiting";
         this.feedback.style.color = result ? FEEDBACK[result.status].color : "";
     }
 
-    render(beat, assessment = null) {
+    render(beat, assessment = null, showBeatLabels = false) {
         const width = this.canvas.clientWidth;
         const height = this.canvas.clientHeight;
         const ratio = window.devicePixelRatio || 1;
@@ -69,14 +84,23 @@ export class Track {
         const right = left + VISIBLE_BEATS;
         for (let gridBeat = Math.ceil(left); gridBeat <= right; gridBeat++) {
             const x = (gridBeat - left) * scale;
-            context.strokeStyle = gridBeat % 4 === 0 ? "#475348" : "#2c3730";
-            context.lineWidth = 1;
+            const barStart = gridBeat % 4 === 0;
+            context.strokeStyle = barStart ? "#83927b" : "#465447";
+            context.lineWidth = barStart ? 2 : 1;
             context.beginPath();
             context.moveTo(x, 0);
             context.lineTo(x, height);
             context.stroke();
+            if (showBeatLabels && gridBeat >= 0 && (barStart || scale >= 40)) {
+                context.fillStyle = barStart ? "#bfcbac" : "#83917f";
+                context.font = `${barStart ? "600 " : ""}10px sans-serif`;
+                context.textAlign = "left";
+                const bar = Math.floor(gridBeat % this.loopBeats / 4) + 1;
+                context.fillText(barStart ? `Bar ${bar}` : String(gridBeat % 4 + 1), x + 5, 14);
+            }
         }
-        context.strokeStyle = "#364137";
+        context.lineWidth = 1;
+        context.strokeStyle = "#29372d";
         context.beginPath();
         context.moveTo(0, height / 2);
         context.lineTo(width, height / 2);
@@ -86,7 +110,7 @@ export class Track {
                 const noteBeat = loop * this.loopBeats + tick / TICKS_PER_BEAT;
                 if (noteBeat < left || noteBeat > right) continue;
                 const x = (noteBeat - left) * scale;
-                context.globalAlpha = noteBeat < beat - 0.08 ? 0.3 : 1;
+                context.globalAlpha = !this.enabled ? 0.14 : noteBeat < beat - 0.08 ? 0.3 : 1;
                 const result = assessment?.resultFor(this.data.instrument, loop, index);
                 context.fillStyle = result ? FEEDBACK[result.status].color : INSTRUMENTS[this.data.instrument].color;
                 context.beginPath();
@@ -104,7 +128,7 @@ export class Track {
         if (assessment) {
             context.font = "bold 13px sans-serif";
             context.textAlign = "center";
-            for (const hit of assessment.tracks.get(this.data.instrument).hits) {
+            for (const hit of assessment.tracks.get(this.data.instrument)?.hits ?? []) {
                 const hitBeat = (hit.correctedTime - assessment.origin) / assessment.secondsPerBeat;
                 if (hitBeat < left || hitBeat > right) continue;
                 const x = (hitBeat - left) * scale;

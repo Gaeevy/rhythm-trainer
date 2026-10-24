@@ -28,6 +28,10 @@
   `src/lesson-catalog.js`. The user generates lessons with AI, commits, and deploys.
   Do not add a browser lesson importer or editor unless requested.
 - Keep keyboard and MIDI mappings in player settings, outside lesson files.
+- Reserve Space for start/stop. Default drum keys are D/F/J/K. Preserve saved
+  preferences when migrating old Space bindings; do not reset MIDI profiles.
+- Apply disabled instruments consistently to guide playback and assessment.
+  Keep disabled lanes visible; changing enabled tracks stops and resets practice.
 - Use the Web Audio clock for scheduled playback. Use input event timestamps,
   converted to the same time base, for assessment. Animation must not determine
   hit timing. Never compare timestamps from different clocks directly.

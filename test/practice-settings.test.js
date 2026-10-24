@@ -19,7 +19,7 @@ test("practice controls and per-lesson tempo overrides survive storage without t
     const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
     const settings = {
         ...defaultPracticeSettings(), countIn: false, toleranceMs: 12.5, latencyOffsetMs: -24.5,
-        guideVolume: 20, guideMuted: true, metronomeVolume: 75, metronomeMuted: false,
+        disabledInstruments: ["kick"], guideVolume: 20, guideMuted: true, metronomeVolume: 75, metronomeMuted: false,
         keyBindings: remapKey(defaultPracticeSettings().keyBindings, "snare", "KeyQ"),
         tempos: { "swing-ride": 92.5, "basic-straight": 110, "mixed-subdivisions": 80 },
         lastBundledLessonId: "basic-straight",
@@ -34,6 +34,7 @@ test("practice controls and per-lesson tempo overrides survive storage without t
 test("corrupt or incompatible preferences restore defaults with a useful warning", () => {
     const invalid = [null, {}, { ...defaultPracticeSettings(), version: 2 }];
     for (const [field, value] of [
+        ["disabledInstruments", null], ["disabledInstruments", ["tom"]], ["disabledInstruments", ["kick", "kick"]],
         ["countIn", "false"], ["guideMuted", 1], ["metronomeMuted", null],
         ["toleranceMs", -1], ["toleranceMs", 151], ["latencyOffsetMs", 501],
         ["guideVolume", -1], ["metronomeVolume", 101], ["lastBundledLessonId", "unknown"],
@@ -56,5 +57,23 @@ test("missing or denied storage never blocks practice", () => {
         assert.deepEqual(loadPracticeSettings(storage).settings, defaultPracticeSettings());
         assert.match(loadPracticeSettings(storage).warning, /unavailable/);
         assert.match(savePracticeSettings(storage, defaultPracticeSettings()), /Could not save/);
+    }
+});
+
+test("existing Space bindings migrate to a free letter without losing practice settings", () => {
+    for (const bindings of [
+        { Space: "kick", KeyF: "snare", KeyJ: "hi_hat", KeyK: "ride" },
+        { Space: "snare", KeyD: "kick", KeyJ: "hi_hat", KeyK: "ride" },
+    ]) {
+        const saved = { ...defaultPracticeSettings(), guideVolume: 17, tempos: { "swing-ride": 92 }, keyBindings: bindings };
+        delete saved.disabledInstruments;
+        const loaded = loadPracticeSettings({ getItem: () => JSON.stringify(saved) });
+        assert.equal(loaded.warning, "");
+        assert.equal(loaded.settings.guideVolume, 17);
+        assert.deepEqual(loaded.settings.tempos, saved.tempos);
+        assert.equal(Object.hasOwn(loaded.settings.keyBindings, "Space"), false);
+        assert.equal(new Set(Object.values(loaded.settings.keyBindings)).size, 4);
+        assert.equal(loaded.settings.keyBindings.KeyD, "kick");
+        assert.deepEqual(loaded.settings.disabledInstruments, []);
     }
 });

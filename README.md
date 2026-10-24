@@ -45,19 +45,39 @@ from the start with the chosen settings. Hiding the tab or an audio interruption
 also stops playback. Volume and mute controls work during playback without
 resetting the loop. After an error, select a lesson again to retry loading it.
 
+The compact header and moderate lane size keep the practice view readable.
+On desktop, one top row holds the lesson dropdown, BPM slider, metronome volume,
+guide volume, and Start/Stop. Slider values are shown beside their labels; speaker
+icons mute/unmute each sound. Controls wrap on narrow screens.
+Bar boundaries use stronger lines; quarter notes use lighter lines. Bar and beat
+labels appear at the top of the first lane.
+
+Expand **PRACTICE SETTINGS** for count-in, on-time tolerance, and latency offset.
+These settings are collapsed by default. Timing results remain in the lanes and
+session summary; repeated legends and footer shortcuts are omitted.
+
+Use **−** beside an instrument to disable its track and **+** to enable it.
+Disabled tracks remain dimmed, with no guide sound, scoring, missed notes, or
+extra hits. MIDI monitoring still works. Changing tracks stops playback and clears
+the session; restart with Space or Start. Track choices are saved in this browser
+and apply to the same instruments in other lessons. Disabling every track lets
+you listen to the metronome alone.
+
 ## Keyboard practice and timing
 
 Start focuses the lanes so you can play immediately. Click the lanes to return
-focus after using controls. Keys: **Space = kick**, **F = snare**, **J = hi-hat**,
+focus after using controls. Use **Space to start/stop**. Drum keys: **D = kick**, **F = snare**, **J = hi-hat**,
 **K = ride**. Only instruments present in the lesson accept input. Hitting an
 empty track during the lesson counts as extra. Holding a key does not repeat
 hits; typing in controls or editable content does not play notes.
 
-Expand **KEYBOARD SETUP** to assign Space, letters, or digits. Choosing a key
+Expand **KEYBOARD SETUP** to assign letters or digits. Choosing a key
 already assigned to another instrument swaps the assignments, so every
 instrument keeps one distinct key. The lane labels, practice hints, and input
-update together. **Reset keys** restores Space/F/J/K without changing MIDI
-mappings. Changing keys stops playback.
+update together. **Reset keys** restores D/F/J/K without changing MIDI
+mappings. Changing keys stops playback. Space is reserved for start/stop; it
+does not play a drum. Existing saved Space mappings move to a free letter key
+without resetting other preferences or MIDI mappings.
 
 Expected notes use rectangles; actual hits appear beneath them at their precise
 positions. The lane text and marker symbols distinguish early (◀), on time (●),
@@ -126,7 +146,7 @@ The visible window stays eight beats wide regardless of total lesson length.
 
 ## Saved practice preferences
 
-Count-in, tolerance, latency offset, guide/metronome volume and mute, keyboard
+Enabled tracks, count-in, tolerance, latency offset, guide/metronome volume and mute, keyboard
 bindings, and tempo overrides are saved automatically in local storage. The
 status below the practice panel reports saving or unavailable storage. If saved
 practice settings are invalid, defaults are restored without changing MIDI
@@ -135,9 +155,9 @@ profiles. Valid changes still work for the current page when saving is unavailab
 Tempo overrides are stored per lesson, so switching
 lessons does not erase your chosen practice tempo. **Use lesson tempo** clears
 that override and restores the JSON's BPM. Playback accepts 20–300 BPM, including
-fractional values. If a JSON lesson specifies a tempo outside this range, change
-the BPM before starting. Blank/invalid numeric edits are not saved and Start
-requires valid controls.
+fractional values. A JSON tempo outside this range is limited to the nearest
+slider endpoint, with a status message. Blank/invalid timing edits are not saved;
+Start opens Practice settings when a timing field needs correction.
 
 Preferences and MIDI mappings use separate storage keys. Settings belong to
 this browser and site address; localhost and GitHub Pages have separate storage.
@@ -242,7 +262,8 @@ assessment. Browser checks must also run
 with untouched native timers: replacing global timers can mask integration bugs.
 
 The automated browser check covers repository lesson loading and lane order,
-count-in, exact early/on-time/late assessment with timestamped test input, a real
+Space start/stop, saved track disabling, metronome-only practice, count-in,
+exact early/on-time/late assessment with timestamped test input, a real
 browser key press and held-key filtering, loops, missed/extra hits, independent
 mute/volume, stop/restart, tempo changes, saved settings and remapping, narrow
 layout, the original metronome link, invalid JSON, and failed-module recovery.
@@ -262,7 +283,7 @@ For a manual browser and real-kit check in Chrome:
 5. Select the straight lesson: only hi-hat, snare, and kick lanes appear.
 6. Select mixed subdivisions: the position progresses through both bars.
 7. Hide and return to the tab: playback stays stopped until Start is pressed.
-8. Click the lanes and play with Space/F/J/K. Check hit feedback and totals.
+8. Click the lanes and play with D/F/J/K. Check hit feedback and totals.
 9. Hold a key or type in a focused control: no repeated or unintended hits.
 10. Stop: totals freeze. Restart: totals reset. Change tolerance/offset and verify
     that restarting applies the new settings.

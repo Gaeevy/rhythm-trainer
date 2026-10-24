@@ -8,7 +8,7 @@ export function defaultPracticeSettings() {
     return {
         version: 1, countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
-        keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {},
+        keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
     };
 }
@@ -23,6 +23,9 @@ export function validPracticeSettings(settings) {
         || !inRange(settings.toleranceMs, 0, 150) || !inRange(settings.latencyOffsetMs, -500, 500)
         || !inRange(settings.guideVolume, 0, 100) || !inRange(settings.metronomeVolume, 0, 100)
         || !BUNDLED_LESSONS.some(lesson => lesson.id === settings.lastBundledLessonId)) return false;
+    if (!Array.isArray(settings.disabledInstruments)
+        || settings.disabledInstruments.some(instrument => !Object.hasOwn(INSTRUMENTS, instrument))
+        || new Set(settings.disabledInstruments).size !== settings.disabledInstruments.length) return false;
     if (!settings.keyBindings || Array.isArray(settings.keyBindings)) return false;
     const entries = Object.entries(settings.keyBindings);
     if (entries.length !== Object.keys(INSTRUMENTS).length
@@ -38,6 +41,15 @@ export function loadPracticeSettings(storage) {
         const text = storage.getItem(PRACTICE_SETTINGS_KEY);
         if (text === null) return { settings: defaultPracticeSettings(), warning: "" };
         const settings = JSON.parse(text);
+        // Keep existing controls and MIDI profiles when reserving Space for transport.
+        if (settings?.version === 1) {
+            if (settings.disabledInstruments === undefined) settings.disabledInstruments = [];
+            if (settings.keyBindings && Object.hasOwn(settings.keyBindings, "Space")) {
+                const replacement = ["KeyD", ...KEY_CODES].find(code => !Object.hasOwn(settings.keyBindings, code));
+                settings.keyBindings[replacement] = settings.keyBindings.Space;
+                delete settings.keyBindings.Space;
+            }
+        }
         if (!validPracticeSettings(settings)) throw new SyntaxError("Invalid practice settings");
         return { settings, warning: "" };
     } catch (error) {

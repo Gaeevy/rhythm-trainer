@@ -15,7 +15,7 @@ function noteKey(instrument, iteration, index) {
 /** Assess an in-memory session using precise hit times, never snapped ticks. */
 export class Assessment {
     constructor(lesson, {
-        origin, bpm = lesson.bpm, toleranceMs = 30, matchingWindowMs = 150, latencyOffsetMs = 0,
+        origin, bpm = lesson.bpm, toleranceMs = 30, matchingWindowMs = 150, latencyOffsetMs = 0, disabledInstruments = [],
     }) {
         validateLesson(lesson);
         this.secondsPerBeat = ticksToSeconds(TICKS_PER_BEAT, bpm);
@@ -36,7 +36,7 @@ export class Assessment {
         this.noteResults = new Map();
         this.counts = Object.fromEntries(Object.values(TimingStatus).map(status => [status, 0]));
         this.totalAbsoluteErrorMs = 0;
-        this.tracks = new Map(lesson.tracks.map(track => {
+        this.tracks = new Map(lesson.tracks.filter(track => !disabledInstruments.includes(track.instrument)).map(track => {
             const notes = track.notes.map((tick, index, ticks) => {
                 const previous = index === 0 ? ticks.at(-1) - lesson.bars * TICKS_PER_BAR : ticks[index - 1];
                 const next = index === ticks.length - 1 ? ticks[0] + lesson.bars * TICKS_PER_BAR : ticks[index + 1];

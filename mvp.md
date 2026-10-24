@@ -38,6 +38,21 @@ that an agent can run and test.
 - Do not squeeze an entire 16-bar lesson into one screen. Display a useful
   time window and scroll continuously across loop boundaries.
 
+- Use a compact header, a centered layout capped at 1440 px, and moderately sized
+  lanes (96–140 px, depending on viewport height and track count).
+- Show stronger bar lines and lighter quarter-note lines; no subdivision grid.
+  Show bar/beat labels only along the top lane.
+- Keep lesson selection, BPM slider, metronome volume, guide volume, and Start/Stop
+  on one desktop row, wrapping on small screens. Use icon mute buttons.
+- Put count-in, on-time tolerance, and latency offset in a collapsed Practice
+  settings panel, alongside Keyboard setup and MIDI setup. Remove repeated
+  footer shortcuts and timing legends; retain results and accessible labels.
+- Each lane has a disable/enable control. Disabled tracks stay visible and dimmed,
+  but have no guide sound or assessment, including misses and extras. MIDI monitor
+  remains independent. Changing tracks stops playback and resets the session.
+  Save disabled instruments with practice preferences; all disabled is valid for
+  metronome-only practice. Keep lesson JSON unchanged.
+
 ## Musical scope
 
 - Lessons contain 1–16 bars, initially in 4/4.
@@ -117,15 +132,17 @@ Do not add per-note objects until a concrete requirement needs extra fields.
   totals usable. Only the latest asynchronous load can change the active lesson.
 - Show module-loading failures with a reload action instead of leaving the app
   indefinitely on “Loading lessons…”.
-- Persist count-in, timing tolerance, latency offset, keyboard bindings,
+- Persist disabled instruments, count-in, timing tolerance, latency offset, keyboard bindings,
   guide/metronome volumes and mute, last bundled selection, and per-lesson tempo
   overrides in a separate versioned practice-settings key. MIDI profiles are
   unchanged. Use lesson tempo clears the override. Only valid numeric edits are saved.
 - Report unavailable/corrupt preference storage without breaking practice.
   Fractional tempo/timing values are allowed within the existing UI ranges.
-  A JSON BPM outside 20–300 remains valid lesson data, but the user
-  must choose a playable BPM before Start; show an explicit status message.
-- Keyboard setup supports Space, letters, and digits. Assigning an occupied key
+  A JSON BPM outside 20–300 remains valid lesson data; the slider limits its
+  initial tempo to the nearest endpoint and shows an explicit status message.
+  Start opens Practice settings if a timing field is invalid.
+- Space starts/stops the loop and cannot be assigned to a drum. Keyboard setup
+  supports letters and digits. Assigning an occupied key
   swaps the two instruments. Update input, lane labels, and accessible/visible
   hints together. Reset keys restores only keyboard defaults. Key changes stop
   playback; saved MIDI mappings are unaffected.
@@ -147,7 +164,7 @@ Do not add per-note objects until a concrete requirement needs extra fields.
   clock, and other unrelated messages. Preserve velocity for sound response if
   useful, but do not score it.
 - Keep keyboard input available for testing, with remapping. Initial defaults:
-  Space = kick, F = snare, J = hi-hat, K = ride.
+  D = kick, F = snare, J = hi-hat, K = ride.
 - Store device/input settings locally, outside lessons.
 - MIDI profiles store note/channel pairs per device ID. No factory mappings are
   assumed. A pair belongs to one instrument; learning it elsewhere reassigns it
@@ -515,6 +532,43 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   **Next:** milestone 7, real-kit practice and audio/latency acceptance with the
   user. Simulated MIDI and scheduled audio do not establish hardware timing or
   audible sound quality.
+
+- **2026-10-24 — Practice-view enhancements complete locally:** committed milestone 6
+  as `a35d858`; final real-kit acceptance is deferred at the user's request.
+  Added a compact header, wider/taller lanes, stronger bar/quarter grid, top mixer
+  with mute icons, track disable controls, and Space start/stop. Default kick is D.
+  Existing Space drum bindings migrate to an available letter without resetting
+  preferences or MIDI mappings. Disabled instruments are saved independently of
+  lesson data, remain visible and dimmed, and are excluded from guide events and
+  assessment. Changing tracks stops and clears the session. All tracks can be
+  disabled for metronome-only practice. Bar/beat labels use only bar labels on
+  narrow lanes to prevent overlap.
+  **Verification:** all 93 Node tests pass, including disabled-track scoring and
+  scheduling, metronome-only loops, Space filtering, and settings migration.
+  `npm run test:browser` passes eight scenarios across `/` and `/rhythm-trainer/`,
+  including native Space/repeat handling, disabled keyboard/MIDI hits, saved
+  disabled instruments, track re-enabling, metronome-only playback, layout size,
+  mixer controls, and existing practice/recovery flows. Desktop (1440×1000) and
+  narrow (390×844) screenshots were visually inspected. Corrected the browser
+  assertion to check only events from the restarted run rather than prior audio.
+  **Remaining:** these enhancements are uncommitted for review. No push or
+  deployment was performed. Real-kit acceptance remains deferred.
+
+- **2026-10-24 — Practice-view layout refinement:** reduced the oversized layout
+  to a centered maximum width and 96–140 px lanes. Combined lesson selection,
+  BPM, metronome/guide volume, and Start/Stop into one desktop row. Added a live
+  BPM readout; retained saved tempos and Space transport. Moved count-in,
+  tolerance, latency, and storage status into a collapsed Practice settings panel.
+  Invalid timing fields reopen that panel on Start. Removed the timing legend,
+  shortcut footer, and repeated transport hints; key help stays in Keyboard setup.
+  **Verification:** all 93 Node tests and all eight browser scenarios pass at
+  `/` and `/rhythm-trainer/`. Browser checks verify the three sliders share one
+  desktop row, the reduced lane height, BPM keyboard interaction/readout and
+  persistence, collapsed settings after reload, invalid timing reopening the
+  panel, and out-of-range lesson tempo limiting. Fresh desktop (1440×1000) and
+  narrow (390×844) screenshots were inspected. Controls wrap without horizontal
+  overflow on narrow screens. Changes remain uncommitted; real-kit acceptance
+  is deferred.
 
 ## Verification and acceptance
 

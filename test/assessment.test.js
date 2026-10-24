@@ -187,3 +187,18 @@ test("rejects invalid settings and timestamps", () => {
     assert.throws(() => session().advance(Infinity), RangeError);
     assert.deepEqual(Object.values(TimingStatus).sort(), ["early", "extra", "late", "missed", "on_time"]);
 });
+
+test("disabled tracks produce no hits, misses, or timing error while enabled tracks still score", () => {
+    const assessment = session(undefined, { disabledInstruments: ["kick"] });
+    assert.equal(hit(assessment, 10, "kick"), null);
+    assert.equal(hit(assessment, 10, "snare").status, "on_time");
+    assessment.advance(12);
+    assert.equal(assessment.counts.on_time, 1);
+    assert.equal(assessment.counts.missed, 3);
+    assert.equal(assessment.hits.length, 1);
+    assert.equal(assessment.meanAbsoluteErrorMs, 0);
+    assert.equal(assessment.tracks.has("kick"), false);
+    const silent = session(undefined, { disabledInstruments: ["snare", "kick", "ride"] });
+    assert.deepEqual(silent.advance(20), []);
+    assert.equal(silent.meanAbsoluteErrorMs, null);
+});

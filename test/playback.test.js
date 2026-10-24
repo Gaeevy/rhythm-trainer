@@ -157,3 +157,18 @@ test("mixed subdivisions keep exact note offsets at loop boundaries", async () =
         }
     }
 });
+
+test("disabled tracks are silent without changing metronome, count-in, or loop length", () => {
+    const before = structuredClone(lesson);
+    const { playback, scheduled, advance } = harness();
+    playback.start(lesson, { disabledInstruments: ["ride", "hi_hat"] });
+    for (let time = 10; time <= 16; time += 0.025) advance(time);
+    assert.ok(scheduled.length >= 8);
+    assert.ok(scheduled.every(event => event.instrument === "metronome"));
+    assert.equal(playback.loopSeconds, 2);
+    assert.equal(playback.countInBeats, 4);
+    assert.deepEqual(lesson, before);
+    playback.start(lesson, { countIn: false, disabledInstruments: ["ride"] });
+    assert.ok(playback.events.some(event => event.instrument === "hi_hat"));
+    assert.ok(playback.events.every(event => event.instrument !== "ride"));
+});

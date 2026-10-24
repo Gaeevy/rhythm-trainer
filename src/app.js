@@ -5,7 +5,7 @@ import { Track } from "./track.js";
 import { BEATS_PER_BAR } from "./music-time.js";
 import { Assessment } from "./assessment.js";
 import { audioTimeForEvent } from "./clock.js";
-import { keyboardInstrument, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
+import { keyboardInstrument, keyboardTransport, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
 import { MidiInput, MidiState } from "./midi.js";
 import { renderMidi, renderMidiActivity } from "./midi-view.js";
 import { BUNDLED_LESSONS } from "./lesson-catalog.js";
@@ -67,8 +67,8 @@ function persistPractice() {
 function updateKeyHints() {
     const hint = Object.entries(INSTRUMENTS).map(([instrument, details]) =>
         `${instrumentKeyLabel(instrument, preferences.keyBindings)}: ${details.label.toLowerCase()}`).join(" · ");
-    element("keyboard-hint").textContent = `Click the lanes to play · ${hint}`;
-    element("timeline").setAttribute("aria-label", `Drum practice. ${hint}`);
+    element("keyboard-hint").textContent = hint;
+    element("timeline").setAttribute("aria-label", `Drum practice. Space starts or stops the loop. ${hint}`);
     for (const track of tracks) track.setKeyLabel(instrumentKeyLabel(track.data.instrument, preferences.keyBindings));
     renderKeyboardBindings(preferences.keyBindings, (instrument, code) => {
         stop("Keyboard mapping changed · Press Start to restart");
@@ -91,9 +91,11 @@ function renderLessonOptions() {
 }
 
 function updateTempoReset() {
+    element("bpm-level").textContent = bpmInput.value;
     const button = element("lesson-tempo");
-    button.hidden = !lesson || Number(bpmInput.value) === lesson.bpm;
-    if (lesson) button.textContent = `Use lesson tempo (${lesson.bpm} BPM)`;
+    const lessonTempo = lesson ? Math.min(300, Math.max(20, lesson.bpm)) : null;
+    button.hidden = !lesson || Number(bpmInput.value) === lessonTempo;
+    if (lesson) button.textContent = `Use lesson tempo (${lessonTempo} BPM)`;
 }
 
 function renderMidiSetup() {
@@ -139,6 +141,28 @@ function showStatus(message, error = false) {
     status.dataset.error = String(error);
 }
 
+function updateMuteButton(bus, muted) {
+    const button = element(`${bus}-mute`);
+    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : "metronome"}`;
+    button.setAttribute("aria-pressed", String(muted));
+    button.setAttribute("aria-label", label);
+    button.title = label;
+}
+
+function toggleTrack(instrument) {
+    stop("Tracks changed · Press Space or Start to restart");
+    midi.cancelLearn();
+    preferences.disabledInstruments = preferences.disabledInstruments.includes(instrument)
+        ? preferences.disabledInstruments.filter(value => value !== instrument)
+        : [...preferences.disabledInstruments, instrument];
+    assessment = null;
+    sessionElapsedSeconds = 0;
+    for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
+    persistPractice();
+    draw();
+    element("timeline").focus({ preventScroll: true });
+}
+
 function updateVolumes(save = true) {
     for (const bus of ["guide", "metronome"]) {
         const volume = Number(element(`${bus}-volume`).value);
@@ -155,7 +179,7 @@ function draw() {
     updateAssessment();
     const beat = playback?.running
         ? playback.beatAt(audioTimeForEvent(audio.context, performance.now())) : 0;
-    for (const track of tracks) track.render(beat, playback?.running ? assessment : null);
+    tracks.forEach((track, index) => track.render(beat, playback?.running ? assessment : null, index === 0));
     const positiveBeat = Math.max(0, beat);
     const loopBeats = lesson.bars * BEATS_PER_BAR;
     position.textContent = [
@@ -164,12 +188,12 @@ function draw() {
         `Loop ${Math.floor(positiveBeat / loopBeats) + 1}`,
     ].join(" · ");
     if (playback?.running) {
-        showStatus(beat < 0 ? `Count-in · ${Math.min(4, Math.ceil(-beat))}` : "Playing · Continuous loop");
+        showStatus(beat < 0 ? `Count-in · ${Math.min(4, Math.ceil(-beat))}` : "Playing");
         animation = requestAnimationFrame(draw);
     }
 }
 
-function stop(message = "Stopped · Ready when you are") {
+function stop(message = "Stopped") {
     startRequest++;
     starting = false;
     updateAssessment();
@@ -199,16 +223,20 @@ async function changeLesson(read, id, { initial = false } = {}) {
         sessionElapsedSeconds = 0;
         tracks = lesson.tracks.map(track => new Track(
             track, lesson.bars * BEATS_PER_BAR, instrumentKeyLabel(track.instrument, preferences.keyBindings),
+            () => toggleTrack(track.instrument),
         ));
+        for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
+        element("tracks").style.setProperty("--track-count", tracks.length);
         element("tracks").replaceChildren(...tracks.map(track => track.element));
         element("lesson-title").textContent = lesson.title;
         element("lesson-detail").textContent = `4/4 · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
-        bpmInput.value = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
+        const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
+        bpmInput.value = requestedTempo;
         renderLessonOptions();
         updateTempoReset();
         if (!initial) persistPractice();
-        showStatus(bpmInput.validity.valid ? "Ready · Start with a count-in or listen straight away"
-            : "Lesson loaded · Choose a BPM between 20 and 300 before starting");
+        showStatus(Number(bpmInput.value) === requestedTempo ? "Ready"
+            : `Tempo set to ${bpmInput.value} BPM (range 20–300)`);
         draw();
     } catch (error) {
         if (request !== lessonRequest) return;
@@ -246,7 +274,10 @@ startButton.addEventListener("click", async () => {
         return;
     }
     if (loading || !lesson) return;
-    if (![bpmInput, toleranceInput, latencyInput].every(input => input.reportValidity())) {
+    const invalidSetting = [toleranceInput, latencyInput].find(input => !input.validity.valid);
+    if (invalidSetting) {
+        element("practice-panel").open = true;
+        invalidSetting.reportValidity();
         showStatus("Check the highlighted practice setting before starting", true);
         return;
     }
@@ -273,12 +304,13 @@ startButton.addEventListener("click", async () => {
         if (request !== startRequest) return;
         if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
         updateVolumes(false);
-        playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked });
+        playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
         assessment = new Assessment(lesson, {
             origin: playback.origin,
             bpm: Number(bpmInput.value),
             toleranceMs: Number(toleranceInput.value),
             latencyOffsetMs: Number(latencyInput.value),
+            disabledInstruments: preferences.disabledInstruments,
         });
         sessionElapsedSeconds = 0;
         for (const track of tracks) track.showFeedback(null);
@@ -298,8 +330,7 @@ for (const bus of ["guide", "metronome"]) {
     element(`${bus}-mute`).addEventListener("click", event => {
         const button = event.currentTarget;
         const muted = button.getAttribute("aria-pressed") !== "true";
-        button.setAttribute("aria-pressed", String(muted));
-        button.textContent = `${muted ? "Unmute" : "Mute"} ${bus}`;
+        updateMuteButton(bus, muted);
         updateVolumes();
     });
 }
@@ -326,6 +357,11 @@ for (const [input, setting] of [[toleranceInput, "toleranceMs"], [latencyInput, 
     });
 }
 document.addEventListener("keydown", event => {
+    if (keyboardTransport(event)) {
+        event.preventDefault();
+        if (!startButton.disabled) startButton.click();
+        return;
+    }
     if (!playback?.running || !assessment) return;
     const instrument = keyboardInstrument(event, preferences.keyBindings);
     if (!instrument || !assessment.tracks.has(instrument)) return;
@@ -372,8 +408,7 @@ toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
 for (const bus of ["guide", "metronome"]) {
     element(`${bus}-volume`).value = preferences[`${bus}Volume`];
-    element(`${bus}-mute`).setAttribute("aria-pressed", String(preferences[`${bus}Muted`]));
-    element(`${bus}-mute`).textContent = `${preferences[`${bus}Muted`] ? "Unmute" : "Mute"} ${bus}`;
+    updateMuteButton(bus, preferences[`${bus}Muted`]);
 }
 element("practice-settings-status").textContent = restoredPractice.warning
     || "Practice settings are saved automatically in this browser.";

@@ -2,8 +2,8 @@ import { validateLesson } from "./lesson.js";
 import { TICKS_PER_BEAT, BEATS_PER_BAR, ticksToSeconds } from "./music-time.js";
 
 /** Expand a lesson into a repeating sequence, including a separate metronome. */
-export function lessonEvents(lesson, bpm) {
-    const events = lesson.tracks.flatMap(track => track.notes.map(tick => ({
+export function lessonEvents(lesson, bpm, disabledInstruments = []) {
+    const events = lesson.tracks.filter(track => !disabledInstruments.includes(track.instrument)).flatMap(track => track.notes.map(tick => ({
         offset: ticksToSeconds(tick, bpm), instrument: track.instrument, accent: false,
     })));
     for (let beat = 0; beat < lesson.bars * BEATS_PER_BAR; beat++) {
@@ -32,7 +32,7 @@ export class Playback {
         this.timer = null;
     }
 
-    start(lesson, { bpm = lesson.bpm, countIn = true } = {}) {
+    start(lesson, { bpm = lesson.bpm, countIn = true, disabledInstruments = [] } = {}) {
         validateLesson(lesson);
         const secondsPerBeat = ticksToSeconds(TICKS_PER_BEAT, bpm);
         this.stop();
@@ -40,7 +40,7 @@ export class Playback {
         this.countInBeats = countIn ? BEATS_PER_BAR : 0;
         this.loopBeats = lesson.bars * BEATS_PER_BAR;
         this.loopSeconds = this.loopBeats * secondsPerBeat;
-        this.events = lessonEvents(lesson, bpm);
+        this.events = lessonEvents(lesson, bpm, disabledInstruments);
         this.startTime = this.clock() + 0.08;
         this.origin = this.startTime + this.countInBeats * secondsPerBeat;
         this.scheduledUntil = this.startTime;

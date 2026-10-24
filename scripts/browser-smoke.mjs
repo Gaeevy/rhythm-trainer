@@ -96,9 +96,19 @@ async function practiceFlow(browser, url) {
         await page.locator("#lesson").selectOption("swing-ride");
         await page.waitForFunction(() => document.querySelectorAll(".track").length === 4 && document.querySelector("#lesson-title").textContent === "Swing ride and hi-hat");
         await page.locator("#bpm").fill("240");
+        await page.locator("#practice-panel summary").click();
         await page.locator("#tolerance").fill("10");
-        await observePlayback(page);
+        await page.locator("#latency-offset").fill("");
+        await page.locator("#practice-panel summary").click();
         await page.locator("#start-stop").click();
+        assert.equal(await page.locator("#practice-panel").getAttribute("open"), "");
+        await stopped(page);
+        await page.locator("#latency-offset").fill("0");
+        await observePlayback(page);
+        await page.locator("#timeline").focus();
+        await page.keyboard.down("Space");
+        await page.keyboard.down("Space");
+        await page.keyboard.up("Space");
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
         await page.keyboard.press("f");
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), 0);
@@ -138,7 +148,8 @@ async function practiceFlow(browser, url) {
         assert.ok(await page.evaluate(() => window.smoke.assessment.counts.missed > 0));
         assert.ok(await page.evaluate(() => window.smoke.scheduled.some(([instrument]) => instrument === "ride")
             && window.smoke.scheduled.some(([instrument]) => instrument === "metronome")));
-        await page.locator("#start-stop").click();
+        await page.locator("#timeline").focus();
+        await page.keyboard.press("Space");
         await stopped(page);
         const frozen = await page.locator(".session-summary").textContent();
         const scheduled = await page.evaluate(() => window.smoke.scheduled.length);
@@ -148,6 +159,9 @@ async function practiceFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);
         assert.equal(await page.evaluate(() => window.setInterval === window.smoke.nativeSetInterval
             && window.clearInterval === window.smoke.nativeClearInterval), true);
+        if (await page.locator("#practice-panel").getAttribute("open") === null) {
+            await page.locator("#practice-panel summary").click();
+        }
         await page.locator("#count-in").uncheck();
         await page.locator("#start-stop").click();
         await playing(page);
@@ -160,6 +174,12 @@ async function practiceFlow(browser, url) {
         await page.reload();
         await ready(page);
         assert.equal(await page.locator("#bpm").inputValue(), "180");
+        assert.equal(await page.locator("#bpm-level").textContent(), "180");
+        assert.equal(await page.locator("#practice-panel").getAttribute("open"), null);
+        await page.locator("#bpm").focus();
+        await page.keyboard.press("ArrowRight");
+        assert.ok(Number(await page.locator("#bpm").inputValue()) > 180);
+        assert.equal(await page.locator("#bpm-level").textContent(), await page.locator("#bpm").inputValue());
         assert.equal(await page.locator("#count-in").isChecked(), false);
         assert.equal(await page.locator("#guide-volume").inputValue(), "20");
         assert.match(await page.locator("#keyboard-hint").textContent(), /R: ride/);
@@ -175,6 +195,75 @@ async function practiceFlow(browser, url) {
         await page.locator("#startStop").waitFor();
         assert.deepEqual(errors, []);
         console.log(`PASS practice flow: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
+async function trackFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#bpm").fill("300");
+        if (await page.locator("#practice-panel").getAttribute("open") === null) {
+            await page.locator("#practice-panel summary").click();
+        }
+        await page.locator("#count-in").uncheck();
+        await observePlayback(page);
+        await page.locator("#timeline").focus();
+        await page.keyboard.press("Space");
+        await playing(page);
+        await page.getByRole("button", { name: "Disable Ride track", exact: true }).click();
+        await stopped(page);
+        assert.equal(await page.locator('.track[data-instrument="ride"]').getAttribute("data-disabled"), "true");
+        assert.equal(await page.locator("#score-missed").textContent(), "0");
+        const restartedAt = await page.evaluate(() => window.smoke.scheduled.length);
+        await page.keyboard.press("Space");
+        await playing(page);
+        const count = await page.evaluate(() => window.smoke.assessment.hits.length);
+        await page.keyboard.press("k");
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), count);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.tracks.has("ride")), false);
+        assert.equal(await page.evaluate(index => window.smoke.scheduled.slice(index).some(([instrument]) => instrument === "ride"), restartedAt), false);
+        for (const name of ["Hi-hat", "Snare", "Kick"]) {
+            await page.getByRole("button", { name: `Disable ${name} track`, exact: true }).click();
+        }
+        await page.keyboard.press("Space");
+        await playing(page);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.tracks.size), 0);
+        const afterStart = await page.evaluate(() => window.smoke.scheduled.length);
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
+        assert.ok(await page.evaluate(index => window.smoke.scheduled.slice(index).every(([instrument]) => instrument === "metronome"), afterStart));
+        assert.equal(await page.locator("#score-missed").textContent(), "0");
+        await page.keyboard.press("d");
+        assert.equal(await page.locator("#score-extra").textContent(), "0");
+        await page.keyboard.press("Space");
+        await stopped(page);
+        await page.reload();
+        await ready(page);
+        assert.equal(await page.locator('.track[data-disabled="true"]').count(), 4);
+        await page.getByRole("button", { name: "Enable Ride track", exact: true }).click();
+        await page.keyboard.press("Space");
+        await playing(page);
+        await page.keyboard.press("Space");
+        await stopped(page);
+        // Keep the moderate lane size and the entire toolbar on one desktop row.
+        assert.equal(await page.evaluate(() => {
+            const timeline = document.querySelector("#timeline").getBoundingClientRect();
+            const mixer = document.querySelector(".lesson-controls").getBoundingClientRect();
+            return timeline.width > innerWidth * 0.9 && timeline.height > innerHeight * 0.5 && timeline.height < innerHeight * 0.65
+                && mixer.bottom <= timeline.top && timeline.top < innerHeight / 3;
+        }), true);
+        assert.equal(await page.evaluate(() => {
+            const controls = [...document.querySelector(".lesson-controls").children];
+            const bottom = controls[0].getBoundingClientRect().bottom;
+            return controls.every(control => Math.abs(control.getBoundingClientRect().bottom - bottom) < 2)
+                && document.querySelectorAll('.lesson-controls input[type="range"]').length === 3;
+        }), true);
+        assert.deepEqual(errors, []);
+        console.log(`PASS track controls and Space transport: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
 
@@ -199,6 +288,14 @@ async function failureRecovery(browser, url) {
         await page.unroute("**/lessons/basic-straight.json");
         await page.locator("#lesson").selectOption("basic-straight");
         await page.waitForFunction(() => document.querySelectorAll(".track").length === 3);
+        const fastLesson = JSON.parse(await readFile(resolve(root, "lessons/basic-straight.json"), "utf8"));
+        fastLesson.bpm = 400;
+        await page.route("**/lessons/basic-straight.json", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(fastLesson) }));
+        await page.locator("#lesson").selectOption("swing-ride");
+        await page.waitForFunction(() => document.querySelectorAll(".track").length === 4);
+        await page.locator("#lesson").selectOption("basic-straight");
+        await page.waitForFunction(() => document.querySelector("#bpm-level").textContent === "300");
+        assert.match(await page.locator("#status").textContent(), /Tempo set to 300 BPM/);
         console.log(`PASS loading failure recovery: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
@@ -241,6 +338,9 @@ async function midiFlow(browser, url) {
             await page.evaluate(note => window.midiTest.send(note), note);
         }
         assert.equal(await page.locator(".midi-note").count(), 5);
+        if (await page.locator("#practice-panel").getAttribute("open") === null) {
+            await page.locator("#practice-panel summary").click();
+        }
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
         await page.locator("#start-stop").click();
@@ -257,6 +357,13 @@ async function midiFlow(browser, url) {
         const count = await page.evaluate(() => window.smoke.assessment.hits.length);
         await page.evaluate(() => window.midiTest.send(59, 0));
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), count);
+        await page.getByRole("button", { name: "Disable Ride track", exact: true }).click();
+        await stopped(page);
+        await page.keyboard.press("Space");
+        await playing(page);
+        await page.evaluate(() => window.midiTest.send(59));
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), 0);
+        assert.match(await page.locator("#midi-monitor").textContent(), /Ride/);
         await page.evaluate(() => window.midiTest.connect(false));
         await stopped(page);
         await page.evaluate(() => window.midiTest.connect(true));
@@ -283,6 +390,7 @@ try {
         const server = await serve(mount);
         try {
             await practiceFlow(browser, server.url);
+            await trackFlow(browser, server.url);
             await failureRecovery(browser, server.url);
             await midiFlow(browser, server.url);
         } finally { await server.close(); }
