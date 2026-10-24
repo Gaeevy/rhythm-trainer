@@ -1,57 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rhythm Training App</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17221c">
+  <title>Rhythm Trainer — Drum practice</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="controls">
-  <label>
-    BPM:
-    <input type="number" id="bpm" value="40" min="10" max="250" />
-  </label>
-  <label>
-    Tact Size:
-    <input type="number" id="tact" value="8" min="1" max="12" />
-  </label>
-  <label>
-    Rhythm:
-    <select id="subdivision">
-      <option value="quarter">Quarter Notes</option>
-      <option value="eighth">Eighth Notes</option>
-      <option value="sixteenth" selected>Sixteenths</option>
-      <option value="triplet">Eighth Triplets</option>
-    </select>
-  </label>
-  <label>
-    Clack Volume:
-    <select id="clackVolume">
-      <option value="0.1">Easy</option>
-      <option value="0.05">Medium</option>
-      <option value="0.01">Optimal</option>
-      <option value="0.003" selected>Challenging</option>
-      <option value="0">Zero</option>
-    </select>
-  </label>
-  <label>
-    Input Method:
-    <select id="inputMethod">
-      <option value="keyboard" selected>Keyboard (Space)</option>
-      <option value="midi-keyboard">MIDI Keyboard</option>
-      <option value="midi-drums">MIDI Drums</option>
-    </select>
-  </label>
-  <button id="startStop">Start</button>
-</div>
-<div id="timeline">
-  <!-- The moving progress bar -->
-  <div id="progress"></div>
-  <!-- Container for tap markers -->
-  <div id="markers"></div>
-  <!-- Beat markers and subdivision markers will be generated dynamically -->
-</div>
-<script src="script.js"></script>
+  <main>
+    <header class="page-header">
+      <div class="wordmark"><span class="logo" aria-hidden="true">▥</span> RHYTHM TRAINER</div>
+      <a href="legacy.html">Original metronome ↗</a>
+    </header>
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">THE PRACTICE ROOM / 01</p>
+      <h1 id="page-title">Find your pocket.</h1>
+      <p>Follow the notes. Settle into the loop.</p>
+    </section>
+    <section class="practice" aria-label="Drum lesson playback">
+      <div class="lesson-controls">
+        <label class="lesson-picker">LESSON
+          <select id="lesson" disabled>
+            <option value="swing-ride">Swing ride and hi-hat</option>
+            <option value="basic-straight">Basic straight groove</option>
+            <option value="mixed-subdivisions">Mixed subdivisions</option>
+          </select>
+        </label>
+        <label class="tempo-control" for="bpm">BPM
+          <input id="bpm" type="number" min="20" max="300" step="1" value="80" required>
+        </label>
+        <label class="count-in"><input id="count-in" type="checkbox" checked> One-bar count-in</label>
+        <button id="start-stop" class="start-button" disabled>Start loop <span aria-hidden="true">▶</span></button>
+      </div>
+      <div class="lesson-info">
+        <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p></div>
+        <span class="mode-badge">LISTEN & FOLLOW</span>
+      </div>
+      <div class="timeline" aria-label="Scrolling drum lanes">
+        <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
+        <div id="tracks"></div>
+      </div>
+      <div class="transport-info">
+        <p id="status" role="status">Loading lesson…</p>
+        <p id="position">Bar 1 / 1 · Beat 1 · Loop 1</p>
+      </div>
+      <div class="mixer" aria-label="Playback volume">
+        <fieldset><legend>GUIDE DRUMS</legend>
+          <label class="volume-label" for="guide-volume">Volume <output id="guide-level">55%</output></label>
+          <div class="volume-row"><input id="guide-volume" type="range" min="0" max="100" value="55"><button id="guide-mute" class="mute-button" aria-pressed="false">Mute guide</button></div>
+        </fieldset>
+        <fieldset><legend>METRONOME</legend>
+          <label class="volume-label" for="metronome-volume">Volume <output id="metronome-level">35%</output></label>
+          <div class="volume-row"><input id="metronome-volume" type="range" min="0" max="100" value="35"><button id="metronome-mute" class="mute-button" aria-pressed="false">Mute metronome</button></div>
+        </fieldset>
+      </div>
+    </section>
+    <footer><p><span class="footer-dot" aria-hidden="true"></span> Playback preview · Keyboard and MIDI scoring come next.</p><p>Changing tempo, count-in, or lesson stops the loop.</p></footer>
+    <noscript>This drum trainer needs JavaScript enabled.</noscript>
+  </main>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>
