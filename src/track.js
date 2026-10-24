@@ -25,6 +25,7 @@ export class Track {
         name.textContent = instrument.label;
         const key = document.createElement("kbd");
         key.textContent = keyLabel;
+        this.key = key;
         name.append(key);
         const details = document.createElement("div");
         details.className = "track-details";
@@ -39,6 +40,10 @@ export class Track {
         this.canvas.setAttribute("role", "img");
         this.canvas.setAttribute("aria-label", `${instrument.label}: ${track.notes.length} notes per loop`);
         this.element.append(label, this.canvas);
+    }
+
+    setKeyLabel(label) {
+        this.key.textContent = label;
     }
 
     showFeedback(result) {

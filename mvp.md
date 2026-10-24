@@ -1,6 +1,6 @@
 # Rhythm Trainer MVP
 
-Status: milestones 1–4 complete; milestone 5 next, 2026-10-24.
+Status: milestones 1–5 complete; milestone 6 next, 2026-10-24.
 This document specifies the next version; it does not describe features already
 implemented in the current metronome.
 
@@ -105,6 +105,32 @@ ignoring them. Validation preserves track order and does not sort or repair data
 
 Velocity scoring, separate articulations, and arbitrary tuplets are outside MVP.
 Do not add per-note objects until a concrete requirement needs extra fields.
+
+## Practice controls and lesson behavior
+
+- Generate lessons with an AI model or edit JSON, commit them to `lessons/`, and
+  register each lesson in `src/lesson-catalog.js`, then deploy. No browser file
+  importer or lesson editor is required. Tests check that files and catalog agree.
+- Validate before replacing the active lesson. Starting a lesson change stops
+  playback; failed loading/validation keeps the prior lesson, selection, and
+  totals usable. Only the latest asynchronous load can change the active lesson.
+- Show module-loading failures with a reload action instead of leaving the app
+  indefinitely on “Loading lessons…”.
+- Persist count-in, timing tolerance, latency offset, keyboard bindings,
+  guide/metronome volumes and mute, last bundled selection, and per-lesson tempo
+  overrides in a separate versioned practice-settings key. MIDI profiles are
+  unchanged. Use lesson tempo clears the override. Only valid numeric edits are saved.
+- Report unavailable/corrupt preference storage without breaking practice.
+  Fractional tempo/timing values are allowed within the existing UI ranges.
+  A JSON BPM outside 20–300 remains valid lesson data, but the user
+  must choose a playable BPM before Start; show an explicit status message.
+- Keyboard setup supports Space, letters, and digits. Assigning an occupied key
+  swaps the two instruments. Update input, lane labels, and accessible/visible
+  hints together. Reset keys restores only keyboard defaults. Key changes stop
+  playback; saved MIDI mappings are unaffected.
+- The session summary includes elapsed practice time excluding count-in and
+  completed loops. Both freeze with counts on Stop and reset on Start or a
+  successful lesson change. These activity records remain in memory only.
 
 ## Input and device setup
 
@@ -212,7 +238,7 @@ metronome does not count as completion of the new practice engine.
 | 2. Playback and dynamic lanes | done | A visible, audible lesson that loops |
 | 3. Keyboard input and timing assessment | done | A playable trainer with precise feedback |
 | 4. MIDI input and device setup | done | Configurable kit input with MIDI learn |
-| 5. Practice controls and custom lessons | not started | Complete everyday practice flow |
+| 5. Practice controls and repository lessons | done | Complete everyday practice flow |
 | 6. Browser verification and deployment | not started | Verified GitHub Pages release candidate |
 | 7. Real-kit acceptance | not started | Verified MPS-850 practice session |
 
@@ -275,17 +301,17 @@ Completion checks: simulated MIDI verifies note-on filtering, device selection,
 mapping, timestamp handling, reconnect, and settings restoration. Keyboard input
 still works. Record actual MPS-850 verification as pending until milestone 7.
 
-### 5. Practice controls and custom lessons
+### 5. Practice controls and repository lessons
 
-- Add bundled-lesson selection and local JSON file import with validation errors.
-  Loading a file must not require uploading it to a server.
+- Load lessons from repository JSON files registered in the lesson catalog.
+  Show loading/validation errors and document the AI → JSON → commit workflow.
 - Complete BPM, count-in, keyboard remapping, tolerance, and latency controls.
 - Stop/reset safely when switching lessons; prevent accidental overlapping runs.
 - Finish session summary and small layout/usability adjustments for practice.
 - Document creating a custom lesson, instrument mapping, and audio setup.
 
-Completion checks: import and practice a custom multi-bar lesson; reject an invalid
-file without breaking the current app; practice a 16-bar lesson without shrinking
+Completion checks: select and practice a repository multi-bar lesson; reject an
+invalid lesson without breaking the current app; practice a 16-bar lesson without shrinking
 the visible notes; verify mapping/settings persistence and all practice controls.
 
 ### 6. Browser verification and deployment
@@ -300,7 +326,7 @@ the visible notes; verify mapping/settings persistence and all practice controls
 
 Completion checks: automated checks pass; a served repository-subpath build loads
 with no missing assets or browser errors; start/count-in/hit/loop/mute/stop/restart
-and lesson import work. Record test commands and outcomes in the progress log.
+and lesson selection work. Record test commands and outcomes in the progress log.
 Any published version must also receive a live smoke check.
 
 ### 7. Real-kit acceptance
@@ -437,8 +463,30 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   **Remaining:** real MPS-850 MIDI assignments, audio routing, and end-to-end
   latency require hardware acceptance in milestone 7. Milestone 4 changes are
   uncommitted for review; the earlier checkpoint is preserved.
-  **Next:** user can try MIDI setup locally; milestone 5 adds custom lesson import
+  **Next:** user can try MIDI setup locally; milestone 5 adds practice controls
   and the remaining practice controls/settings.
+- **2026-10-24 — Milestone 4 checkpoint:** user confirmed the MIDI setup and
+  saved mapping restoration work. Committed as `685b8b5` (`Add MIDI learn, device
+  profiles, and reconnect handling`). No changes were pushed or deployed.
+- **2026-10-24 — Milestone 5 scope corrected:** the initial implementation added
+  a local file importer and tab-local lesson catalog. The user clarified that
+  lessons will be generated with AI, committed to the repository, and deployed.
+  Removed the importer, file reader, and transient custom lesson state. Kept
+  repository lesson selection, saved practice settings, keyboard remapping, and
+  practice time/completed-loop totals. Documented adding JSON plus a catalog
+  entry; tests now check catalog/file agreement without a hard-coded lesson count.
+  The user's screenshot showed a failed connection loading an ES module. The
+  local server serves that module successfully; the specific connection failure
+  has not been reproduced. Added startup failure reporting with a reload action.
+  **Verification:** all 89 Node tests pass. Isolated headless Chrome verified
+  repository lesson selection, native-timer playback, saved tempo/count-in/volume,
+  invalid JSON preserving the previous lesson, a 16-bar lesson with dynamic lanes,
+  keyboard remapping/restoration, and an intentionally failed module request
+  showing the reload action and recovering after reload. The localhost module URL
+  also returns HTTP 200. No user Chrome profile was accessed; the user's original
+  connection failure is not explained by these checks.
+  **Next:** user reload check, then milestone 6 browser checks and deployment
+  preparation. Changes are uncommitted; no live deployment has been performed.
 
 ## Verification and acceptance
 

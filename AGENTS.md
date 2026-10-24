@@ -24,6 +24,9 @@
 - Separate lesson data, audio scheduling, input mapping, timing assessment, and
   rendering. Avoid unnecessary abstractions and inheritance hierarchies.
 - Use JSON lesson files and integer musical ticks. Follow the format in `mvp.md`.
+- Add lessons as JSON files in `lessons/` and register them in
+  `src/lesson-catalog.js`. The user generates lessons with AI, commits, and deploys.
+  Do not add a browser lesson importer or editor unless requested.
 - Keep keyboard and MIDI mappings in player settings, outside lesson files.
 - Use the Web Audio clock for scheduled playback. Use input event timestamps,
   converted to the same time base, for assessment. Animation must not determine

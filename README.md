@@ -18,9 +18,10 @@ The new trainer is being built one milestone at a time. See
 - Missed/extra note counts, session totals, and mean absolute timing error.
 - Adjustable on-time tolerance and latency offset.
 - MIDI device selection, MIDI learn, multiple pad zones, and locally saved mappings.
+- Repository JSON lessons, keyboard remapping, and saved practice preferences.
+- Practice time and completed-loop counts alongside the session totals.
 
-Keyboard and MIDI practice are available. Custom JSON file import comes in
-milestone 5. The
+Keyboard and MIDI practice are available. The
 [original metronome](legacy.html) remains available with its existing Space-key
 and MIDI tap markers. The original metronome does not assess timing accuracy.
 
@@ -50,8 +51,13 @@ Start focuses the lanes so you can play immediately. Click the lanes to return
 focus after using controls. Keys: **Space = kick**, **F = snare**, **J = hi-hat**,
 **K = ride**. Only instruments present in the lesson accept input. Hitting an
 empty track during the lesson counts as extra. Holding a key does not repeat
-hits; typing in controls or editable content does not play notes. Keyboard
-remapping will get a settings interface in milestone 5.
+hits; typing in controls or editable content does not play notes.
+
+Expand **KEYBOARD SETUP** to assign Space, letters, or digits. Choosing a key
+already assigned to another instrument swaps the assignments, so every
+instrument keeps one distinct key. The lane labels, practice hints, and input
+update together. **Reset keys** restores Space/F/J/K without changing MIDI
+mappings. Changing keys stops playback.
 
 Expected notes use rectangles; actual hits appear beneath them at their precise
 positions. The lane text and marker symbols distinguish early (◀), on time (●),
@@ -76,6 +82,65 @@ Stop freezes the session totals without counting future notes as missed. Start
 creates a new session; loading another lesson also clears the totals. Original
 event timestamps and unrounded errors stay in memory for the current session;
 they are not saved across reloads or sent to a server.
+
+The summary also shows practice time (excluding count-in) and completed loops.
+These freeze on Stop and reset on Start or a successful lesson change.
+
+## Custom lessons
+
+Generate or edit a JSON lesson, then:
+
+1. Save it as `lessons/my-lesson.json`.
+2. Add `{ id: "my-lesson", title: "My lesson" }` to `src/lesson-catalog.js`.
+3. Run `npm test`. Tests validate every lesson and check that the lesson list
+   matches the files in `lessons/`.
+4. Try it locally, then commit and deploy with the rest of the app.
+
+Lessons load from the repository. No in-app importer or editor is required.
+Switching lessons stops playback and clears the session after a successful load.
+If a lesson fails to load or validate, the error is shown and the previous lesson
+remains usable. Choose the lesson again to retry.
+
+This two-bar example has swing ride notes and hi-hat on beats 2 and 4:
+
+```json
+{
+  "version": 1,
+  "title": "My two-bar swing lesson",
+  "bpm": 80,
+  "time_signature": [4, 4],
+  "bars": 2,
+  "tracks": [
+    {"instrument": "ride", "notes": [0, 96, 160, 192, 288, 352, 384, 480, 544, 576, 672, 736]},
+    {"instrument": "hi_hat", "notes": [96, 288, 480, 672]}
+  ]
+}
+```
+
+Positions are absolute ticks from the lesson start. Beat 1 starts at tick 0;
+bar 2 starts at 384. Use 32 ticks between eighth-note triplets, 16 between
+sixteenth-note triplets, and 12 between thirty-second notes. Mix subdivisions
+freely; all positions must be sorted, unique within a track, and before the
+loop end. Lessons support 1–16 bars and any subset of the four instruments.
+The visible window stays eight beats wide regardless of total lesson length.
+
+## Saved practice preferences
+
+Count-in, tolerance, latency offset, guide/metronome volume and mute, keyboard
+bindings, and tempo overrides are saved automatically in local storage. The
+status below the practice panel reports saving or unavailable storage. If saved
+practice settings are invalid, defaults are restored without changing MIDI
+profiles. Valid changes still work for the current page when saving is unavailable.
+
+Tempo overrides are stored per lesson, so switching
+lessons does not erase your chosen practice tempo. **Use lesson tempo** clears
+that override and restores the JSON's BPM. Playback accepts 20–300 BPM, including
+fractional values. If a JSON lesson specifies a tempo outside this range, change
+the BPM before starting. Blank/invalid numeric edits are not saved and Start
+requires valid controls.
+
+Preferences and MIDI mappings use separate storage keys. Settings belong to
+this browser and site address; localhost and GitHub Pages have separate storage.
 
 The guide sounds are synthesized in the browser; no external samples or audio
 services are used. They are functional practice sounds, not a sampled drum kit.
@@ -183,6 +248,13 @@ For a browser check in Chrome:
     and ride zones. Confirm the monitor identifies the intended instruments.
 12. Practice simultaneous hits; unplug/reconnect and verify the loop stays stopped
     until Start. Reload and reconnect to confirm saved mapping restoration.
+13. Remap/swap keys and reload: inputs and lane hints agree, practice controls
+    restore, and MIDI profiles remain unchanged.
+14. Add a multi-bar lesson to the repository and lesson list, then select it.
+    Try invalid JSON and confirm the previous lesson stays usable. Try a 16-bar
+    lesson and confirm note spacing stays the same as bar/loop position advances.
+15. If the app cannot load its JavaScript modules, confirm it shows a connection
+    error and a **Reload page** button instead of staying on “Loading lessons…”.
 
 Hardware MIDI and end-to-end latency have not been verified. Real-kit acceptance
 with the Millenium MPS-850 is milestone 7; keyboard/simulated MIDI checks do not
@@ -234,6 +306,9 @@ src/feedback.js         Shared timing labels, symbols, and colors
 src/midi.js             Selected MIDI input, filtering, learn, and reconnects
 src/midi-settings.js    Versioned local MIDI device profiles
 src/midi-view.js        MIDI setup controls and last-hit monitor
+src/lesson-catalog.js   Bundled lesson selector entries
+src/practice-settings.js Local practice preferences and validation
+src/keyboard-view.js    Keyboard remapping controls
 lessons/                Three bundled JSON lessons
 test/                   Node tests for lesson and playback logic
 legacy.html, legacy.css Original metronome interface

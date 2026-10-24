@@ -19,9 +19,9 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; font-size
 .practice { border: 1px solid var(--border); border-radius: 12px; background: #1d2921; box-shadow: 0 20px 60px #07150d30; overflow: hidden; }
 .lesson-controls { padding: 22px 26px; display: flex; align-items: end; gap: 20px; background: #243027; border-bottom: 1px solid var(--border); }
 .lesson-picker, .tempo-control { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; }
-.lesson-picker { flex: 1; }
+.lesson-picker { flex: 1; min-width: 0; }
 select, input[type="number"] { padding: 11px 12px; background: #1b261e; color: #f2f0e7; font-size: 14px; letter-spacing: 0; height: 43px; }
-select { width: 100%; }
+select { width: 100%; min-width: 0; max-width: 100%; }
 input[type="number"] { width: 82px; font-variant-numeric: tabular-nums; }
 .count-in { font-size: 12px; color: #c6cec4; display: flex; align-items: center; gap: 6px; height: 43px; white-space: nowrap; }
 input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
@@ -31,6 +31,10 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .lesson-info { display: flex; justify-content: space-between; align-items: center; padding: 24px 26px 20px; gap: 10px; }
 h2 { margin: 0 0 7px; font-size: 16px; font-weight: 550; }
 .lesson-info p { color: var(--muted); font-size: 12px; margin: 0; }
+.lesson-info > div { min-width: 0; overflow-wrap: anywhere; }
+#reset-keys { background: #34432d; color: #e0e8ce; padding: 9px 12px; font-size: 11px; }
+.lesson-error { color: #ffc0b0; font-size: 12px; line-height: 1.6; margin: 16px 26px 0; overflow-wrap: anywhere; }
+.text-button { background: transparent; color: #d3dcae; font-size: 10px; padding: 5px 8px; margin-top: 8px; }
 .mode-badge { color: #bbca9b; font-size: 9px; letter-spacing: 1.1px; border: 1px solid #4b5b41; background: #2b3728; padding: 7px 9px; border-radius: 4px; white-space: nowrap; }
 .timeline { margin: 0 26px; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: #18231c; }
 .timeline-heading { display: grid; grid-template-columns: 170px 1fr; font-size: 9px; color: #869587; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
@@ -53,6 +57,8 @@ kbd { font-size: 9px; font-family: inherit; padding: 2px 4px; border: 1px solid 
 .session-summary > div { display: flex; flex-direction: column; gap: 7px; }
 .session-summary span { color: var(--muted); font-size: 10px; }
 .session-summary output { font-size: 22px; font-weight: 500; }
+.session-meta { margin: 0; padding: 0 26px 17px; background: #202c23; font-size: 10px; color: var(--muted); }
+.session-meta output { color: #d2dbbd; }
 .timing-controls { display: flex; align-items: center; gap: 22px; padding: 18px 26px; border-top: 1px solid var(--border); }
 .timing-controls label { display: flex; flex-direction: column; gap: 8px; font-size: 10px; color: var(--muted); }
 .timing-controls input { width: 100%; max-width: 130px; }
@@ -73,9 +79,14 @@ output { font-variant-numeric: tabular-nums; }
 .mute-button { color: #c1cbbd; background: transparent; font-size: 10px; padding: 8px 10px; min-width: 108px; white-space: nowrap; }
 .mute-button:hover { background: #344133; }
 .mute-button[aria-pressed="true"] { background: #d7e6a0; color: #24301f; border-color: #d7e6a0; }
-.midi-panel { border-top: 1px solid var(--border); }
-.midi-panel summary { cursor: pointer; padding: 20px 26px; font-size: 10px; letter-spacing: 1px; color: #d2dbbd; }
-.midi-panel summary span { float: right; color: var(--muted); font-size: 11px; letter-spacing: 0; }
+.settings-panel { border-top: 1px solid var(--border); }
+.settings-panel summary { cursor: pointer; padding: 20px 26px; font-size: 10px; letter-spacing: 1px; color: #d2dbbd; }
+.settings-panel summary span { float: right; color: var(--muted); font-size: 11px; letter-spacing: 0; }
+.keyboard-content { padding: 0 26px 22px; }
+.keyboard-content p, .settings-status { font-size: 10px; color: var(--muted); line-height: 1.7; }
+.settings-status[data-warning="true"] { color: #e8b35a; }
+.keyboard-bindings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.keyboard-bindings label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 11px; }
 .midi-content { padding: 0 26px 22px; }
 .midi-connection { display: flex; align-items: end; gap: 18px; }
 .midi-connection > button, .midi-learn { background: #34432d; color: #e0e8ce; padding: 11px 14px; font-size: 12px; white-space: nowrap; }
@@ -99,6 +110,7 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #8e9c8
   .lesson-picker { flex-basis: 65%; }
   .count-in { flex: 1; }
   .lesson-info { padding: 20px 18px; }
+  .lesson-error { margin: 15px 18px 0; }
   .timeline { margin: 0 18px; }
   .track, .timeline-heading { grid-template-columns: 108px minmax(0, 1fr); }
   .track-label { gap: 7px; padding: 0 9px; font-size: 12px; }
@@ -112,16 +124,19 @@ footer { display: flex; justify-content: space-between; gap: 16px; color: #8e9c8
   .feedback-legend { padding: 0 18px 16px; gap: 12px; }
   .session-summary { grid-template-columns: repeat(3, 1fr); padding: 18px; row-gap: 20px; }
   .session-summary output { font-size: 19px; }
+  .session-meta { padding: 0 18px 17px; line-height: 1.7; }
   .timing-controls { flex-wrap: wrap; padding: 18px; gap: 16px; }
   .timing-controls label { flex: 1; min-width: 100px; }
   .timing-controls p { margin: 0; }
-  .midi-panel summary { padding: 18px; }
+  .settings-panel summary { padding: 18px; }
+  .keyboard-content { padding: 0 18px 18px; }
+  .keyboard-bindings { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .midi-content { padding: 0 18px 18px; }
   .midi-connection { flex-wrap: wrap; gap: 12px; }
   .midi-connection label { min-width: 100%; }
   .midi-mapping { grid-template-columns: 55px minmax(0, 1fr) 90px; gap: 8px; }
   .midi-learn { padding: 10px 7px; font-size: 11px; }
-  .midi-panel summary span { font-size: 10px; max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .settings-panel summary span { font-size: 10px; max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   footer { flex-direction: column; gap: 0; }
   footer p { margin: 6px 0 0; }
 }

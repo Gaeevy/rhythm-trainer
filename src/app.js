@@ -5,9 +5,13 @@ import { Track } from "./track.js";
 import { BEATS_PER_BAR } from "./music-time.js";
 import { Assessment } from "./assessment.js";
 import { audioTimeForEvent } from "./clock.js";
-import { keyboardInstrument, instrumentKeyLabel } from "./input.js";
+import { keyboardInstrument, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
 import { MidiInput, MidiState } from "./midi.js";
 import { renderMidi, renderMidiActivity } from "./midi-view.js";
+import { BUNDLED_LESSONS } from "./lesson-catalog.js";
+import { loadPracticeSettings, savePracticeSettings } from "./practice-settings.js";
+import { renderKeyboardBindings } from "./keyboard-view.js";
+import { INSTRUMENTS } from "./instruments.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
@@ -28,6 +32,8 @@ let startRequest = 0;
 let lessonRequest = 0;
 let loading = true;
 let assessment = null;
+let activeLessonId = null;
+let sessionElapsedSeconds = 0;
 
 function recordInputHit(hit) {
     if (!playback?.running || !assessment || !assessment.tracks.has(hit.instrument)) return;
@@ -38,17 +44,57 @@ function recordInputHit(hit) {
     updateSummary();
 }
 
-let midiStorage;
-try { midiStorage = window.localStorage; } catch { /* Storage can be disabled; input still works. */ }
+let browserStorage;
+try { browserStorage = window.localStorage; } catch { /* Storage can be disabled; input still works. */ }
+const restoredPractice = loadPracticeSettings(browserStorage);
+const preferences = restoredPractice.settings;
 const midi = new MidiInput({
     requestAccess: window.isSecureContext && typeof navigator.requestMIDIAccess === "function"
         ? options => navigator.requestMIDIAccess(options) : undefined,
-    storage: midiStorage,
+    storage: browserStorage,
     onHit: recordInputHit,
     onChange: () => renderMidiSetup(),
     onActivity: () => renderMidiActivity(midi),
     onDisconnect: () => stop("MIDI device disconnected · Press Start to resume with keyboard or reconnect"),
 });
+
+function persistPractice() {
+    const warning = savePracticeSettings(browserStorage, preferences);
+    element("practice-settings-status").textContent = warning || "Practice settings saved in this browser.";
+    element("practice-settings-status").dataset.warning = String(Boolean(warning));
+}
+
+function updateKeyHints() {
+    const hint = Object.entries(INSTRUMENTS).map(([instrument, details]) =>
+        `${instrumentKeyLabel(instrument, preferences.keyBindings)}: ${details.label.toLowerCase()}`).join(" · ");
+    element("keyboard-hint").textContent = `Click the lanes to play · ${hint}`;
+    element("timeline").setAttribute("aria-label", `Drum practice. ${hint}`);
+    for (const track of tracks) track.setKeyLabel(instrumentKeyLabel(track.data.instrument, preferences.keyBindings));
+    renderKeyboardBindings(preferences.keyBindings, (instrument, code) => {
+        stop("Keyboard mapping changed · Press Start to restart");
+        midi.cancelLearn();
+        preferences.keyBindings = remapKey(preferences.keyBindings, instrument, code);
+        updateKeyHints();
+        persistPractice();
+    });
+}
+
+function renderLessonOptions() {
+    const options = BUNDLED_LESSONS.map(({ id, title }) => {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = title;
+        return option;
+    });
+    lessonSelect.replaceChildren(...options);
+    lessonSelect.value = activeLessonId ?? preferences.lastBundledLessonId;
+}
+
+function updateTempoReset() {
+    const button = element("lesson-tempo");
+    button.hidden = !lesson || Number(bpmInput.value) === lesson.bpm;
+    if (lesson) button.textContent = `Use lesson tempo (${lesson.bpm} BPM)`;
+}
 
 function renderMidiSetup() {
     renderMidi(midi, {
@@ -70,11 +116,17 @@ function updateSummary() {
     }
     const meanError = assessment?.meanAbsoluteErrorMs;
     element("mean-error").textContent = meanError == null ? "—" : `${meanError.toFixed(1)} ms`;
+    const seconds = Math.floor(sessionElapsedSeconds);
+    element("session-duration").textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+    const loops = assessment ? Math.floor(sessionElapsedSeconds / assessment.loopSeconds) : 0;
+    element("session-loops").textContent = loops;
+    element("session-loop-label").textContent = loops === 1 ? "loop completed" : "loops completed";
 }
 
 function updateAssessment() {
     if (assessment && playback?.running) {
         const now = audioTimeForEvent(audio.context, performance.now());
+        sessionElapsedSeconds = Math.max(0, now - assessment.origin);
         for (const result of assessment.advance(now)) {
             tracks.find(track => track.data.instrument === result.instrument)?.showFeedback(result);
         }
@@ -87,13 +139,16 @@ function showStatus(message, error = false) {
     status.dataset.error = String(error);
 }
 
-function updateVolumes() {
+function updateVolumes(save = true) {
     for (const bus of ["guide", "metronome"]) {
         const volume = Number(element(`${bus}-volume`).value);
         const muted = element(`${bus}-mute`).getAttribute("aria-pressed") === "true";
         element(`${bus}-level`).textContent = `${volume}%`;
         audio?.setVolume(bus, volume / 100, muted);
+        preferences[`${bus}Volume`] = volume;
+        preferences[`${bus}Muted`] = muted;
     }
+    if (save) persistPractice();
 }
 
 function draw() {
@@ -127,36 +182,62 @@ function stop(message = "Stopped · Ready when you are") {
     showStatus(message);
 }
 
-async function loadLesson() {
+async function changeLesson(read, id, { initial = false } = {}) {
     const request = ++lessonRequest;
     stop("Loading lesson…");
+    midi.cancelLearn();
     loading = true;
     startButton.disabled = true;
+    element("lesson-error").hidden = true;
     try {
-        const response = await fetch(new URL(`../lessons/${lessonSelect.value}.json`, import.meta.url));
-        if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
-        const nextLesson = parseLesson(await response.text());
+        const nextLesson = await read();
         if (request !== lessonRequest) return;
         lesson = nextLesson;
+        activeLessonId = id;
+        if (BUNDLED_LESSONS.some(entry => entry.id === id)) preferences.lastBundledLessonId = id;
         assessment = null;
+        sessionElapsedSeconds = 0;
         tracks = lesson.tracks.map(track => new Track(
-            track, lesson.bars * BEATS_PER_BAR, instrumentKeyLabel(track.instrument),
+            track, lesson.bars * BEATS_PER_BAR, instrumentKeyLabel(track.instrument, preferences.keyBindings),
         ));
         element("tracks").replaceChildren(...tracks.map(track => track.element));
         element("lesson-title").textContent = lesson.title;
         element("lesson-detail").textContent = `4/4 · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
-        bpmInput.value = lesson.bpm;
-        startButton.disabled = false;
-        showStatus("Ready · Start with a count-in or listen straight away");
+        bpmInput.value = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
+        renderLessonOptions();
+        updateTempoReset();
+        if (!initial) persistPractice();
+        showStatus(bpmInput.validity.valid ? "Ready · Start with a count-in or listen straight away"
+            : "Lesson loaded · Choose a BPM between 20 and 300 before starting");
         draw();
     } catch (error) {
-        if (request === lessonRequest) showStatus(error.message, true);
+        if (request !== lessonRequest) return;
+        const message = `${error.message}${lesson ? " Previous lesson kept; press Start to resume." : " Choose a lesson again to retry."}`;
+        element("lesson-error").textContent = message;
+        element("lesson-error").hidden = false;
+        renderLessonOptions();
+        showStatus(message, true);
+        if (!lesson) {
+            element("lesson-title").textContent = "No lesson loaded";
+            element("lesson-detail").textContent = "Choose a lesson again to retry.";
+        }
     } finally {
         if (request === lessonRequest) {
             loading = false;
             lessonSelect.disabled = false;
+            startButton.disabled = !lesson;
         }
     }
+}
+
+function loadLesson(initial = false) {
+    const id = lessonSelect.value;
+    return changeLesson(async () => {
+        if (!BUNDLED_LESSONS.some(entry => entry.id === id)) throw new Error("Unknown bundled lesson");
+        const response = await fetch(new URL(`../lessons/${id}.json`, import.meta.url));
+        if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
+        return parseLesson(await response.text());
+    }, id, { initial });
 }
 
 startButton.addEventListener("click", async () => {
@@ -165,7 +246,10 @@ startButton.addEventListener("click", async () => {
         return;
     }
     if (loading || !lesson) return;
-    if (![bpmInput, toleranceInput, latencyInput].every(input => input.reportValidity())) return;
+    if (![bpmInput, toleranceInput, latencyInput].every(input => input.reportValidity())) {
+        showStatus("Check the highlighted practice setting before starting", true);
+        return;
+    }
     midi.cancelLearn();
     const request = ++startRequest;
     starting = true;
@@ -188,7 +272,7 @@ startButton.addEventListener("click", async () => {
         await audio.context.resume();
         if (request !== startRequest) return;
         if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
-        updateVolumes();
+        updateVolumes(false);
         playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked });
         assessment = new Assessment(lesson, {
             origin: playback.origin,
@@ -196,6 +280,7 @@ startButton.addEventListener("click", async () => {
             toleranceMs: Number(toleranceInput.value),
             latencyOffsetMs: Number(latencyInput.value),
         });
+        sessionElapsedSeconds = 0;
         for (const track of tracks) track.showFeedback(null);
         element("timeline").focus({ preventScroll: true });
         starting = false;
@@ -218,14 +303,31 @@ for (const bus of ["guide", "metronome"]) {
         updateVolumes();
     });
 }
-bpmInput.addEventListener("input", () => stop("Tempo changed · Press Start to restart"));
-countInInput.addEventListener("change", () => stop("Count-in changed · Press Start to restart"));
-for (const input of [toleranceInput, latencyInput]) {
-    input.addEventListener("input", () => stop("Timing settings changed · Press Start to restart"));
+bpmInput.addEventListener("input", () => {
+    stop("Tempo changed · Press Start to restart");
+    updateTempoReset();
+    if (activeLessonId && bpmInput.validity.valid) {
+        preferences.tempos[activeLessonId] = Number(bpmInput.value);
+        persistPractice();
+    }
+});
+countInInput.addEventListener("change", () => {
+    stop("Count-in changed · Press Start to restart");
+    preferences.countIn = countInInput.checked;
+    persistPractice();
+});
+for (const [input, setting] of [[toleranceInput, "toleranceMs"], [latencyInput, "latencyOffsetMs"]]) {
+    input.addEventListener("input", () => {
+        stop("Timing settings changed · Press Start to restart");
+        if (input.validity.valid) {
+            preferences[setting] = Number(input.value);
+            persistPractice();
+        }
+    });
 }
 document.addEventListener("keydown", event => {
     if (!playback?.running || !assessment) return;
-    const instrument = keyboardInstrument(event);
+    const instrument = keyboardInstrument(event, preferences.keyBindings);
     if (!instrument || !assessment.tracks.has(instrument)) return;
     event.preventDefault();
     recordInputHit({ instrument, originalTimeStamp: event.timeStamp, source: "keyboard" });
@@ -242,7 +344,22 @@ element("midi-device").addEventListener("change", event => {
     stop("MIDI device changed · Press Start to restart");
     midi.selectDevice(event.target.value);
 });
-lessonSelect.addEventListener("change", loadLesson);
+lessonSelect.addEventListener("change", () => loadLesson());
+element("lesson-tempo").addEventListener("click", () => {
+    if (!lesson) return;
+    stop("Lesson tempo restored · Press Start to restart");
+    delete preferences.tempos[activeLessonId];
+    bpmInput.value = lesson.bpm;
+    updateTempoReset();
+    persistPractice();
+});
+element("reset-keys").addEventListener("click", () => {
+    stop("Default keys restored · Press Start to restart");
+    midi.cancelLearn();
+    preferences.keyBindings = { ...DEFAULT_KEY_BINDINGS };
+    updateKeyHints();
+    persistPractice();
+});
 window.addEventListener("resize", () => { if (lesson && !playback?.running) draw(); });
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) midi.cancelLearn();
@@ -250,4 +367,18 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("pagehide", () => { stop(); midi.disconnect(); });
 renderMidiSetup();
-loadLesson();
+countInInput.checked = preferences.countIn;
+toleranceInput.value = preferences.toleranceMs;
+latencyInput.value = preferences.latencyOffsetMs;
+for (const bus of ["guide", "metronome"]) {
+    element(`${bus}-volume`).value = preferences[`${bus}Volume`];
+    element(`${bus}-mute`).setAttribute("aria-pressed", String(preferences[`${bus}Muted`]));
+    element(`${bus}-mute`).textContent = `${preferences[`${bus}Muted`] ? "Unmute" : "Mute"} ${bus}`;
+}
+element("practice-settings-status").textContent = restoredPractice.warning
+    || "Practice settings are saved automatically in this browser.";
+element("practice-settings-status").dataset.warning = String(Boolean(restoredPractice.warning));
+updateVolumes(false);
+updateKeyHints();
+renderLessonOptions();
+loadLesson(true);

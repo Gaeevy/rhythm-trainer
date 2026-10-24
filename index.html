@@ -23,19 +23,18 @@
       <div class="lesson-controls">
         <label class="lesson-picker">LESSON
           <select id="lesson" disabled>
-            <option value="swing-ride">Swing ride and hi-hat</option>
-            <option value="basic-straight">Basic straight groove</option>
-            <option value="mixed-subdivisions">Mixed subdivisions</option>
+            <option>Loading lessons…</option>
           </select>
         </label>
         <label class="tempo-control" for="bpm">BPM
-          <input id="bpm" type="number" min="20" max="300" step="1" value="80" required>
+          <input id="bpm" type="number" min="20" max="300" step="any" value="80" required>
         </label>
         <label class="count-in"><input id="count-in" type="checkbox" checked> One-bar count-in</label>
         <button id="start-stop" class="start-button" disabled>Start loop <span aria-hidden="true">▶</span></button>
       </div>
+      <p id="lesson-error" class="lesson-error" role="alert" hidden></p>
       <div class="lesson-info">
-        <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p></div>
+        <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p><button id="lesson-tempo" type="button" class="text-button" hidden>Use lesson tempo</button></div>
         <span class="mode-badge">DRUM PRACTICE</span>
       </div>
       <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: kick. F: snare. J: hi-hat. K: ride.">
@@ -57,9 +56,10 @@
         <div><span>Extra</span><output id="score-extra">0</output></div>
         <div><span>Mean absolute error</span><output id="mean-error">—</output></div>
       </div>
+      <p class="session-meta"><output id="session-duration">0:00</output> played · <output id="session-loops">0</output> <span id="session-loop-label">loops completed</span> · Totals freeze on Stop</p>
       <div class="timing-controls">
-        <label>On-time tolerance (±ms)<input id="tolerance" type="number" min="0" max="150" step="1" value="30" required></label>
-        <label>Latency offset (ms)<input id="latency-offset" type="number" min="-500" max="500" step="1" value="0" required></label>
+        <label>On-time tolerance (±ms)<input id="tolerance" type="number" min="0" max="150" step="any" value="30" required></label>
+        <label>Latency offset (ms)<input id="latency-offset" type="number" min="-500" max="500" step="any" value="0" required></label>
         <p>Match window: up to ±150 ms, narrower between close notes.<br>Positive offset subtracts delay from hit times. Changing settings stops the loop.</p>
       </div>
       <div class="mixer" aria-label="Playback volume">
@@ -72,7 +72,15 @@
           <div class="volume-row"><input id="metronome-volume" type="range" min="0" max="100" value="35"><button id="metronome-mute" class="mute-button" aria-pressed="false">Mute metronome</button></div>
         </fieldset>
       </div>
-      <details id="midi-panel" class="midi-panel">
+      <details id="keyboard-panel" class="settings-panel">
+        <summary>KEYBOARD SETUP <span>Customize keys</span></summary>
+        <div class="keyboard-content">
+          <div id="keyboard-bindings" class="keyboard-bindings"></div>
+          <p>Choose Space, a letter, or a digit. Choosing an occupied key swaps the two assignments. Changing keys stops playback.</p>
+          <button id="reset-keys" type="button">Reset keys to Space / F / J / K</button>
+        </div>
+      </details>
+      <details id="midi-panel" class="settings-panel">
         <summary>MIDI SETUP <span id="midi-summary">Keyboard available</span></summary>
         <div class="midi-content">
           <div class="midi-connection">
@@ -87,9 +95,25 @@
         </div>
       </details>
     </section>
-    <footer><p><span class="footer-dot" aria-hidden="true"></span> Click the lanes to play · Space: kick · F: snare · J: hi-hat · K: ride</p><p>Keyboard + MIDI · Session totals reset on Start.</p></footer>
+    <p id="practice-settings-status" class="settings-status" role="status">Practice settings are saved automatically in this browser.</p>
+    <footer><p><span class="footer-dot" aria-hidden="true"></span> <span id="keyboard-hint">Click the lanes to play · Space: kick · F: snare · J: hi-hat · K: ride</span></p><p>Keyboard + MIDI · Session totals reset on Start.</p></footer>
     <noscript>This drum trainer needs JavaScript enabled.</noscript>
   </main>
-  <script type="module" src="src/app.js"></script>
+  <script type="module">
+    import("./src/app.js").catch(error => {
+      console.error("Could not load drum trainer", error);
+      document.getElementById("lesson").replaceChildren(new Option("Could not load lessons", ""));
+      document.getElementById("lesson-title").textContent = "App could not load";
+      document.getElementById("status").textContent = "Check the server connection, then reload the page.";
+      const message = document.getElementById("lesson-error");
+      message.hidden = false;
+      message.textContent = "Could not load the app. Check the server connection. ";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Reload page";
+      retry.addEventListener("click", () => location.reload());
+      message.append(retry);
+    });
+  </script>
 </body>
 </html>

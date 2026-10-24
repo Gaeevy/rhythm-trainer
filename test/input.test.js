@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { keyboardInstrument, instrumentKeyLabel } from "../src/input.js";
+import { DEFAULT_KEY_BINDINGS, keyboardInstrument, instrumentKeyLabel, remapKey } from "../src/input.js";
 import { feedbackText } from "../src/feedback.js";
 
 test("keyboard bindings and labels agree for all four instruments", () => {
@@ -34,4 +34,22 @@ test("feedback uses signed milliseconds and text as well as distinct symbols", (
     assert.equal(feedbackText({ status: "on_time", errorMs: -0.1 }), "● On time 0 ms");
     assert.equal(feedbackText({ status: "missed", errorMs: null }), "× Missed");
     assert.equal(feedbackText({ status: "extra", errorMs: null }), "+ Extra");
+});
+
+test("remapping to an occupied key swaps assignments without changing the original", () => {
+    const swapped = remapKey(DEFAULT_KEY_BINDINGS, "snare", "Space");
+    assert.equal(keyboardInstrument({ code: "Space" }, swapped), "snare");
+    assert.equal(keyboardInstrument({ code: "KeyF" }, swapped), "kick");
+    assert.equal(DEFAULT_KEY_BINDINGS.Space, "kick");
+    assert.equal(Object.keys(swapped).length, 4);
+    assert.deepEqual(remapKey(DEFAULT_KEY_BINDINGS, "snare", "KeyF"), DEFAULT_KEY_BINDINGS);
+});
+
+test("letters and digits can replace a key; unsupported keys and instruments fail", () => {
+    const bindings = remapKey(DEFAULT_KEY_BINDINGS, "ride", "Digit1");
+    assert.equal(keyboardInstrument({ code: "Digit1" }, bindings), "ride");
+    assert.equal(keyboardInstrument({ code: "KeyK" }, bindings), null);
+    assert.equal(instrumentKeyLabel("ride", bindings), "1");
+    assert.throws(() => remapKey(bindings, "ride", "Escape"), RangeError);
+    assert.throws(() => remapKey(bindings, "tom", "KeyT"), RangeError);
 });
