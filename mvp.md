@@ -1,6 +1,6 @@
 # Rhythm Trainer MVP
 
-Status: milestones 1–3 complete; milestone 4 next, 2026-10-24.
+Status: milestones 1–4 complete; milestone 5 next, 2026-10-24.
 This document specifies the next version; it does not describe features already
 implemented in the current metronome.
 
@@ -122,6 +122,23 @@ Do not add per-note objects until a concrete requirement needs extra fields.
 - Keep keyboard input available for testing, with remapping. Initial defaults:
   Space = kick, F = snare, J = hi-hat, K = ride.
 - Store device/input settings locally, outside lessons.
+- MIDI profiles store note/channel pairs per device ID. No factory mappings are
+  assumed. A pair belongs to one instrument; learning it elsewhere reassigns it
+  with a status message. Each instrument can have several pairs, individually
+  removable from setup.
+- Request MIDI permission only on Connect MIDI, with `sysex: false`. On first use
+  require explicit device selection; after reload, Connect restores the saved
+  selection if available. Only the selected input is listened to.
+- Learning/mapping/device changes stop playback. Learn consumes one valid Note
+  On, never a scoring hit. Start cancels unfinished learn. Unmapped Note On events
+  appear in the monitor but are not scored. The monitor also works while stopped.
+- Physical disconnect stops playback; reconnect restores the same device's
+  mappings without restarting practice. Release old ports on switch/disconnect.
+  Report permission/port-open errors and allow explicit retry. Keyboard remains
+  usable after MIDI errors. Handle invalid/unavailable local storage without
+  breaking input; warn if mappings cannot persist beyond the current page.
+- MIDI input shares event-to-audio clock conversion and assessment with keyboard
+  input. Preserve velocity in results, without velocity scoring or own-hit audio.
 - Real-kit MIDI notes and end-to-end latency must be checked with the user.
 
 ## Audio
@@ -194,7 +211,7 @@ metronome does not count as completion of the new practice engine.
 | 1. Lesson model and development setup | done | Validated JSON lessons and repeatable checks |
 | 2. Playback and dynamic lanes | done | A visible, audible lesson that loops |
 | 3. Keyboard input and timing assessment | done | A playable trainer with precise feedback |
-| 4. MIDI input and device setup | not started | Configurable kit input with MIDI learn |
+| 4. MIDI input and device setup | done | Configurable kit input with MIDI learn |
 | 5. Practice controls and custom lessons | not started | Complete everyday practice flow |
 | 6. Browser verification and deployment | not started | Verified GitHub Pages release candidate |
 | 7. Real-kit acceptance | not started | Verified MPS-850 practice session |
@@ -391,9 +408,44 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   live deployment, and real-kit acceptance. Milestone 3 changes are separate from
   the earlier checkpoint commit. **Next:** milestone 4, MIDI input and device setup.
 
+- **2026-10-24 — Milestone 3 checkpoint:** user confirmed keyboard practice works.
+  Committed as `d7736f9` (`Add keyboard timing assessment and ignore IDE files`),
+  including `.idea/` in `.gitignore`. Nothing was pushed or deployed.
+- **2026-10-24 — Milestone 4 done:** added explicit MIDI connection/device
+  selection, note/channel-based MIDI learn with multiple notes per instrument,
+  reassignment/removal, and a last-hit monitor. Added versioned local device
+  profiles and selection restoration after explicit Connect. MIDI hits share
+  timestamp conversion and assessment with keyboard hits; velocity is retained
+  without being scored. Learn/device/mapping changes stop playback; starting
+  cancels unfinished learn. Only the selected input is listened to. Unplug stops
+  playback and reconnect restores mappings without restarting the loop. Old
+  ports are released; stale async port failures cannot detach a newly selected
+  device. Permission denial, busy ports, unsupported MIDI, and unavailable or
+  corrupt local storage have visible, nonfatal feedback. MIDI setup disclosure
+  keyboard activation does not create practice hits. Metronome and guide sounds
+  are unchanged.
+  **Verification:** all 83 Node tests passed. Isolated browser checks with
+  native timers and simulated MIDI verified explicit permission options, device
+  selection/filtering, all four instruments, hi-hat pad/pedal and ride zones,
+  learn/cancel/reassign/remove, exact shared scoring and preserved velocity/time,
+  keyboard coexistence, unplug/stop/reconnect, per-device profile isolation,
+  reload restoration, pending-learn cancellation on Start, permission retry,
+  no devices, unsupported API, storage failure, and busy-port recovery. Desktop
+  and 390 px mobile screenshots were inspected with no horizontal overflow;
+  no browser errors remained. No real MIDI permission or user Chrome profile
+  access was used. README includes the setup flow and real-kit checklist.
+  **Remaining:** real MPS-850 MIDI assignments, audio routing, and end-to-end
+  latency require hardware acceptance in milestone 7. Milestone 4 changes are
+  uncommitted for review; the earlier checkpoint is preserved.
+  **Next:** user can try MIDI setup locally; milestone 5 adds custom lesson import
+  and the remaining practice controls/settings.
+
 ## Verification and acceptance
 
-Milestone 3 user check: keyboard practice confirmed working on 2026-10-24.
+Milestone 4 user check (2026-10-24): the kit appears as `e-drum` from Medeli
+Electronics. The user learned kick 36, snare 38, hi-hat 42, ride 59 on channel 10,
+and confirmed saved mappings restore. This verifies setup and persistence;
+pedal/ride zones, audio routing, and end-to-end timing remain milestone 7 checks.
 
 - One documented startup command; no account, backend, or cloud service required.
 - Deterministic tests for JSON validation and timing assessment, including

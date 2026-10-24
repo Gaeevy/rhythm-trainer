@@ -17,9 +17,10 @@ The new trainer is being built one milestone at a time. See
 - Keyboard input with precise hit markers and early/on-time/late feedback.
 - Missed/extra note counts, session totals, and mean absolute timing error.
 - Adjustable on-time tolerance and latency offset.
+- MIDI device selection, MIDI learn, multiple pad zones, and locally saved mappings.
 
-Keyboard practice is available. MIDI setup comes in milestone 4, and custom JSON
-file import in milestone 5. The
+Keyboard and MIDI practice are available. Custom JSON file import comes in
+milestone 5. The
 [original metronome](legacy.html) remains available with its existing Space-key
 and MIDI tap markers. The original metronome does not assess timing accuracy.
 
@@ -81,6 +82,52 @@ services are used. They are functional practice sounds, not a sampled drum kit.
 For now, the swing example has notes only in the ride and hi-hat lanes; snare
 and kick lanes are intentionally empty.
 
+## MIDI setup
+
+Use Chrome on localhost or HTTPS. To set up the Millenium MPS-850:
+
+1. Connect the module's **USB MIDI** port to the Mac; do not use its USB MEMORY
+   port. Expand **MIDI SETUP** below the volume controls.
+2. Click **Connect MIDI** and allow MIDI access if Chrome asks. On first use,
+   explicitly select the kit from **Input device**.
+3. Click **Learn pad** beside an instrument, then strike the intended pad or
+   pedal once. That hit is used for setup, not scoring.
+4. Repeat Learn pad to add another zone. For jazz, learn both the hi-hat pad and
+   pedal chick under **Hi-hat**, and the desired ride zones under **Ride**.
+5. Check the input monitor while stopped: it shows the last valid Note On,
+   channel, velocity, and instrument, or **Unmapped**. The kit does not need to
+   use channel 10. Learn records the actual note and channel.
+6. Start a lesson. Mapped MIDI hits use the same timing assessment as keyboard
+   hits. MIDI and keyboard input can be used together.
+
+There are no assumed factory note mappings. Each instrument can have several
+note/channel pairs. A pair belongs to one instrument: learning it elsewhere
+moves the assignment and reports the change. Remove individual assignments
+with their **×** buttons. Learning or changing mappings/device stops the loop;
+Start cancels unfinished learning before beginning practice.
+
+Mappings and device selection are saved per device ID in this browser's local
+storage, separately from lessons. After reload, click Connect MIDI again; the
+saved device is selected if available. Different browsers, site addresses, or
+changed device IDs can require new mappings. If storage is disabled/full, the
+page reports it and mappings continue to work until the page is reloaded.
+
+Only the selected device is listened to. Note Off, zero-velocity Note On, clocks,
+CC (including hi-hat controller movement), pressure, and SysEx are ignored.
+The hi-hat pedal must send a Note On for its chick to count as a hit. Velocity
+is retained in session data but is not scored. Unmapped notes appear in the
+monitor and do not count as practice hits. Browser playback of your own MIDI
+hits is off; guide sounds and metronome remain independent.
+
+Unplugging the selected device stops practice; reconnecting the same ID restores
+the mappings but does not restart the loop. Disconnect MIDI releases the input
+and keeps saved mappings. If a port is busy, close other MIDI applications and
+use Reconnect MIDI. Keyboard practice remains available after MIDI errors.
+
+USB MIDI carries events, not the kit's audio. Use an audio setup that lets you
+hear both the drum module and browser guide/metronome. The actual MPS-850
+connection and end-to-end latency still require a real-kit check.
+
 ## Development setup and tests
 
 The project pins Node.js in `.node-version`. On macOS, install fnm once:
@@ -113,7 +160,10 @@ The deterministic tests cover JSON parsing/validation, clock conversion,
 look-ahead scheduling, count-in, repeated loops, stop/restart, delayed callbacks,
 mixed subdivisions, hit matching, latency correction, missed/extra notes, keyboard
 filtering, and signed feedback. Scheduling is tested against a controllable audio
-clock, without relying on animation or real timers. Browser checks must also run
+clock, without relying on animation or real timers. MIDI tests use simulated
+ports for note filtering, device selection, learn/cancel/reassign/remove, saved
+profiles, disconnect/reconnect, permission errors, busy ports, and timestamped
+assessment. Browser checks must also run
 with untouched native timers: replacing global timers can mask integration bugs.
 
 For a browser check in Chrome:
@@ -129,6 +179,10 @@ For a browser check in Chrome:
 9. Hold a key or type in a focused control: no repeated or unintended hits.
 10. Stop: totals freeze. Restart: totals reset. Change tolerance/offset and verify
     that restarting applies the new settings.
+11. With the kit, complete MIDI learn for four instruments, both hi-hat pad/pedal,
+    and ride zones. Confirm the monitor identifies the intended instruments.
+12. Practice simultaneous hits; unplug/reconnect and verify the loop stays stopped
+    until Start. Reload and reconnect to confirm saved mapping restoration.
 
 Hardware MIDI and end-to-end latency have not been verified. Real-kit acceptance
 with the Millenium MPS-850 is milestone 7; keyboard/simulated MIDI checks do not
@@ -177,6 +231,9 @@ src/input.js            Keyboard filtering and default player mappings
 src/clock.js            Event timestamps mapped to the audio clock
 src/assessment.js       Precise hit matching, missed notes, and session results
 src/feedback.js         Shared timing labels, symbols, and colors
+src/midi.js             Selected MIDI input, filtering, learn, and reconnects
+src/midi-settings.js    Versioned local MIDI device profiles
+src/midi-view.js        MIDI setup controls and last-hit monitor
 lessons/                Three bundled JSON lessons
 test/                   Node tests for lesson and playback logic
 legacy.html, legacy.css Original metronome interface

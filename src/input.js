@@ -6,7 +6,7 @@ export const DEFAULT_KEY_BINDINGS = Object.freeze({
 export function keyboardInstrument(event, bindings = DEFAULT_KEY_BINDINGS) {
     if (event.repeat || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return null;
     if (event.target?.isContentEditable || event.target?.closest?.(
-        "input, textarea, select, button, a, [contenteditable]:not([contenteditable='false'])",
+        "input, textarea, select, button, summary, a, [contenteditable]:not([contenteditable='false'])",
     )) return null;
     return Object.hasOwn(bindings, event.code) ? bindings[event.code] : null;
 }

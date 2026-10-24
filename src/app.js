@@ -6,6 +6,8 @@ import { BEATS_PER_BAR } from "./music-time.js";
 import { Assessment } from "./assessment.js";
 import { audioTimeForEvent } from "./clock.js";
 import { keyboardInstrument, instrumentKeyLabel } from "./input.js";
+import { MidiInput, MidiState } from "./midi.js";
+import { renderMidi, renderMidiActivity } from "./midi-view.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
@@ -26,6 +28,41 @@ let startRequest = 0;
 let lessonRequest = 0;
 let loading = true;
 let assessment = null;
+
+function recordInputHit(hit) {
+    if (!playback?.running || !assessment || !assessment.tracks.has(hit.instrument)) return;
+    const result = assessment.recordHit({
+        ...hit, audioTime: audioTimeForEvent(audio.context, hit.originalTimeStamp),
+    });
+    if (result) tracks.find(track => track.data.instrument === hit.instrument).showFeedback(result);
+    updateSummary();
+}
+
+let midiStorage;
+try { midiStorage = window.localStorage; } catch { /* Storage can be disabled; input still works. */ }
+const midi = new MidiInput({
+    requestAccess: window.isSecureContext && typeof navigator.requestMIDIAccess === "function"
+        ? options => navigator.requestMIDIAccess(options) : undefined,
+    storage: midiStorage,
+    onHit: recordInputHit,
+    onChange: () => renderMidiSetup(),
+    onActivity: () => renderMidiActivity(midi),
+    onDisconnect: () => stop("MIDI device disconnected · Press Start to resume with keyboard or reconnect"),
+});
+
+function renderMidiSetup() {
+    renderMidi(midi, {
+        onLearn: instrument => {
+            stop("MIDI learn · Strike the selected pad or pedal");
+            midi.startLearn(instrument);
+        },
+        onRemove: (instrument, entry) => {
+            stop("MIDI mapping changed · Press Start to restart");
+            midi.cancelLearn();
+            midi.removeMapping(instrument, entry);
+        },
+    });
+}
 
 function updateSummary() {
     for (const state of ["on_time", "early", "late", "missed", "extra"]) {
@@ -129,6 +166,7 @@ startButton.addEventListener("click", async () => {
     }
     if (loading || !lesson) return;
     if (![bpmInput, toleranceInput, latencyInput].every(input => input.reportValidity())) return;
+    midi.cancelLearn();
     const request = ++startRequest;
     starting = true;
     startButton.textContent = "Stop ■";
@@ -190,17 +228,26 @@ document.addEventListener("keydown", event => {
     const instrument = keyboardInstrument(event);
     if (!instrument || !assessment.tracks.has(instrument)) return;
     event.preventDefault();
-    const result = assessment.recordHit({
-        instrument, originalTimeStamp: event.timeStamp,
-        audioTime: audioTimeForEvent(audio.context, event.timeStamp),
-    });
-    if (result) tracks.find(track => track.data.instrument === instrument).showFeedback(result);
-    updateSummary();
+    recordInputHit({ instrument, originalTimeStamp: event.timeStamp, source: "keyboard" });
+});
+element("midi-connect").addEventListener("click", () => {
+    stop("MIDI setup · Keyboard remains available");
+    if (midi.access) {
+        const retry = midi.state === MidiState.ERROR;
+        midi.disconnect();
+        if (retry) midi.connect();
+    } else midi.connect();
+});
+element("midi-device").addEventListener("change", event => {
+    stop("MIDI device changed · Press Start to restart");
+    midi.selectDevice(event.target.value);
 });
 lessonSelect.addEventListener("change", loadLesson);
 window.addEventListener("resize", () => { if (lesson && !playback?.running) draw(); });
 document.addEventListener("visibilitychange", () => {
+    if (document.hidden) midi.cancelLearn();
     if (document.hidden && (starting || playback?.running)) stop("Tab hidden · Press Start to restart");
 });
-window.addEventListener("pagehide", () => stop());
+window.addEventListener("pagehide", () => { stop(); midi.disconnect(); });
+renderMidiSetup();
 loadLesson();

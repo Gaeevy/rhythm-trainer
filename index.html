@@ -36,7 +36,7 @@
       </div>
       <div class="lesson-info">
         <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p></div>
-        <span class="mode-badge">KEYBOARD PRACTICE</span>
+        <span class="mode-badge">DRUM PRACTICE</span>
       </div>
       <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: kick. F: snare. J: hi-hat. K: ride.">
         <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
@@ -72,8 +72,22 @@
           <div class="volume-row"><input id="metronome-volume" type="range" min="0" max="100" value="35"><button id="metronome-mute" class="mute-button" aria-pressed="false">Mute metronome</button></div>
         </fieldset>
       </div>
+      <details id="midi-panel" class="midi-panel">
+        <summary>MIDI SETUP <span id="midi-summary">Keyboard available</span></summary>
+        <div class="midi-content">
+          <div class="midi-connection">
+            <button id="midi-connect" type="button">Connect MIDI</button>
+            <label for="midi-device">Input device<select id="midi-device" disabled><option value="">Select MIDI device</option></select></label>
+          </div>
+          <p id="midi-status" role="status">Connect MIDI, then select your drum kit.</p>
+          <p id="midi-storage-warning" role="status" hidden></p>
+          <div id="midi-mappings" aria-label="MIDI instrument mappings"></div>
+          <p id="midi-monitor" role="status">No MIDI hits yet. Strike a pad to check the input.</p>
+          <p class="midi-help">Learn pad adds one note at a time. Learn again to add another zone.<br>For jazz, map both the hi-hat pedal chick and pad to Hi-hat. Map ride zones to Ride.</p>
+        </div>
+      </details>
     </section>
-    <footer><p><span class="footer-dot" aria-hidden="true"></span> Click the lanes to play · Space: kick · F: snare · J: hi-hat · K: ride</p><p>Session totals reset on Start. MIDI setup comes next.</p></footer>
+    <footer><p><span class="footer-dot" aria-hidden="true"></span> Click the lanes to play · Space: kick · F: snare · J: hi-hat · K: ride</p><p>Keyboard + MIDI · Session totals reset on Start.</p></footer>
     <noscript>This drum trainer needs JavaScript enabled.</noscript>
   </main>
   <script type="module" src="src/app.js"></script>

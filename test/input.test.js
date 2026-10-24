@@ -19,6 +19,7 @@ test("ignores repeats, handled keys, modifiers, editable fields, and controls", 
     }
     assert.equal(keyboardInstrument({ code: "KeyF", target: { isContentEditable: true } }), null);
     assert.equal(keyboardInstrument({ code: "KeyF", target: { closest: selector => selector.includes("button") } }), null);
+    assert.equal(keyboardInstrument({ code: "Space", target: { closest: selector => selector.includes("summary") } }), null);
     assert.equal(keyboardInstrument({ code: "KeyF", target: { closest: () => null } }), "snare");
 });
 

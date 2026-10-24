@@ -94,7 +94,7 @@ export class Assessment {
     }
 
     /** Match only the nearest note on this instrument; a second hit becomes extra. */
-    recordHit({ instrument, originalTimeStamp, audioTime, source = "keyboard" }) {
+    recordHit({ instrument, originalTimeStamp, audioTime, source = "keyboard", velocity = null }) {
         const track = this.tracks.get(instrument);
         if (!track) return null;
         if (![originalTimeStamp, audioTime].every(Number.isFinite)) {
@@ -128,7 +128,7 @@ export class Assessment {
                 ? TimingStatus.ON_TIME : errorSeconds < 0 ? TimingStatus.EARLY : TimingStatus.LATE;
         }
         const result = {
-            instrument, source, originalTimeStamp, audioTime, correctedTime, bpm: this.bpm,
+            instrument, source, velocity, originalTimeStamp, audioTime, correctedTime, bpm: this.bpm,
             expected: matches ? nearest : null,
             errorMs: matches ? errorSeconds * 1000 : null,
             status,
