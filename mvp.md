@@ -1,6 +1,7 @@
 # Rhythm Trainer MVP
 
-Status: milestones 1–5 complete; milestone 6 next, 2026-10-24.
+Status: milestones 1–6 complete locally; milestone 7 next, 2026-10-24.
+The release candidate has not been pushed or verified on the live site.
 This document specifies the next version; it does not describe features already
 implemented in the current metronome.
 
@@ -239,7 +240,7 @@ metronome does not count as completion of the new practice engine.
 | 3. Keyboard input and timing assessment | done | A playable trainer with precise feedback |
 | 4. MIDI input and device setup | done | Configurable kit input with MIDI learn |
 | 5. Practice controls and repository lessons | done | Complete everyday practice flow |
-| 6. Browser verification and deployment | not started | Verified GitHub Pages release candidate |
+| 6. Browser verification and deployment | done | Locally verified release candidate; deployment documented, not published |
 | 7. Real-kit acceptance | not started | Verified MPS-850 practice session |
 
 ### 1. Lesson model and development setup
@@ -487,6 +488,33 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   connection failure is not explained by these checks.
   **Next:** user reload check, then milestone 6 browser checks and deployment
   preparation. Changes are uncommitted; no live deployment has been performed.
+
+- **2026-10-24 — Milestone 6 done locally:** committed milestone 5 as `acb52f3`.
+  Added `npm run test:browser` with pinned development-only Playwright and a
+  lockfile. The script starts temporary loopback servers on available ports and
+  launches headless Chrome with a disposable profile, without connecting to the
+  user's browser. It checks both `/` and `/rhythm-trainer/`; the subpath server
+  returns 404 for assets requested outside the mount. Each context starts with
+  independent storage. Browsers and servers close on success or failure.
+  **Verification:** `npm test` passed all 89 tests. `npm run test:browser` passed
+  all six scenarios: practice flow, loading failure recovery, and simulated MIDI
+  at each URL path. Practice checks include each repository lesson and lane order,
+  count-in, precise signed keyboard errors, real key presses, held-key/control
+  filtering, loops/misses/extras, audio scheduling, independent mixer gains,
+  stopped scheduling/sources and frozen totals, restart/tempo changes, saved
+  preferences/remapping, narrow layout, and the legacy link. Native timers remain
+  unchanged. Failure checks cover module connection failure/reload and invalid
+  JSON/retry. MIDI checks cover explicit permission, device selection, multi-zone
+  learn, precise shared assessment/velocity, zero-velocity filtering, unplug/stop,
+  reconnect without auto-start, and saved mappings after reload.
+  Read-only GitHub checks confirmed Pages uses `main`, `/`, with HTTPS at
+  `https://gaeevy.github.io/rhythm-trainer/`. README records installation, checks,
+  the existing push-to-main deployment process, and live/manual acceptance steps.
+  **Publication:** no push, deployment, or live smoke check of this candidate was
+  performed. Milestone 6 changes remain uncommitted for review.
+  **Next:** milestone 7, real-kit practice and audio/latency acceptance with the
+  user. Simulated MIDI and scheduled audio do not establish hardware timing or
+  audible sound quality.
 
 ## Verification and acceptance
 

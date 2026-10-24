@@ -212,14 +212,24 @@ From the repository folder:
 ```sh
 fnm install
 fnm use
+npm ci
 npm test
+npm run test:browser
 ```
 
 With this shell setup, fnm also selects the installed version automatically when
-you enter the repository. No `npm install` is needed: there are no dependencies.
-`npm test` runs Node's built-in test runner (`node --test`). Node and npm are only
-required for development checks, not for serving or deploying the app.
-If dependencies are added later, commit `package-lock.json` and use `npm ci`.
+you enter the repository. `npm ci` installs the pinned development dependency,
+Playwright. The browser check requires Google Chrome installed on the machine.
+It launches headless Chrome with a temporary profile; it does not connect to your
+open Chrome, read your profile, or request access to your physical MIDI devices.
+No separate browser download or running development server is required.
+
+`npm test` runs Node's built-in test runner (`node --test`) and can run without
+installing dependencies. `npm run test:browser` starts temporary local servers on
+available ports, checks both `/` and `/rhythm-trainer/`, and closes its browsers
+and servers afterward, including on failure. A failed assertion exits nonzero.
+Node, npm, and Playwright are only needed for development checks. The deployed
+app and the Python development server have no npm runtime dependencies.
 
 The deterministic tests cover JSON parsing/validation, clock conversion,
 look-ahead scheduling, count-in, repeated loops, stop/restart, delayed callbacks,
@@ -231,7 +241,19 @@ profiles, disconnect/reconnect, permission errors, busy ports, and timestamped
 assessment. Browser checks must also run
 with untouched native timers: replacing global timers can mask integration bugs.
 
-For a browser check in Chrome:
+The automated browser check covers repository lesson loading and lane order,
+count-in, exact early/on-time/late assessment with timestamped test input, a real
+browser key press and held-key filtering, loops, missed/extra hits, independent
+mute/volume, stop/restart, tempo changes, saved settings and remapping, narrow
+layout, the original metronome link, invalid JSON, and failed-module recovery.
+Simulated MIDI covers explicit connection, pad learning, multiple zones, exact
+assessment with velocity, zero-velocity filtering, unplug/reconnect, and saved
+mapping restoration. Normal practice flows fail on browser errors, failed
+requests, or HTTP errors. Intentionally failed requests have separate recovery
+checks. The browser check observes real audio scheduling with native timers;
+it does not verify what the sound actually sounds like or real-kit latency.
+
+For a manual browser and real-kit check in Chrome:
 
 1. Start the swing lesson, confirm four lanes, count-in, and several loops.
 2. Change guide and metronome volume/mute independently; notes keep scrolling.
@@ -256,7 +278,7 @@ For a browser check in Chrome:
 15. If the app cannot load its JavaScript modules, confirm it shows a connection
     error and a **Reload page** button instead of staying on “Loading lessons…”.
 
-Hardware MIDI and end-to-end latency have not been verified. Real-kit acceptance
+Full real-kit practice and end-to-end latency have not been verified. Real-kit acceptance
 with the Millenium MPS-850 is milestone 7; keyboard/simulated MIDI checks do not
 replace that acceptance.
 
@@ -311,6 +333,7 @@ src/practice-settings.js Local practice preferences and validation
 src/keyboard-view.js    Keyboard remapping controls
 lessons/                Three bundled JSON lessons
 test/                   Node tests for lesson and playback logic
+scripts/browser-smoke.mjs Isolated Chrome checks and temporary static servers
 legacy.html, legacy.css Original metronome interface
 script.js, click_tr.wav Original metronome behavior and sound
 AGENTS.md, mvp.md       Agent instructions, scope, and progress
@@ -318,10 +341,35 @@ AGENTS.md, mvp.md       Agent instructions, scope, and progress
 
 ## Deployment
 
-Publish the repository's static files with GitHub Pages. No build is needed.
-Asset and lesson URLs are relative, including when hosted under
-`/rhythm-trainer/`. Local changes are not automatically published by this work;
-a live deployment must be checked separately.
+GitHub Pages is configured to deploy from **main**, **/ (root)**, at
+[the practice app](https://gaeevy.github.io/rhythm-trainer/). This configuration
+was read from GitHub on 2026-10-24. No build step, Railway service, or GitHub Actions
+workflow is needed. Asset and lesson URLs are relative.
+
+Before publishing, run:
+
+```sh
+npm ci
+npm test
+npm run test:browser
+```
+
+Review and commit the intended changes, then push `main` when ready to publish:
+
+```sh
+git push origin main
+```
+
+A push to the configured branch triggers Pages deployment. In the repository's
+**Settings → Pages**, confirm the deployment has completed. Then open the live
+app, refresh with **⌘⇧R**, and check lesson loading, start/count-in, keyboard input,
+mute, stop/restart, and the original metronome link. Check the browser console
+for missing modules or lessons. Keep live storage separate from localhost
+storage: MIDI learning and practice preferences must be set up on the live site.
+
+Milestone 6 verifies the local release candidate at both URL paths. It does not
+publish these commits or verify the new trainer on the live site. The physical
+MPS-850 practice and latency checklist above remains milestone 7.
 
 ## License
 

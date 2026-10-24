@@ -43,8 +43,9 @@
 
 - Keep local startup to one documented command; no external services required.
 - Use the Node version in `.node-version` for development checks (`fnm install`
-  and `fnm use` after initializing fnm). Run `npm test`; no dependency install is
-  currently needed. Keep the README setup instructions current.
+  and `fnm use` after initializing fnm). Run `npm test`. For browser checks, run
+  `npm ci` and `npm run test:browser` with Chrome installed. Keep the README
+  setup instructions current.
 - Add meaningful deterministic tests for lesson validation, timing assessment,
   clock conversion, and loop boundaries as those features are implemented.
 - Verify the browser flow with keyboard input and simulated MIDI events.
