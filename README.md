@@ -155,6 +155,12 @@ These are practice patterns, not complete song arrangements or backing tracks.
 - **Chop Suey!:** two bars at the requested practice tempo of 80 BPM; eighth-note
   closed hi-hat with the supplied sixteenth-note snare and kick variations.
 
+- **Fascination Street: bars 9–12:** four bars at 80 BPM for practice. Straight
+  sixteenth notes, with the shown kick variations, snare on beats 2/4 and extra
+  snare notes in bars 10–12. All X noteheads use closed hi-hat, including the
+  opening hit, per the requested simplification. Diamond noteheads use Snare,
+  without a separate cross-stick articulation. Hi-hat rests on the diamond notes.
+
 Parenthesized snare notes in the excerpts are ghost notes. Version 1 stores timing
 only, so these notes use the same guide volume and scoring as other snare notes.
 The screenshots' bar numbers and 99-repeat markings do not affect the loop.
