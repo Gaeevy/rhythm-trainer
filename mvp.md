@@ -197,6 +197,36 @@ Implementation checkpoints (full development history is in Git):
   have not reached remote main. Automated PR checks must pass before merge;
   deployment and real-kit acceptance remain pending.
 
+- **2026-10-25 — Song lessons:** added Californication (one bar, 96 BPM),
+  Come Undone (one bar, requested 80 BPM), and Chop Suey! (two bars, requested
+  80 BPM) from the supplied notation. Californication and Chop Suey! use closed
+  hi-hat; Come Undone now uses ride, per the later user adjustment. All include
+  snare and kick.
+  Come Undone preserves the sixteenth-note triplets and middle-triplet rest.
+  Parenthesized ghost notes retain their timing but use regular snare volume;
+  version 1 has no per-note dynamics. No runtime/catalog edits are required.
+  Made the browser track-control scenario select Swing 01 explicitly instead of
+  assuming the first alphabetic lesson has a ride lane.
+  **Verification:** all 94 JavaScript tests and ten browser scenarios pass at
+  root and `/rhythm-trainer/`, including the real six-lesson catalog. Included
+  in the song-lessons release; transcription/listening review remains pending.
+
+- **2026-10-25 — Swing lessons 03/04 and ride adjustment:** changed Come Undone
+  from closed hi-hat to ride without changing note positions. Added two two-bar
+  swing lessons at 80 BPM, keeping the established ride/kick/pedal accompaniment.
+  Swing 03 snare ticks: 0/160/384/544/608/640 (beat 3 triplet rest followed by
+  two notes in bar 2). Swing 04 snare ticks: 0/160/448/544 (offbeat response in
+  bar 2). **Verification:** all 94 JavaScript tests and ten browser scenarios
+  pass at root and `/rhythm-trainer/`, including the eight-lesson catalog.
+  Included in the song-lessons release; notation/listening review remains pending.
+
+- **2026-10-25 — Song-lessons release:** user authorized commit, merge, and
+  deployment of the five new lesson files, Come Undone ride mapping, documentation,
+  and catalog-order-independent browser check. Local verification: 94 JavaScript
+  tests and ten browser scenarios pass. Release must pass Actions before merge;
+  then verify Pages deployment and the live eight-lesson catalog. Physical-kit
+  and listening acceptance remain separate from deployment checks.
+
 ## Verification and next steps
 
 Run `npm test`, `npm run test:tools`, and `npm run test:browser` with pinned Node

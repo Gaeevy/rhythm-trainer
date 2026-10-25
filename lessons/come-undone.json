@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "title": "Come Undone",
+  "bpm": 80,
+  "time_signature": [4, 4],
+  "bars": 1,
+  "tracks": [
+    {"instrument": "ride", "notes": [0, 48, 96, 144, 176, 192, 240, 288, 336, 352, 368]},
+    {"instrument": "snare", "notes": [96, 288]},
+    {"instrument": "kick", "notes": [0]}
+  ]
+}

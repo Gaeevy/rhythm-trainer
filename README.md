@@ -129,9 +129,33 @@ app needs neither audio conversion nor extra Python packages.
   bars at 80 BPM. Snare on beat 1 and the swung “and” of 2 in both bars, plus
   the swung “and” of 3 in bar 2.
 
+- **Swing 03: snare triplet pair:** two bars at 80 BPM. Same accompaniment;
+  snare on beat 1 and the swung “and” of 2 in both bars, plus the middle and
+  last triplets of beat 3 in bar 2.
+- **Swing 04: offbeat snare response:** two bars at 80 BPM. Same accompaniment;
+  snare on beat 1 and the swung “and” of 2 in bar 1, then the swung “and”
+  of beats 1 and 2 in bar 2.
+
 The old straight, mixed-subdivision, and pad-check examples have been removed.
 Browser-only lesson fixtures retain subset/full-kit coverage without appearing
 in the app's lesson selector.
+
+## Song lessons
+
+Transcribed from the supplied notation excerpts; each lesson repeats indefinitely.
+These are practice patterns, not complete song arrangements or backing tracks.
+
+- **Californication:** one bar at the shown 96 BPM; eighth-note closed hi-hat,
+  kick on beat 1 and the “and” of 3, and the supplied snare pattern.
+- **Come Undone:** one bar at the requested practice tempo of 80 BPM, using ride
+  instead of hi-hat. Includes sixteenth-note triplets on the “and” of beats 2 and 4, with the middle triplet
+  rest on beat 2. Snare on beats 2 and 4; kick on beat 1.
+- **Chop Suey!:** two bars at the requested practice tempo of 80 BPM; eighth-note
+  closed hi-hat with the supplied sixteenth-note snare and kick variations.
+
+Parenthesized snare notes in the excerpts are ghost notes. Version 1 stores timing
+only, so these notes use the same guide volume and scoring as other snare notes.
+The screenshots' bar numbers and 99-repeat markings do not affect the loop.
 
 ## Add a lesson
 
