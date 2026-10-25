@@ -12,7 +12,6 @@
   <main>
     <header class="page-header">
       <h1 class="wordmark"><span class="logo" aria-hidden="true">▥</span> RHYTHM TRAINER</h1>
-      <a href="legacy.html">Original metronome ↗</a>
     </header>
     <section class="practice" aria-label="Drum lesson playback">
       <div class="lesson-controls">
@@ -82,20 +81,9 @@
       <details id="midi-panel" class="settings-panel">
         <summary>MIDI SETUP <span id="midi-summary">Keyboard available</span></summary>
         <div class="midi-content">
-          <div class="midi-connection">
-            <button id="midi-connect" type="button">Connect MIDI</button>
-            <label for="midi-device">Input device<select id="midi-device" disabled><option value="">Select MIDI device</option></select></label>
-          </div>
-          <div class="midi-profile-controls">
-            <button id="midi-profile-apply" type="button" disabled>Use MPS-850 profile</button>
-            <button id="midi-profile-export" type="button" disabled>Download MPS-850 config</button>
-          </div>
-          <p id="midi-profile-status" class="settings-help" role="status">Loading MPS-850 profile…</p>
-          <p id="midi-status" role="status">Connect MIDI, then select your drum kit.</p>
-          <p id="midi-storage-warning" role="status" hidden></p>
-          <div id="midi-mappings" aria-label="MIDI instrument mappings"></div>
-          <p id="midi-monitor" role="status">No MIDI hits yet. Strike a pad to check the input.</p>
-          <p class="midi-help">Learn pad adds one note at a time. Learn again to add another zone.<br>Learn Hi-hat closed, open, and pedal separately. Hold/release the pedal before learning a stick hit.<br>Hi-hat (any) is for older lessons; new action tracks require their own mappings. Map ride zones to Ride.</p>
+          <p id="midi-status" role="status">Connecting to MPS-850…</p>
+          <button id="midi-connect" type="button">Enable / retry MIDI</button>
+          <p id="midi-monitor" role="status">No MIDI hits yet.</p>
         </div>
       </details>
     </section>

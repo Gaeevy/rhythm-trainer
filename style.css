@@ -15,7 +15,7 @@ a:hover { color: #fff; }
 .practice { border: 1px solid var(--border); border-radius: 12px; background: #1d2921; box-shadow: 0 20px 60px #07150d30; overflow: hidden; }
 .lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(220px, 1.8fr) repeat(3, minmax(110px, 1fr)) auto; align-items: end; gap: 20px; background: #243027; border-bottom: 1px solid var(--border); }
 .lesson-picker { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; }
-.lesson-picker { flex: 1; min-width: 0; }
+.lesson-picker { min-width: 0; }
 select, input[type="number"] { padding: 11px 12px; background: #1b261e; color: #f2f0e7; font-size: 14px; letter-spacing: 0; height: 43px; }
 select { width: 100%; min-width: 0; max-width: 100%; }
 input[type="number"] { width: 82px; font-variant-numeric: tabular-nums; }
@@ -88,19 +88,8 @@ output { font-variant-numeric: tabular-nums; }
 .keyboard-bindings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
 .keyboard-bindings label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 11px; }
 .midi-content { padding: 0 26px 22px; }
-.midi-connection { display: flex; align-items: end; gap: 18px; }
-.midi-connection > button, .midi-learn { background: #34432d; color: #e0e8ce; padding: 11px 14px; font-size: 12px; white-space: nowrap; }
-.midi-connection label { display: flex; flex-direction: column; flex: 1; gap: 7px; color: var(--muted); font-size: 10px; }
-#midi-status, #midi-monitor, .midi-help, #midi-storage-warning { font-size: 11px; color: var(--muted); line-height: 1.7; }
+#midi-status, #midi-monitor { font-size: 11px; color: var(--muted); line-height: 1.7; }
 #midi-status { color: #d2dbbd; }
-#midi-storage-warning { color: #e8b35a; }
-.midi-mapping { display: grid; grid-template-columns: 120px minmax(0, 1fr) 112px; align-items: center; gap: 14px; border-top: 1px solid var(--border); padding: 12px 0; }
-.midi-instrument { font-size: 12px; }
-.midi-notes { display: flex; flex-wrap: wrap; gap: 7px; color: #909e8e; font-size: 11px; }
-.midi-note { padding: 7px 9px; font-size: 10px; color: #cbd7b8; background: #263423; }
-.midi-note:hover { background: #3b4531; }
-.midi-learn[aria-pressed="true"] { background: var(--accent); color: #20301b; }
-.midi-help { margin-bottom: 0; }
 @media (max-width: 1050px) {
   .lesson-controls { grid-template-columns: minmax(160px, 1.5fr) repeat(3, minmax(90px, 1fr)) auto; gap: 12px; padding: 14px; }
   .start-button { min-width: 112px; padding: 0 12px; gap: 12px; }
@@ -125,19 +114,12 @@ output { font-variant-numeric: tabular-nums; }
   .session-meta { padding: 0 18px 17px; line-height: 1.7; }
   .timing-controls { flex-wrap: wrap; gap: 16px; }
   .timing-controls label { flex: 1; min-width: 100px; }
-  .timing-controls p { margin: 0; }
   .settings-panel summary { padding: 18px; }
   .practice-content, .keyboard-content { padding: 0 18px 18px; }
   .keyboard-bindings { grid-template-columns: repeat(2, 1fr); gap: 14px; }
   .midi-content { padding: 0 18px 18px; }
-  .midi-connection { flex-wrap: wrap; gap: 12px; }
-  .midi-connection label { min-width: 100%; }
-  .midi-mapping { grid-template-columns: 55px minmax(0, 1fr) 90px; gap: 8px; }
-  .midi-learn { padding: 10px 7px; font-size: 11px; }
   .settings-panel summary span { font-size: 10px; max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (max-width: 420px) { .mode-badge { display: none; } .page-header { font-size: 10px; } .wordmark { font-size: 10px; letter-spacing: 1px; } }
 
-.midi-profile-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
-.midi-profile-controls button { background: #34432d; color: #e0e8ce; padding: 9px 12px; font-size: 11px; }
-@media (max-width: 800px) { .midi-mapping { grid-template-columns: 90px minmax(0, 1fr) 90px; } }
+#midi-connect { background: #34432d; color: #e0e8ce; padding: 9px 12px; font-size: 11px; }

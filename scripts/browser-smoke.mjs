@@ -31,6 +31,30 @@ async function serve(mount) {
     };
 }
 
+async function mockMidi(context, options = {}) {
+    // Never enumerate the developer's real devices in automated browser checks.
+    await context.addInitScript(({ ports = [], denied = false, busy = false, unsupported = false }) => {
+        const makePort = id => ({ id, name: id, state: "connected", onmidimessage: null,
+            async open() { if (window.midiTest.busy) throw new Error("Device busy"); }, async close() {} });
+        const access = { inputs: new Map(ports.map(id => [id, makePort(id)])), onstatechange: null };
+        window.midiTest = {
+            denied, busy, requests: [],
+            sendData(id, data, timeStamp = performance.now()) {
+                const event = new MIDIMessageEvent("midimessage", { data: new Uint8Array(data) });
+                Object.defineProperty(event, "timeStamp", { value: timeStamp });
+                access.inputs.get(id)?.onmidimessage?.(event);
+            },
+            connect(id, connected) { access.inputs.get(id).state = connected ? "connected" : "disconnected"; access.onstatechange?.(); },
+            addPort(id) { access.inputs.set(id, makePort(id)); access.onstatechange?.(); },
+        };
+        Object.defineProperty(navigator, "requestMIDIAccess", { configurable: true, value: unsupported ? undefined : async options => {
+            window.midiTest.requests.push(options);
+            if (window.midiTest.denied) throw new DOMException("Permission denied", "NotAllowedError");
+            return access;
+        } });
+    }, options);
+}
+
 async function ready(page) {
     await page.waitForFunction(() => document.querySelector("#start-stop")?.disabled === false);
 }
@@ -81,6 +105,7 @@ async function timedKey(page, code, beat, errorMs = 0) {
 
 async function practiceFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+    await mockMidi(context);
     try {
         const page = await context.newPage();
         const errors = [];
@@ -121,7 +146,7 @@ async function practiceFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 12);
         await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
         for (const [code, beat, errorMs, expected] of [
-            ["KeyK", 0, 0, "on_time"], ["KeyJ", 1, -20, "early"], ["KeyK", 1, 20, "late"],
+            ["KeyK", 0, 0, "on_time"], ["KeyH", 1, -20, "early"], ["KeyK", 1, 20, "late"],
         ]) {
             const hit = await timedKey(page, code, beat, errorMs);
             assert.equal(hit.status, expected);
@@ -196,9 +221,6 @@ async function practiceFlow(browser, url) {
         await stopped(page);
         await page.setViewportSize({ width: 390, height: 844 });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-        // The preserved metronome must also resolve its relative assets at either mount.
-        await page.getByRole("link", { name: /Original metronome/ }).click();
-        await page.locator("#startStop").waitFor();
         assert.deepEqual(errors, []);
         console.log(`PASS practice flow: ${new URL(url).pathname}`);
     } finally { await context.close(); }
@@ -206,6 +228,7 @@ async function practiceFlow(browser, url) {
 
 async function trackFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context);
     try {
         const page = await context.newPage();
         const errors = [];
@@ -233,7 +256,7 @@ async function trackFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), count);
         assert.equal(await page.evaluate(() => window.smoke.assessment.tracks.has("ride")), false);
         assert.equal(await page.evaluate(index => window.smoke.scheduled.slice(index).some(([instrument]) => instrument === "ride"), restartedAt), false);
-        for (const name of ["Hi-hat (any)", "Snare", "Kick"]) {
+        for (const name of ["Hi-hat pedal", "Snare", "Kick"]) {
             await page.getByRole("button", { name: `Disable ${name} track`, exact: true }).click();
         }
         await page.keyboard.press("Space");
@@ -276,6 +299,7 @@ async function trackFlow(browser, url) {
 async function failureRecovery(browser, url) {
     const context = await browser.newContext();
     let releaseSamples = () => {};
+    await mockMidi(context);
     try {
         const page = await context.newPage();
         await page.route("**/src/lesson-catalog.js", route => route.abort("connectionfailed"));
@@ -306,8 +330,9 @@ async function failureRecovery(browser, url) {
         await page.route("**/config/drumkits/mps-850.json", route => route.fulfill({ status: 404, body: "Missing profile" }));
         await page.reload();
         await ready(page);
-        await page.waitForFunction(() => document.querySelector("#midi-profile-status").textContent.includes("Could not load"));
-        assert.equal(await page.locator("#midi-profile-apply").isDisabled(), true);
+        await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("Could not load"));
+        await page.locator("#midi-panel summary").click();
+        assert.equal(await page.locator("#midi-connect").isVisible(), true);
         assert.equal(await page.locator("#start-stop").isEnabled(), true);
         const pendingSamples = new Promise(resolve => { releaseSamples = resolve; });
         await page.route("**/assets/drums/kick.wav", async route => { await pendingSamples; await route.continue(); });
@@ -343,121 +368,89 @@ async function failureRecovery(browser, url) {
 
 async function midiFlow(browser, url) {
     const context = await browser.newContext();
+    await mockMidi(context, { ports: ["kit", "other"] });
     try {
-        await context.addInitScript(() => {
-            const kit = { id: "kit", name: "Simulated MPS-850", manufacturer: "Test", state: "connected", onmidimessage: null,
-                async open() {}, async close() {} };
-            const access = { inputs: new Map([[kit.id, kit]]), onstatechange: null };
-            window.midiTest = {
-                requests: [],
-                send(note, velocity = 90, timeStamp = performance.now()) {
-                    const event = new MIDIMessageEvent("midimessage", { data: new Uint8Array([0x99, note, velocity]) });
-                    Object.defineProperty(event, "timeStamp", { value: timeStamp });
-                    kit.onmidimessage?.(event);
-                },
-                connect(connected) { kit.state = connected ? "connected" : "disconnected"; access.onstatechange?.(); },
-            };
-            Object.defineProperty(navigator, "requestMIDIAccess", { configurable: true, value: async options => {
-                window.midiTest.requests.push(options);
-                return access;
-            } });
-        });
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", error => errors.push(error.message));
+        // Old browser mappings must never override the fixed repository config.
+        await page.addInitScript(() => localStorage.setItem("rhythm-trainer.midi.v1", "old custom mappings"));
         await page.goto(url);
         await ready(page);
-        assert.deepEqual(await page.evaluate(() => window.midiTest.requests), []);
-        await page.locator("#midi-panel summary").click();
-        await page.locator("#midi-connect").click();
-        await page.waitForFunction(() => !document.querySelector("#midi-device").disabled);
+        await page.waitForFunction(() => document.querySelector("#midi-summary").textContent.includes("connected"));
         assert.deepEqual(await page.evaluate(() => window.midiTest.requests), [{ sysex: false }]);
-        assert.equal(await page.locator("#midi-device").inputValue(), "");
-        await page.locator("#midi-device").selectOption("kit");
-        for (const [instrument, note] of [["kick", 36], ["snare", 38], ["hi_hat", 42], ["hi_hat", 44], ["ride", 59]]) {
-            await page.locator(`.midi-learn[data-instrument="${instrument}"]`).click();
-            await page.evaluate(note => window.midiTest.send(note), note);
-        }
-        assert.equal(await page.locator(".midi-note").count(), 5);
-        if (await page.locator("#practice-panel").getAttribute("open") === null) {
-            await page.locator("#practice-panel summary").click();
-        }
+        assert.equal(await page.locator("#midi-device").count(), 0);
+        assert.equal(await page.getByRole("button", { name: "Learn pad", exact: true }).count(), 0);
+        await page.locator("#lesson").selectOption("mps-850-check");
+        await page.waitForFunction(() => document.querySelectorAll(".track").length === 12);
+        await page.locator("#bpm").fill("300");
+        await page.locator("#practice-panel summary").click();
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
         await page.locator("#start-stop").click();
         await playing(page);
         await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
-        const hit = await page.evaluate(() => {
-            window.midiTest.send(59, 77, window.smoke.stamp(0));
-            return window.smoke.assessment.hits.at(-1);
+        for (const [id, note, beat, expected] of [
+            ["kit", 42, 0, "on_time"], ["kit", 42, 1, "extra"], ["kit", 46, 1, "on_time"],
+            ["other", 38, 6, "on_time"], ["kit", 36, 11, "on_time"],
+        ]) {
+            const result = await page.evaluate(({ id, note, beat }) => {
+                window.midiTest.sendData(id, [0x99, note, 77], window.smoke.stamp(beat));
+                return window.smoke.assessment.hits.at(-1);
+            }, { id, note, beat });
+            assert.equal(result.status, expected);
+            assert.equal(result.source, "midi");
+            assert.equal(result.velocity, 77);
+        }
+        const beforePedal = await page.evaluate(() => window.smoke.assessment.hits.length);
+        await page.evaluate(() => {
+            const stamp = window.smoke.stamp(2);
+            for (const data of [[0xb9, 4, 80], [0x99, 44, 90], [0x99, 44, 0], [0xa9, 46, 127]]) {
+                window.midiTest.sendData("kit", data, stamp);
+            }
         });
-        assert.equal(hit.status, "on_time");
-        assert.equal(hit.source, "midi");
-        assert.equal(hit.velocity, 77);
-        assert.ok(Math.abs(hit.errorMs) < 0.01);
-        const count = await page.evaluate(() => window.smoke.assessment.hits.length);
-        await page.evaluate(() => window.midiTest.send(59, 0));
-        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), count);
-        await page.getByRole("button", { name: "Disable Ride track", exact: true }).click();
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), beforePedal + 1);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.at(-1).status), "on_time");
+        await page.evaluate(() => window.midiTest.connect("kit", false));
         await stopped(page);
-        await page.keyboard.press("Space");
-        await playing(page);
-        await page.evaluate(() => window.midiTest.send(59));
-        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), 0);
-        assert.match(await page.locator("#midi-monitor").textContent(), /Ride/);
-        await page.evaluate(() => window.midiTest.connect(false));
-        await stopped(page);
-        await page.evaluate(() => window.midiTest.connect(true));
-        await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("Listening"));
+        await page.evaluate(() => window.midiTest.connect("kit", true));
+        await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("kit"));
         await stopped(page);
         await page.reload();
         await ready(page);
-        assert.deepEqual(await page.evaluate(() => window.midiTest.requests), []);
-        await page.locator("#midi-panel summary").click();
-        assert.equal(await page.locator(".midi-note").count(), 5);
-        await page.locator("#midi-connect").click();
-        await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("Listening"));
-        assert.equal(await page.locator("#midi-device").inputValue(), "kit");
+        await page.waitForFunction(() => document.querySelector("#midi-summary").textContent.includes("connected"));
+        assert.deepEqual(await page.evaluate(() => window.midiTest.requests), [{ sysex: false }]);
         assert.deepEqual(errors, []);
-        await page.waitForFunction(() => !document.querySelector("#midi-profile-apply").disabled);
-        await page.locator("#midi-profile-apply").click();
-        assert.equal(await page.locator(".midi-note").count(), 12);
-        for (const [instrument, note] of [["hi_hat_closed", 42], ["hi_hat_open", 46], ["hi_hat_pedal", 44]]) {
-            await page.locator(`.midi-learn[data-instrument="${instrument}"]`).click();
-            await page.evaluate(note => window.midiTest.send(note), note);
-        }
-        assert.equal(await page.locator('[data-instrument="hi_hat"] .midi-note').count(), 0);
-        const [download] = await Promise.all([
-            page.waitForEvent("download"), page.locator("#midi-profile-export").click(),
-        ]);
-        const exported = JSON.parse(await readFile(await download.path(), "utf8"));
-        assert.equal(download.suggestedFilename(), "mps-850.json");
-        assert.equal(exported.verification, "partial");
-        assert.deepEqual(exported.mappings.hi_hat_closed, [{ note: 42, channel: 10 }]);
-        assert.deepEqual(exported.mappings.hi_hat_pedal, [{ note: 44, channel: 10 }]);
-        assert.equal(Object.hasOwn(exported, "deviceId"), false);
-        await page.locator("#lesson").selectOption("mps-850-check");
-        await page.waitForFunction(() => document.querySelectorAll(".track").length === 12);
-        await page.locator("#bpm").fill("300");
-        await observePlayback(page);
-        await page.locator("#start-stop").click();
-        await playing(page);
-        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
-        for (const [note, beat, expected] of [[42, 0, "on_time"], [42, 1, "extra"], [46, 1, "on_time"], [44, 2, "on_time"]]) {
-            const result = await page.evaluate(({ note, beat }) => {
-                window.midiTest.send(note, 88, window.smoke.stamp(beat));
-                return window.smoke.assessment.hits.at(-1);
-            }, { note, beat });
-            assert.equal(result.status, expected);
-        }
-        assert.equal(await page.locator("#score-on_time").textContent(), "3");
-        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
-        for (const instrument of ["hi_hat_closed", "hi_hat_open", "hi_hat_pedal", "tom_1", "tom_2", "tom_3", "tom_4", "crash_1", "crash_2"]) {
-            assert.ok(await page.evaluate(instrument => window.smoke.scheduled.some(([value]) => value === instrument), instrument));
-        }
-        assert.deepEqual(errors, []);
-        console.log(`PASS simulated MIDI: ${new URL(url).pathname}`);
     } finally { await context.close(); }
+
+    for (const mode of ["denied", "busy", "none", "unsupported"]) {
+        const recovery = await browser.newContext();
+        await mockMidi(recovery, { ports: mode === "none" ? [] : ["kit"],
+            denied: mode === "denied", busy: mode === "busy", unsupported: mode === "unsupported" });
+        try {
+            const page = await recovery.newPage();
+            await page.goto(url);
+            await ready(page);
+            await page.locator("#midi-panel summary").click();
+            if (mode === "unsupported") {
+                assert.equal(await page.locator("#midi-connect").isDisabled(), true);
+            } else if (mode === "none") {
+                await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("No MIDI inputs"));
+                await page.evaluate(() => window.midiTest.addPort("later"));
+                await page.waitForFunction(() => document.querySelector("#midi-summary").textContent.includes("connected"));
+            } else {
+                await page.waitForFunction(() => document.querySelector("#midi-connect").disabled === false);
+                await page.evaluate(() => { window.midiTest.denied = false; window.midiTest.busy = false; });
+                await page.locator("#midi-connect").click();
+                await page.waitForFunction(() => document.querySelector("#midi-summary").textContent.includes("connected"));
+            }
+            await page.locator("#practice-panel summary").click();
+            await page.locator("#count-in").uncheck();
+            await page.locator("#start-stop").click();
+            await playing(page);
+        } finally { await recovery.close(); }
+    }
+    console.log(`PASS automatic MPS-850 MIDI and recovery: ${new URL(url).pathname}`);
 }
 
 let browser;

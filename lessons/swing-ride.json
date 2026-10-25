@@ -6,7 +6,7 @@
   "bars": 1,
   "tracks": [
     {"instrument": "ride", "notes": [0, 96, 160, 192, 288, 352]},
-    {"instrument": "hi_hat", "notes": [96, 288]},
+    {"instrument": "hi_hat_pedal", "notes": [96, 288]},
     {"instrument": "snare", "notes": []},
     {"instrument": "kick", "notes": []}
   ]

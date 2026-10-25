@@ -50,12 +50,28 @@ export function loadPracticeSettings(storage) {
                 delete settings.keyBindings.Space;
             }
         }
-        if (settings?.version === 1 && settings.keyBindings
-            && ["kick", "snare", "hi_hat", "ride"].every(instrument => Object.values(settings.keyBindings).includes(instrument))) {
-            for (const [preferred, instrument] of Object.entries(DEFAULT_KEY_BINDINGS)) {
-                if (Object.values(settings.keyBindings).includes(instrument)) continue;
-                const code = [preferred, ...KEY_CODES].find(code => !Object.hasOwn(settings.keyBindings, code));
-                if (code) settings.keyBindings[code] = instrument;
+        if (settings?.version === 1 && settings.keyBindings) {
+            const bindings = settings.keyBindings;
+            // One-time cleanup of old saved preferences; no generic hi-hat at runtime.
+            const generic = Object.keys(bindings).find(code => bindings[code] === "hi_hat");
+            const closed = Object.keys(bindings).find(code => bindings[code] === "hi_hat_closed");
+            if (generic) {
+                if (!closed || closed === "KeyL") {
+                    if (closed) delete bindings[closed];
+                    bindings[generic] = "hi_hat_closed";
+                } else delete bindings[generic];
+            }
+            if (Array.isArray(settings.disabledInstruments) && settings.disabledInstruments.includes("hi_hat")) {
+                settings.disabledInstruments = [...new Set(settings.disabledInstruments.map(
+                    instrument => instrument === "hi_hat" ? "hi_hat_closed" : instrument,
+                ))];
+            }
+            if (["kick", "snare", "hi_hat_closed", "ride"].every(instrument => Object.values(bindings).includes(instrument))) {
+                for (const [preferred, instrument] of Object.entries(DEFAULT_KEY_BINDINGS)) {
+                    if (Object.values(bindings).includes(instrument)) continue;
+                    const code = [preferred, ...KEY_CODES].find(code => !Object.hasOwn(bindings, code));
+                    if (code) bindings[code] = instrument;
+                }
             }
         }
         if (!validPracticeSettings(settings)) throw new SyntaxError("Invalid practice settings");
@@ -64,7 +80,7 @@ export function loadPracticeSettings(storage) {
         return {
             settings: defaultPracticeSettings(),
             warning: error instanceof SyntaxError
-                ? "Saved practice settings were invalid. Defaults restored; MIDI mappings are unchanged."
+                ? "Saved practice settings were invalid. Defaults restored."
                 : "Local storage is unavailable. Practice settings will last for this page only.",
         };
     }

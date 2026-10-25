@@ -7,7 +7,7 @@ const lesson = {
     version: 1, title: "Playback test", bpm: 120, time_signature: [4, 4], bars: 1,
     tracks: [
         { instrument: "ride", notes: [0, 32, 96, 160, 192, 288, 352] },
-        { instrument: "hi_hat", notes: [96, 288] },
+        { instrument: "hi_hat_closed", notes: [96, 288] },
     ],
 };
 
@@ -34,7 +34,7 @@ function harness() {
 test("repeating events retain triplets, simultaneous hits, and bar accents", () => {
     const events = lessonEvents(lesson, 120);
     assert.equal(events.length, 13);
-    assert.deepEqual(events.filter(event => event.offset === 0.5).map(event => event.instrument), ["ride", "hi_hat", "metronome"]);
+    assert.deepEqual(events.filter(event => event.offset === 0.5).map(event => event.instrument), ["ride", "hi_hat_closed", "metronome"]);
     assert.equal(events.find(event => event.offset === 1 / 6).instrument, "ride");
     assert.deepEqual(events.filter(event => event.instrument === "metronome").map(event => event.accent), [true, false, false, false]);
 });
@@ -83,7 +83,7 @@ test("adjacent scheduling windows do not duplicate a note on their boundary", ()
     h.advance(target - 0.12);
     h.advance(target - 0.10);
     h.advance(target - 0.08);
-    assert.equal(h.scheduled.filter(event => event.instrument === "hi_hat" && event.time === target).length, 1);
+    assert.equal(h.scheduled.filter(event => event.instrument === "hi_hat_closed" && event.time === target).length, 1);
 });
 
 test("delayed callbacks skip old notes instead of playing a catch-up burst", () => {
@@ -161,7 +161,7 @@ test("mixed subdivisions keep exact note offsets at loop boundaries", async () =
 test("disabled tracks are silent without changing metronome, count-in, or loop length", () => {
     const before = structuredClone(lesson);
     const { playback, scheduled, advance } = harness();
-    playback.start(lesson, { disabledInstruments: ["ride", "hi_hat"] });
+    playback.start(lesson, { disabledInstruments: ["ride", "hi_hat_closed"] });
     for (let time = 10; time <= 16; time += 0.025) advance(time);
     assert.ok(scheduled.length >= 8);
     assert.ok(scheduled.every(event => event.instrument === "metronome"));
@@ -169,6 +169,6 @@ test("disabled tracks are silent without changing metronome, count-in, or loop l
     assert.equal(playback.countInBeats, 4);
     assert.deepEqual(lesson, before);
     playback.start(lesson, { countIn: false, disabledInstruments: ["ride"] });
-    assert.ok(playback.events.some(event => event.instrument === "hi_hat"));
+    assert.ok(playback.events.some(event => event.instrument === "hi_hat_closed"));
     assert.ok(playback.events.every(event => event.instrument !== "ride"));
 });

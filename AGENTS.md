@@ -27,16 +27,16 @@
 - Add lessons as JSON files in `lessons/` and register them in
   `src/lesson-catalog.js`. The user generates lessons with AI, commits, and deploys.
   Do not add a browser lesson importer or editor unless requested.
-- Keep keyboard and MIDI mappings outside lesson files. Store portable kit
-  defaults in `config/drumkits/`; browser mappings override them. Preserve local
-  learning, explicit removals, and existing settings when adding instruments.
-- Use `hi_hat_closed`, `hi_hat_open`, and `hi_hat_pedal` for explicit actions.
-  Keep legacy `hi_hat` lessons compatible without allowing generic mappings to
-  satisfy explicit actions. Do not combine generic and explicit tracks in a lesson.
-- Complete physical MPS-850 mapping and config review with the user before
-  committing the completed profile or starting the recorded-sample phase.
-- Reserve Space for start/stop. Default drum keys are D/F/J/K. Preserve saved
-  preferences when migrating old Space bindings; do not reset MIDI profiles.
+- Use `config/drumkits/mps-850.json` as the sole MIDI mapping source. Connect
+  all available inputs automatically as MPS-850 inputs. Keep a permission/retry
+  control for browser errors; do not add MIDI Learn, device selection, profile
+  import/export, or browser MIDI mapping overrides without a new requirement.
+- Use only explicit hi-hat closed/open/pedal tracks. Update lessons directly;
+  do not retain generic hi-hat routing or a second legacy application.
+- Preserve saved practice controls and custom keys. Any compatibility migration
+  belongs only at the storage boundary, not in lesson/input/audio behavior.
+- Reserve Space for start/stop. Default keys D/F/J/K are kick/snare/closed
+  hi-hat/ride; U/H are open hi-hat/pedal.
 - Apply disabled instruments consistently to guide playback and assessment.
   Keep disabled lanes visible; changing enabled tracks stops and resets practice.
 - Keep sample sources and licenses under `assets/drums/`. Preserve the current

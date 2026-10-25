@@ -1,5 +1,5 @@
 import { TICKS_PER_BAR } from "./music-time.js";
-import { INSTRUMENTS, HI_HAT_ACTIONS } from "./instruments.js";
+import { INSTRUMENTS } from "./instruments.js";
 
 export const SUPPORTED_INSTRUMENTS = Object.freeze(Object.keys(INSTRUMENTS));
 
@@ -79,8 +79,6 @@ export function validateLesson(lesson) {
             noteCount++;
         }
     }
-    requireCondition(!instruments.has("hi_hat") || !HI_HAT_ACTIONS.some(instrument => instruments.has(instrument)),
-        "lesson.tracks", "use generic hi_hat or explicit hi-hat actions, not both");
     requireCondition(noteCount > 0, "lesson.tracks", "must contain at least one note across all tracks");
     return lesson;
 }

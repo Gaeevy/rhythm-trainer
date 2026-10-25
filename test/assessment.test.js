@@ -49,7 +49,7 @@ test("simultaneous instruments match independently; wrong instruments never cons
     assert.equal(hit(assessment, 10, "snare").status, "on_time");
     assert.equal(hit(assessment, 10, "kick").status, "on_time");
     assert.equal(hit(assessment, 10, "ride").status, "extra");
-    assert.equal(hit(assessment, 10, "hi_hat"), null);
+    assert.equal(hit(assessment, 10, "hi_hat_closed"), null);
     assert.equal(assessment.counts.on_time, 2);
     assert.equal(assessment.counts.extra, 1);
 });

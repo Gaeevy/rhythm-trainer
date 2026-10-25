@@ -122,7 +122,7 @@ export class DrumAudio {
     }
 
     schedule(instrument, time, accent = false) {
-        if (["hi_hat", "hi_hat_closed", "hi_hat_pedal"].includes(instrument)) this.chokeHiHat(time);
+        if (["hi_hat_closed", "hi_hat_pedal"].includes(instrument)) this.chokeHiHat(time);
         if (instrument !== "metronome" && this.sampleVoice(instrument, time)) return;
         switch (instrument) {
             case "metronome":
@@ -136,7 +136,6 @@ export class DrumAudio {
                 this.tone(time, 180, 90, 0.09, 0.18, this.guide, "triangle");
                 break;
             case "hi_hat_closed":
-            case "hi_hat":
                 this.noiseVoice(time, 7000, 0.055, 0.35);
                 break;
             case "hi_hat_open":

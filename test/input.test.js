@@ -4,7 +4,7 @@ import { DEFAULT_KEY_BINDINGS, keyboardInstrument, keyboardTransport, instrument
 import { feedbackText } from "../src/feedback.js";
 
 test("keyboard bindings and labels agree for all four instruments", () => {
-    for (const [code, instrument, label] of [["KeyD", "kick", "D"], ["KeyF", "snare", "F"], ["KeyJ", "hi_hat", "J"], ["KeyK", "ride", "K"]]) {
+    for (const [code, instrument, label] of [["KeyD", "kick", "D"], ["KeyF", "snare", "F"], ["KeyJ", "hi_hat_closed", "J"], ["KeyK", "ride", "K"]]) {
         assert.equal(keyboardInstrument({ code }), instrument);
         assert.equal(instrumentKeyLabel(instrument), label);
     }

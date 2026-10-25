@@ -30,7 +30,7 @@ function harness() {
     return { audio: new DrumAudio(context), sources, context, requests, fetcher };
 }
 
-test("recordings load once, deduplicate the legacy hi-hat alias, and use exact audio timestamps", async () => {
+test("recordings load once, cover every instrument and use exact audio timestamps", async () => {
     const h = harness();
     await Promise.all([h.audio.loadSamples(h.fetcher), h.audio.loadSamples(h.fetcher)]);
     assert.equal(h.requests.length, 12);

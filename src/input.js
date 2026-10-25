@@ -1,8 +1,8 @@
 import { INSTRUMENTS } from "./instruments.js";
 
 export const DEFAULT_KEY_BINDINGS = Object.freeze({
-    KeyD: "kick", KeyF: "snare", KeyJ: "hi_hat", KeyK: "ride",
-    KeyL: "hi_hat_closed", KeyU: "hi_hat_open", KeyH: "hi_hat_pedal",
+    KeyD: "kick", KeyF: "snare", KeyJ: "hi_hat_closed", KeyK: "ride",
+    KeyU: "hi_hat_open", KeyH: "hi_hat_pedal",
     KeyQ: "tom_1", KeyW: "tom_2", KeyE: "tom_3", KeyR: "tom_4",
     KeyA: "crash_1", KeyS: "crash_2",
 });

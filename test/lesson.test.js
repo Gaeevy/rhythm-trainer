@@ -104,8 +104,8 @@ test("JSON parse errors use the same user-facing error type", () => {
     assert.throws(() => parseLesson("null"), /lesson: must be an object/);
 });
 
-test("generic and explicit hi-hat tracks cannot be mixed in one lesson", () => {
+test("removed generic hi-hat IDs are rejected", () => {
     const lesson = example();
     lesson.tracks = [{ instrument: "hi_hat", notes: [0] }, { instrument: "hi_hat_pedal", notes: [96] }];
-    assert.throws(() => validateLesson(lesson), /generic hi_hat or explicit/);
+    assert.throws(() => validateLesson(lesson), /must be one of/);
 });

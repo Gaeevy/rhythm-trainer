@@ -6,13 +6,12 @@ import { BEATS_PER_BAR } from "./music-time.js";
 import { Assessment } from "./assessment.js";
 import { audioTimeForEvent } from "./clock.js";
 import { keyboardInstrument, keyboardTransport, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
-import { MidiInput, MidiState } from "./midi.js";
+import { MidiInput } from "./midi.js";
 import { renderMidi, renderMidiActivity } from "./midi-view.js";
 import { BUNDLED_LESSONS } from "./lesson-catalog.js";
 import { loadPracticeSettings, savePracticeSettings } from "./practice-settings.js";
 import { renderKeyboardBindings } from "./keyboard-view.js";
-import { validateKitProfile } from "./kit-profile.js";
-import { INSTRUMENTS, lessonInstrument } from "./instruments.js";
+import { INSTRUMENTS } from "./instruments.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
@@ -35,12 +34,11 @@ let loading = true;
 let assessment = null;
 let activeLessonId = null;
 let sessionElapsedSeconds = 0;
-let kitProfile = null;
 
 function recordInputHit(hit) {
     if (!playback?.running || !assessment) return;
-    const instrument = lessonInstrument(hit.instrument, assessment.tracks);
-    if (!instrument) return;
+    const instrument = hit.instrument;
+    if (!assessment.tracks.has(instrument)) return;
     const result = assessment.recordHit({
         ...hit, instrument, audioTime: audioTimeForEvent(audio.context, hit.originalTimeStamp),
     });
@@ -55,11 +53,10 @@ const preferences = restoredPractice.settings;
 const midi = new MidiInput({
     requestAccess: window.isSecureContext && typeof navigator.requestMIDIAccess === "function"
         ? options => navigator.requestMIDIAccess(options) : undefined,
-    storage: browserStorage,
     onHit: recordInputHit,
-    onChange: () => renderMidiSetup(),
+    onChange: () => renderMidi(midi),
     onActivity: () => renderMidiActivity(midi),
-    onDisconnect: () => stop("MIDI device disconnected · Press Start to resume with keyboard or reconnect"),
+    onDisconnect: () => stop("MIDI disconnected · Loop stopped"),
 });
 
 function persistPractice() {
@@ -76,7 +73,6 @@ function updateKeyHints() {
     for (const track of tracks) track.setKeyLabel(instrumentKeyLabel(track.data.instrument, preferences.keyBindings));
     renderKeyboardBindings(preferences.keyBindings, (instrument, code) => {
         stop("Keyboard mapping changed · Press Start to restart");
-        midi.cancelLearn();
         preferences.keyBindings = remapKey(preferences.keyBindings, instrument, code);
         updateKeyHints();
         persistPractice();
@@ -100,22 +96,6 @@ function updateTempoReset() {
     const lessonTempo = lesson ? Math.min(300, Math.max(20, lesson.bpm)) : null;
     button.hidden = !lesson || Number(bpmInput.value) === lessonTempo;
     if (lesson) button.textContent = `Use lesson tempo (${lessonTempo} BPM)`;
-}
-
-function renderMidiSetup() {
-    element("midi-profile-apply").disabled = !kitProfile || !midi.input;
-    element("midi-profile-export").disabled = !midi.profile;
-    renderMidi(midi, {
-        onLearn: instrument => {
-            stop("MIDI learn · Strike the selected pad or pedal");
-            midi.startLearn(instrument);
-        },
-        onRemove: (instrument, entry) => {
-            stop("MIDI mapping changed · Press Start to restart");
-            midi.cancelLearn();
-            midi.removeMapping(instrument, entry);
-        },
-    });
 }
 
 function updateSummary() {
@@ -157,7 +137,6 @@ function updateMuteButton(bus, muted) {
 
 function toggleTrack(instrument) {
     stop("Tracks changed · Press Space or Start to restart");
-    midi.cancelLearn();
     preferences.disabledInstruments = preferences.disabledInstruments.includes(instrument)
         ? preferences.disabledInstruments.filter(value => value !== instrument)
         : [...preferences.disabledInstruments, instrument];
@@ -215,7 +194,6 @@ function stop(message = "Stopped") {
 async function changeLesson(read, id, { initial = false } = {}) {
     const request = ++lessonRequest;
     stop("Loading lesson…");
-    midi.cancelLearn();
     loading = true;
     startButton.disabled = true;
     element("lesson-error").hidden = true;
@@ -287,7 +265,6 @@ startButton.addEventListener("click", async () => {
         showStatus("Check the highlighted practice setting before starting", true);
         return;
     }
-    midi.cancelLearn();
     const request = ++startRequest;
     starting = true;
     startButton.textContent = "Stop ■";
@@ -376,47 +353,11 @@ document.addEventListener("keydown", event => {
     }
     if (!playback?.running || !assessment) return;
     const instrument = keyboardInstrument(event, preferences.keyBindings);
-    if (!instrument || !lessonInstrument(instrument, assessment.tracks)) return;
+    if (!instrument || !assessment.tracks.has(instrument)) return;
     event.preventDefault();
     recordInputHit({ instrument, originalTimeStamp: event.timeStamp, source: "keyboard" });
 });
-element("midi-connect").addEventListener("click", () => {
-    stop("MIDI setup · Keyboard remains available");
-    if (midi.access) {
-        const retry = midi.state === MidiState.ERROR;
-        midi.disconnect();
-        if (retry) midi.connect();
-    } else midi.connect();
-});
-element("midi-device").addEventListener("change", event => {
-    stop("MIDI device changed · Press Start to restart");
-    midi.selectDevice(event.target.value);
-});
-element("midi-profile-apply").addEventListener("click", () => {
-    stop("MIDI profile changed · Press Start to restart");
-    if (kitProfile) midi.applyKitProfile(kitProfile);
-});
-element("midi-profile-export").addEventListener("click", () => {
-    midi.cancelLearn();
-    const profile = midi.exportKitProfile();
-    const url = URL.createObjectURL(new Blob([JSON.stringify(profile, null, 2) + "\n"], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "mps-850.json";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
-async function loadKitProfile() {
-    try {
-        const response = await fetch(new URL("../config/drumkits/mps-850.json", import.meta.url));
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        kitProfile = validateKitProfile(await response.json());
-        element("midi-profile-status").textContent = `MPS-850 profile: ${kitProfile.verification}. Apply to fill defaults; learned mappings stay in place.`;
-    } catch (error) {
-        element("midi-profile-status").textContent = `Could not load MPS-850 profile: ${error.message}. MIDI Learn remains available.`;
-    }
-    renderMidiSetup();
-}
+element("midi-connect").addEventListener("click", () => midi.connect());
 lessonSelect.addEventListener("change", () => loadLesson());
 element("lesson-tempo").addEventListener("click", () => {
     if (!lesson) return;
@@ -428,18 +369,17 @@ element("lesson-tempo").addEventListener("click", () => {
 });
 element("reset-keys").addEventListener("click", () => {
     stop("Default keys restored · Press Start to restart");
-    midi.cancelLearn();
     preferences.keyBindings = { ...DEFAULT_KEY_BINDINGS };
     updateKeyHints();
     persistPractice();
 });
 window.addEventListener("resize", () => { if (lesson && !playback?.running) draw(); });
 document.addEventListener("visibilitychange", () => {
-    if (document.hidden) midi.cancelLearn();
     if (document.hidden && (starting || playback?.running)) stop("Tab hidden · Press Start to restart");
 });
 window.addEventListener("pagehide", () => { stop(); midi.disconnect(); });
-renderMidiSetup();
+window.addEventListener("pageshow", event => { if (event.persisted) midi.connect(); });
+renderMidi(midi);
 countInInput.checked = preferences.countIn;
 toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
@@ -455,4 +395,4 @@ updateKeyHints();
 renderLessonOptions();
 loadLesson(true);
 
-loadKitProfile();
+midi.connect();

@@ -2,7 +2,6 @@
 export const DRUM_SAMPLES = Object.freeze({
     kick: { file: "kick.wav", gain: 0.85 },
     snare: { file: "snare.wav", gain: 0.7 },
-    hi_hat: { file: "hi_hat_closed.wav", gain: 0.3 },
     hi_hat_closed: { file: "hi_hat_closed.wav", gain: 0.3 },
     hi_hat_open: { file: "hi_hat_open.wav", gain: 0.35 },
     hi_hat_pedal: { file: "hi_hat_pedal.wav", gain: 0.4 },

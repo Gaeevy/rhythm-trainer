@@ -5,7 +5,7 @@
   "time_signature": [4, 4],
   "bars": 1,
   "tracks": [
-    {"instrument": "hi_hat", "notes": [0, 48, 96, 144, 192, 240, 288, 336]},
+    {"instrument": "hi_hat_closed", "notes": [0, 48, 96, 144, 192, 240, 288, 336]},
     {"instrument": "snare", "notes": [96, 288]},
     {"instrument": "kick", "notes": [0, 192]}
   ]

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultPracticeSettings, loadPracticeSettings, savePracticeSettings, validPracticeSettings, PRACTICE_SETTINGS_KEY } from "../src/practice-settings.js";
-import { MIDI_SETTINGS_KEY } from "../src/midi-settings.js";
 import { remapKey, DEFAULT_KEY_BINDINGS } from "../src/input.js";
 
 test("defaults are valid and do not share mutable bindings or tempo overrides", () => {
@@ -15,7 +14,7 @@ test("defaults are valid and do not share mutable bindings or tempo overrides", 
 });
 
 test("practice controls and per-lesson tempo overrides survive storage without touching MIDI", () => {
-    const values = new Map([[MIDI_SETTINGS_KEY, "Existing device profiles"]]);
+    const values = new Map([["rhythm-trainer.midi.v1", "Existing device profiles"]]);
     const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
     const settings = {
         ...defaultPracticeSettings(), countIn: false, toleranceMs: 12.5, latencyOffsetMs: -24.5,
@@ -28,7 +27,7 @@ test("practice controls and per-lesson tempo overrides survive storage without t
     assert.equal(savePracticeSettings(storage, settings), "");
     assert.ok(values.has(PRACTICE_SETTINGS_KEY));
     assert.deepEqual(loadPracticeSettings(storage), { settings, warning: "" });
-    assert.equal(values.get(MIDI_SETTINGS_KEY), "Existing device profiles");
+    assert.equal(values.get("rhythm-trainer.midi.v1"), "Existing device profiles");
 });
 
 test("corrupt or incompatible preferences restore defaults with a useful warning", () => {
@@ -46,7 +45,7 @@ test("corrupt or incompatible preferences restore defaults with a useful warning
         assert.equal(validPracticeSettings(settings), false);
         const loaded = loadPracticeSettings({ getItem: () => JSON.stringify(settings) });
         assert.deepEqual(loaded.settings, defaultPracticeSettings());
-        assert.match(loaded.warning, /invalid.*MIDI mappings are unchanged/);
+        assert.match(loaded.warning, /invalid/);
     }
     assert.match(loadPracticeSettings({ getItem: () => "{bad JSON}" }).warning, /invalid/);
 });
@@ -76,4 +75,17 @@ test("existing Space bindings migrate to a free letter without losing practice s
         assert.equal(loaded.settings.keyBindings.KeyD, "kick");
         assert.deepEqual(loaded.settings.disabledInstruments, []);
     }
+});
+
+test("old generic hi-hat preferences become closed hi-hat without resetting controls", () => {
+    const saved = { ...defaultPracticeSettings(), guideVolume: 17, latencyOffsetMs: 23,
+        keyBindings: { ...defaultPracticeSettings().keyBindings, KeyJ: "hi_hat", KeyL: "hi_hat_closed" },
+        disabledInstruments: ["hi_hat", "hi_hat_closed"] };
+    const { settings, warning } = loadPracticeSettings({ getItem: () => JSON.stringify(saved) });
+    assert.equal(warning, "");
+    assert.equal(settings.keyBindings.KeyJ, "hi_hat_closed");
+    assert.equal(Object.hasOwn(settings.keyBindings, "KeyL"), false);
+    assert.deepEqual(settings.disabledInstruments, ["hi_hat_closed"]);
+    assert.equal(settings.guideVolume, 17);
+    assert.equal(settings.latencyOffsetMs, 23);
 });
