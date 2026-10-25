@@ -10,10 +10,11 @@ const profile = JSON.parse(await readFile(new URL("../config/drumkits/mps-850.js
 test("fixed MPS-850 config matches the observed basic pads and covers every instrument", () => {
     assert.equal(validateKitProfile(profile), profile);
     const expected = { kick: 36, snare: 38, hi_hat_closed: 42, hi_hat_open: 46, hi_hat_pedal: 44,
-        tom_1: 48, tom_2: 45, tom_3: 43, tom_4: 41, crash_1: 49, crash_2: 57, ride: 59 };
+        tom_1: 48, tom_2: 45, tom_3: 43, tom_4: 41, crash_1: 49, crash_2: 57 };
     for (const [instrument, note] of Object.entries(expected)) {
         assert.deepEqual(profile.mappings[instrument], [{ note, channel: 10 }]);
     }
+    assert.deepEqual(profile.mappings.ride, [{ note: 51, channel: 10 }, { note: 59, channel: 10 }]);
     assert.deepEqual(Object.keys(profile.mappings).sort(), Object.keys(INSTRUMENTS).sort());
     assert.deepEqual(new Set(Object.values(DEFAULT_KEY_BINDINGS)), new Set(Object.keys(INSTRUMENTS)));
 });

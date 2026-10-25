@@ -57,10 +57,12 @@ Basic mappings observed on this kit, all on **channel 10**:
 | Hi-hat pedal chick | 44 |
 | Tom 1 / 2 / 3 / 4 | 48 / 45 / 43 / 41 |
 | Crash 1 / 2 | 49 / 57 |
-| Ride | 59 |
+| Ride (normal / edge) | 51 / 59 |
 
 These verify the user's basic pad mappings, not universal factory settings or
-end-to-end latency. Rims and separate cymbal bow/edge/bell mappings are excluded.
+end-to-end latency. Normal ride D♯2 (51) and edge B2 (59) both count as
+**Ride**, with the same timing assessment. Rims and separately scored cymbal
+articulations are excluded.
 Only nonzero-velocity Note On is scored. Note Off, controllers, aftertouch, clocks,
 and unmapped notes do not create hits. The MIDI panel monitors the last Note On.
 

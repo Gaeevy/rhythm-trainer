@@ -432,6 +432,7 @@ async function midiFlow(browser, url) {
         await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
         for (const [id, note, beat, expected] of [
             ["kit", 42, 0, "on_time"], ["kit", 42, 1, "extra"], ["kit", 46, 1, "on_time"],
+            ["kit", 51, 3, "on_time"], ["kit", 59, 3, "extra"],
             ["other", 38, 6, "on_time"], ["kit", 36, 11, "on_time"],
         ]) {
             const result = await page.evaluate(({ id, note, beat }) => {

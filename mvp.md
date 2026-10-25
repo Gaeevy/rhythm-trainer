@@ -2,7 +2,8 @@
 
 Status: milestones 1–6 completed locally. Basic MPS-850 note mappings are observed;
 full real-kit practice/latency acceptance (milestone 7) remains pending.
-The cleanup was reviewed and approved for commit on 2026-10-25. It has not been deployed.
+The MVP and eight lessons were deployed through Pages on 2026-10-25.
+The normal/edge ride mapping correction is being prepared for release.
 
 ## Goal and architecture
 
@@ -91,7 +92,8 @@ jazz, the user's Millenium MPS-850, Chrome on macOS, and simple local iteration.
 | Kick / snare | 36 / 38 |
 | Hi-hat closed / open / pedal | 42 / 46 / 44 |
 | Tom 1 / 2 / 3 / 4 | 48 / 45 / 43 / 41 |
-| Crash 1 / 2 / ride | 49 / 57 / 59 |
+| Crash 1 / 2 | 49 / 57 |
+| Ride (normal / edge, both scored as Ride) | 51 / 59 |
 
 These come from this user's kit observations on 2026-10-24/25, not factory guesses.
 The MIDI Monitor octave convention was anchored by snare D1 = note 38. Its final
@@ -226,6 +228,16 @@ Implementation checkpoints (full development history is in Git):
   tests and ten browser scenarios pass. Release must pass Actions before merge;
   then verify Pages deployment and the live eight-lesson catalog. Physical-kit
   and listening acceptance remain separate from deployment checks.
+
+- **2026-10-25 — Ride zones:** user observed normal ride D♯2 = note 51 and
+  edge B2 = note 59, both channel 10. Map both to the existing Ride instrument;
+  do not introduce a separate edge track. Velocity values 58/114 are preserved,
+  not used as note numbers. Added mapping/input regression coverage and simulated
+  assessment of normal and edge hits against the same expected ride note (the
+  second hit is extra). **Verification:** all 95 JavaScript tests and ten browser
+  scenarios pass at root and `/rhythm-trainer/`. Song lesson
+  PR #2 is merged and its Pages deployment passed; release this correction after
+  checks and verify the live mapping. Real-kit confirmation remains pending.
 
 ## Verification and next steps
 
