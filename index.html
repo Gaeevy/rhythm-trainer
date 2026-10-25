@@ -1,57 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rhythm Training App</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17221c">
+  <title>Rhythm Trainer — Drum practice</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="controls">
-  <label>
-    BPM:
-    <input type="number" id="bpm" value="40" min="10" max="250" />
-  </label>
-  <label>
-    Tact Size:
-    <input type="number" id="tact" value="8" min="1" max="12" />
-  </label>
-  <label>
-    Rhythm:
-    <select id="subdivision">
-      <option value="quarter">Quarter Notes</option>
-      <option value="eighth">Eighth Notes</option>
-      <option value="sixteenth" selected>Sixteenths</option>
-      <option value="triplet">Eighth Triplets</option>
-    </select>
-  </label>
-  <label>
-    Clack Volume:
-    <select id="clackVolume">
-      <option value="0.1">Easy</option>
-      <option value="0.05">Medium</option>
-      <option value="0.01">Optimal</option>
-      <option value="0.003" selected>Challenging</option>
-      <option value="0">Zero</option>
-    </select>
-  </label>
-  <label>
-    Input Method:
-    <select id="inputMethod">
-      <option value="keyboard" selected>Keyboard (Space)</option>
-      <option value="midi-keyboard">MIDI Keyboard</option>
-      <option value="midi-drums">MIDI Drums</option>
-    </select>
-  </label>
-  <button id="startStop">Start</button>
-</div>
-<div id="timeline">
-  <!-- The moving progress bar -->
-  <div id="progress"></div>
-  <!-- Container for tap markers -->
-  <div id="markers"></div>
-  <!-- Beat markers and subdivision markers will be generated dynamically -->
-</div>
-<script src="script.js"></script>
+  <main>
+    <header class="page-header">
+      <h1 class="wordmark"><span class="logo" aria-hidden="true">▥</span> RHYTHM TRAINER</h1>
+    </header>
+    <section class="practice" aria-label="Drum lesson playback">
+      <div class="lesson-controls">
+        <label class="lesson-picker">LESSON
+          <select id="lesson" disabled>
+            <option>Loading lessons…</option>
+          </select>
+        </label>
+        <div class="tempo-control">
+          <label class="volume-label" for="bpm">BPM <output id="bpm-level">80</output></label>
+          <div class="volume-row"><input id="bpm" type="range" min="20" max="300" step="any" value="80"></div>
+        </div>
+        <div class="volume-control">
+          <label class="volume-label" for="metronome-volume">Metronome <output id="metronome-level">35%</output></label>
+          <div class="volume-row"><button id="metronome-mute" type="button" class="mute-button" aria-label="Mute metronome" title="Mute metronome" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="metronome-volume" type="range" min="0" max="100" value="35"></div>
+        </div>
+        <div class="volume-control">
+          <label class="volume-label" for="guide-volume">Guide drums <output id="guide-level">55%</output></label>
+          <div class="volume-row"><button id="guide-mute" type="button" class="mute-button" aria-label="Mute guide drums" title="Mute guide drums" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="guide-volume" type="range" min="0" max="100" value="55"></div>
+        </div>
+        <button id="start-stop" class="start-button" title="Start or stop (Space)" disabled>Start loop <span aria-hidden="true">▶</span></button>
+      </div>
+      <p id="lesson-error" class="lesson-error" role="alert" hidden></p>
+      <div class="lesson-info">
+        <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p><button id="lesson-tempo" type="button" class="text-button" hidden>Use lesson tempo</button></div>
+        <span class="mode-badge">DRUM PRACTICE</span>
+      </div>
+      <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: start / stop. D: kick. F: snare. J: hi-hat. K: ride.">
+        <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
+        <div id="tracks"></div>
+      </div>
+      <div class="transport-info">
+        <p id="status" role="status">Loading lesson…</p>
+        <p id="position">Bar 1 / 1 · Beat 1 · Loop 1</p>
+      </div>
+      <div class="session-summary" aria-label="Session totals">
+        <div><span>On time</span><output id="score-on_time">0</output></div>
+        <div><span>Early</span><output id="score-early">0</output></div>
+        <div><span>Late</span><output id="score-late">0</output></div>
+        <div><span>Missed</span><output id="score-missed">0</output></div>
+        <div><span>Extra</span><output id="score-extra">0</output></div>
+        <div><span>Mean absolute error</span><output id="mean-error">—</output></div>
+      </div>
+      <p class="session-meta"><output id="session-duration">0:00</output> played · <output id="session-loops">0</output> <span id="session-loop-label">loops completed</span></p>
+      <details id="practice-panel" class="settings-panel">
+        <summary>PRACTICE SETTINGS</summary>
+        <div class="practice-content">
+          <label class="count-in"><input id="count-in" type="checkbox" checked> One-bar count-in</label>
+          <div class="timing-controls">
+            <label>On-time tolerance (±ms)<input id="tolerance" type="number" min="0" max="150" step="any" value="30" required></label>
+            <label>Latency offset (ms)<input id="latency-offset" type="number" min="-500" max="500" step="any" value="0" required></label>
+          </div>
+          <p class="settings-help">Positive latency offset subtracts delay from hit times. Changing these settings stops the loop.</p>
+          <p id="guide-sound-status" class="settings-help" role="status">Guide drums: acoustic recordings load on first Start.</p>
+          <p id="practice-settings-status" class="settings-status" role="status">Practice settings are saved automatically in this browser.</p>
+        </div>
+      </details>
+      <details id="keyboard-panel" class="settings-panel">
+        <summary>KEYBOARD SETUP <span>Customize keys</span></summary>
+        <div class="keyboard-content">
+          <p id="keyboard-hint" class="settings-help">D: kick · F: snare · J: hi-hat · K: ride</p>
+          <div id="keyboard-bindings" class="keyboard-bindings"></div>
+          <p>Choose a letter or a digit. Space starts and stops the loop. Choosing an occupied key swaps the two assignments. Changing keys stops playback.</p>
+          <button id="reset-keys" type="button">Reset default keys</button>
+        </div>
+      </details>
+      <details id="midi-panel" class="settings-panel">
+        <summary>MIDI SETUP <span id="midi-summary">Keyboard available</span></summary>
+        <div class="midi-content">
+          <p id="midi-status" role="status">Connecting to MPS-850…</p>
+          <button id="midi-connect" type="button">Enable / retry MIDI</button>
+          <p id="midi-monitor" role="status">No MIDI hits yet.</p>
+        </div>
+      </details>
+    </section>
+    <noscript>This drum trainer needs JavaScript enabled.</noscript>
+  </main>
+  <script type="module">
+    import("./src/app.js").catch(error => {
+      console.error("Could not load drum trainer", error);
+      document.getElementById("lesson").replaceChildren(new Option("Could not load lessons", ""));
+      document.getElementById("lesson-title").textContent = "App could not load";
+      document.getElementById("status").textContent = "Check the server connection, then reload the page.";
+      const message = document.getElementById("lesson-error");
+      message.hidden = false;
+      message.textContent = "Could not load the app. Check the server connection. ";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Reload page";
+      retry.addEventListener("click", () => location.reload());
+      message.append(retry);
+    });
+  </script>
 </body>
 </html>

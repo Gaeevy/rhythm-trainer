@@ -1,0 +1,74 @@
+# Project instructions
+
+## Product and scope
+
+- Read `mvp.md` before changing application behavior. It records the agreed MVP.
+- Follow the implementation plan in `mvp.md` one milestone at a time. Update its
+  status and progress log in the same change as the implementation. Mark a
+  milestone done only after its completion checks pass; distinguish automated
+  checks from hardware checks. Record blockers and the next concrete action.
+- Enhance this repository. Keep the app deployable to GitHub Pages.
+- The MVP is a static browser application. Do not add Flask, a database,
+  authentication, or a frontend framework unless a new requirement needs it.
+- The primary user practices jazz on a Millenium MPS-850 using Chrome on macOS.
+- The user knows Python. Use Python for development tools when useful, but keep
+  audio scheduling, input timestamps, timing assessment, and animation local to
+  the browser. Do not route individual hits through a server.
+
+## Implementation
+
+- Use small JavaScript ES modules, plain HTML, and CSS. Avoid a build step unless
+  it solves a concrete problem.
+- Represent each lesson track with the same reusable `Track` component/class.
+  Build lanes from the lesson's tracks; do not hard-code four lane elements.
+- Separate lesson data, audio scheduling, input mapping, timing assessment, and
+  rendering. Avoid unnecessary abstractions and inheritance hierarchies.
+- Use JSON lesson files and integer musical ticks. Follow the format in `mvp.md`.
+- Add lessons as JSON files in `lessons/` only. `scripts/site.py` generates
+  `generated/lesson-catalog.js`; never edit or commit that catalog. The user
+  generates lessons with AI, commits, and deploys.
+  Do not add a browser lesson importer or editor unless requested.
+- Use `config/drumkits/mps-850.json` as the sole MIDI mapping source. Connect
+  all available inputs automatically as MPS-850 inputs. Keep a permission/retry
+  control for browser errors; do not add MIDI Learn, device selection, profile
+  import/export, or browser MIDI mapping overrides without a new requirement.
+- Use only explicit hi-hat closed/open/pedal tracks. Update lessons directly;
+  do not retain generic hi-hat routing or a second legacy application.
+- Preserve saved practice controls and custom keys. Any compatibility migration
+  belongs only at the storage boundary, not in lesson/input/audio behavior.
+- Reserve Space for start/stop. Default keys D/F/J/K are kick/snare/closed
+  hi-hat/ride; U/H are open hi-hat/pedal.
+- Apply disabled instruments consistently to guide playback and assessment.
+  Keep disabled lanes visible; changing enabled tracks stops and resets practice.
+- Keep sample sources and licenses under `assets/drums/`. Preserve the current
+  metronome sound. Load recordings before scheduling, and keep a retryable
+  synthesized fallback if loading fails.
+- Use the Web Audio clock for scheduled playback. Use input event timestamps,
+  converted to the same time base, for assessment. Animation must not determine
+  hit timing. Never compare timestamps from different clocks directly.
+- Support simultaneous hits and match each expected note at most once.
+- Ignore held-key repeats and playing shortcuts while a text control has focus.
+- Use consistent terms: lesson, track, lane, bar, beat, note, hit, tick,
+  early, on time, late, missed, extra. A track is lesson data and behavior;
+  a lane is its visual representation. One beat means one quarter note in MVP.
+- Keep code readable and use descriptive names. If Python is added, also read
+  `${CODEX_HOME:-$HOME/.codex}/context/python.md`.
+
+## Verification and delivery
+
+- Keep local startup to `python3 scripts/site.py`; no external services required.
+  Run `npm run test:tools` for the Python server/catalog/build checks.
+  Package only runtime assets in `_site/` for the Pages Actions workflow.
+- Use the Node version in `.node-version` for development checks (`fnm install`
+  and `fnm use` after initializing fnm). Run `npm test`. For browser checks, run
+  `npm ci` and `npm run test:browser` with Chrome installed. Keep the README
+  setup instructions current.
+- Add meaningful deterministic tests for lesson validation, timing assessment,
+  clock conversion, and loop boundaries as those features are implemented.
+- Verify the browser flow with keyboard input and simulated MIDI events.
+  Hardware behavior still requires a real-kit check; state this limitation.
+- Test triplets, thirty-second notes, simultaneous notes, missed/extra hits,
+  duplicate hits, and start/stop/restart behavior where affected.
+- Use relative asset URLs so deployment under `/rhythm-trainer/` works.
+- Do not edit or remove unrelated user files, including IDE settings.
+- Document setup, checks, and any remaining hardware verification in the README.

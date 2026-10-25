@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "title": "Swing ride and hi-hat",
+  "bpm": 80,
+  "time_signature": [4, 4],
+  "bars": 1,
+  "tracks": [
+    {"instrument": "ride", "notes": [0, 96, 160, 192, 288, 352]},
+    {"instrument": "hi_hat_pedal", "notes": [96, 288]},
+    {"instrument": "snare", "notes": []},
+    {"instrument": "kick", "notes": []}
+  ]
+}

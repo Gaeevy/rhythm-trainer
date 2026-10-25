@@ -1,0 +1,83 @@
+{
+  "author": "Karoryfer Samples",
+  "library": "Big Rusty Drums",
+  "license": "CC0-1.0",
+  "repository": "https://github.com/sfzinstruments/karoryfer.big-rusty-drums",
+  "revision": "f07ce00df34a46b6b08375be56fe116cf15782bc",
+  "format": "44100 Hz mono 16-bit PCM WAV",
+  "processing": "Trim leading silence with 2 ms attack padding; limit tail; normalize peak to 0.75; fade last 40 ms.",
+  "samples": [
+    {
+      "instrument": "kick",
+      "source": "Samples/kick_24/kick/kick/k_vl3_rr1.flac",
+      "maximum_seconds": 1.0,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "snare",
+      "source": "Samples/snare_14/center/top/sn_center_vl3_rr1.flac",
+      "maximum_seconds": 1.0,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "hi_hat_closed",
+      "source": "Samples/hihat_14/cl/cl/ht_cl_vl3_rr1.flac",
+      "maximum_seconds": 0.4,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "hi_hat_open",
+      "source": "Samples/hihat_14/open/cl/ht_open_vl3_rr1.flac",
+      "maximum_seconds": 2.5,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "hi_hat_pedal",
+      "source": "Samples/hihat_14/chik/cl/ht_chik_vl3_rr1.flac",
+      "maximum_seconds": 0.4,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "tom_1",
+      "source": "Samples/tom_14/center/cl/t14_vl3_rr1.flac",
+      "maximum_seconds": 1.2,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "tom_2",
+      "source": "Samples/tom_15/center/cl/t15_vl3_rr1.flac",
+      "maximum_seconds": 1.2,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "tom_3",
+      "source": "Samples/tom_18/center/cl/t18_vl3_rr1.flac",
+      "maximum_seconds": 1.2,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "tom_4",
+      "source": "Samples/tom_22/center/cl/t22_vl3_rr1.flac",
+      "maximum_seconds": 1.2,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "crash_1",
+      "source": "Samples/crash_17/cr/oh/cr_vl3_rr1.flac",
+      "maximum_seconds": 4.0,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "crash_2",
+      "source": "Samples/crash_sizzle_17/cr/oh/crs_vl3_rr1.flac",
+      "maximum_seconds": 4.0,
+      "trimmed_leading_seconds": 0.0
+    },
+    {
+      "instrument": "ride",
+      "source": "Samples/ride_22/rd/oh/rd_vl3_rr1.flac",
+      "maximum_seconds": 3.2,
+      "trimmed_leading_seconds": 0.0004988662131519275
+    }
+  ]
+}

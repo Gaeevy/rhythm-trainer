@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "id": "mps-850",
+  "name": "Millenium MPS-850",
+  "verification": "verified",
+  "notes": "Basic pad mappings observed on this user\u2019s MPS-850 on 2026-10-24/25, all channel 10. Rims and separate cymbal bow/edge/bell mappings are intentionally excluded. This verifies note assignments on this kit, not end-to-end latency or universal factory defaults.",
+  "mappings": {
+    "kick": [
+      {
+        "note": 36,
+        "channel": 10
+      }
+    ],
+    "snare": [
+      {
+        "note": 38,
+        "channel": 10
+      }
+    ],
+    "hi_hat_closed": [
+      {
+        "note": 42,
+        "channel": 10
+      }
+    ],
+    "hi_hat_open": [
+      {
+        "note": 46,
+        "channel": 10
+      }
+    ],
+    "hi_hat_pedal": [
+      {
+        "note": 44,
+        "channel": 10
+      }
+    ],
+    "tom_1": [
+      {
+        "note": 48,
+        "channel": 10
+      }
+    ],
+    "tom_2": [
+      {
+        "note": 45,
+        "channel": 10
+      }
+    ],
+    "tom_3": [
+      {
+        "note": 43,
+        "channel": 10
+      }
+    ],
+    "tom_4": [
+      {
+        "note": 41,
+        "channel": 10
+      }
+    ],
+    "crash_1": [
+      {
+        "note": 49,
+        "channel": 10
+      }
+    ],
+    "crash_2": [
+      {
+        "note": 57,
+        "channel": 10
+      }
+    ],
+    "ride": [
+      {
+        "note": 59,
+        "channel": 10
+      }
+    ]
+  }
+}
