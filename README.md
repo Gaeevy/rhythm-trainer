@@ -8,9 +8,11 @@ The new trainer is being built one milestone at a time. See
 
 ## Current features
 
-- JSON lessons with dynamic instrument lanes: kick, snare, hi-hat, and ride.
+- JSON lessons with dynamic lanes: kick, snare, four toms, two crashes, ride,
+  and separate closed/open/pedal hi-hat actions.
 - A fixed playhead, scrolling notes, beat/bar lines, and continuous looping.
-- Synthesized guide drum sounds and a metronome, with independent volume/mute.
+- Synthesized guide drums and a metronome, with independent volume/mute.
+  Recorded samples are planned after the physical kit profile is verified.
 - An optional one-bar count-in and adjustable tempo from 20–300 BPM.
 - Straight, swing, and mixed-subdivision example lessons.
 - Sixteenth-note triplets and thirty-second notes, including mixed subdivisions.
@@ -67,15 +69,17 @@ you listen to the metronome alone.
 
 Start focuses the lanes so you can play immediately. Click the lanes to return
 focus after using controls. Use **Space to start/stop**. Drum keys: **D = kick**, **F = snare**, **J = hi-hat**,
-**K = ride**. Only instruments present in the lesson accept input. Hitting an
+**K = ride**. Defaults for the new tracks are **L/U/H** for closed/open/pedal
+hi-hat, **Q/W/E/R** for Tom 1–4, and **A/S** for Crash 1–2. Existing bindings
+are kept; free keys are assigned for new tracks when defaults are occupied.
+Only instruments present in the lesson accept input. Hitting an
 empty track during the lesson counts as extra. Holding a key does not repeat
 hits; typing in controls or editable content does not play notes.
 
 Expand **KEYBOARD SETUP** to assign letters or digits. Choosing a key
 already assigned to another instrument swaps the assignments, so every
 instrument keeps one distinct key. The lane labels, practice hints, and input
-update together. **Reset keys** restores D/F/J/K without changing MIDI
-mappings. Changing keys stops playback. Space is reserved for start/stop; it
+update together. **Reset keys** restores all default bindings without changing MIDI mappings. Changing keys stops playback. Space is reserved for start/stop; it
 does not play a drum. Existing saved Space mappings move to a free letter key
 without resetting other preferences or MIDI mappings.
 
@@ -141,7 +145,7 @@ Positions are absolute ticks from the lesson start. Beat 1 starts at tick 0;
 bar 2 starts at 384. Use 32 ticks between eighth-note triplets, 16 between
 sixteenth-note triplets, and 12 between thirty-second notes. Mix subdivisions
 freely; all positions must be sorted, unique within a track, and before the
-loop end. Lessons support 1–16 bars and any subset of the four instruments.
+loop end. Lessons support 1–16 bars and any subset of the supported instruments.
 The visible window stays eight beats wide regardless of total lesson length.
 
 ## Saved practice preferences
@@ -177,15 +181,24 @@ Use Chrome on localhost or HTTPS. To set up the Millenium MPS-850:
    explicitly select the kit from **Input device**.
 3. Click **Learn pad** beside an instrument, then strike the intended pad or
    pedal once. That hit is used for setup, not scoring.
-4. Repeat Learn pad to add another zone. For jazz, learn both the hi-hat pad and
-   pedal chick under **Hi-hat**, and the desired ride zones under **Ride**.
-5. Check the input monitor while stopped: it shows the last valid Note On,
+4. Learn **Hi-hat closed**, **Hi-hat open**, and **Hi-hat pedal** separately.
+   For closed: hold the pedal closed **before** clicking Learn pad, then strike
+   the pad. For open: release the pedal before clicking Learn pad, then strike.
+   For pedal: click Learn pad, then close the pedal without a stick hit.
+5. Repeat Learn pad to add another zone of the same instrument. Learn tom
+   head/rim zones under Tom 1–4 and ride bow/edge/bell zones under Ride.
+6. Check the input monitor while stopped: it shows the last valid Note On,
    channel, velocity, and instrument, or **Unmapped**. The kit does not need to
    use channel 10. Learn records the actual note and channel.
-6. Start a lesson. Mapped MIDI hits use the same timing assessment as keyboard
+7. Start a lesson. Mapped MIDI hits use the same timing assessment as keyboard
    hits. MIDI and keyboard input can be used together.
 
-There are no assumed factory note mappings. Each instrument can have several
+The repository profile covers basic pad mappings verified on this kit, not a
+universal factory preset or end-to-end latency acceptance. **Use MPS-850 profile** fills its known defaults after you select
+the MIDI input. It keeps learned mappings and explicit local removals. The app
+never assumes that a device called `e-drum` is an MPS-850.
+
+Each instrument can have several
 note/channel pairs. A pair belongs to one instrument: learning it elsewhere
 moves the assignment and reports the change. Remove individual assignments
 with their **×** buttons. Learning or changing mappings/device stops the loop;
@@ -196,6 +209,42 @@ storage, separately from lessons. After reload, click Connect MIDI again; the
 saved device is selected if available. Different browsers, site addresses, or
 changed device IDs can require new mappings. If storage is disabled/full, the
 page reports it and mappings continue to work until the page is reloaded.
+
+### Save the physical kit configuration in the repository
+
+The portable profile is `config/drumkits/mps-850.json`. It contains kick 36, snare 38, ride 59, closed/open/pedal hi-hat 42/46/44,
+Tom 1–4 48/45/43/41, and Crash 1–2 49/57, all on channel 10. These are the
+user’s observed basic pad mappings. Rims and separate cymbal bow/edge/bell
+mappings are excluded for now. MIDI Monitor is
+sufficient to collect mappings; the pad-check lesson is optional. Select decimal
+number display for notes to avoid octave-name ambiguity. The last Note On data
+column is velocity, not the note number. Pedal Control/Aftertouch events do not
+add scoring hits.
+
+1. Apply the profile if you want its known defaults, then learn the remaining
+   pads and the three hi-hat actions. Strike each again while stopped and check
+   the input monitor's label. Learn additional zones if wanted.
+2. Select **MPS-850 pad check** to practice the explicit actions. Only its listed
+   tracks appear; a closed stick hit cannot satisfy a pedal or open note.
+3. Click **Download MPS-850 config**. Send the downloaded `mps-850.json` back to
+   the agent, or save it over `config/drumkits/mps-850.json` in the repository.
+4. Together, review the mappings against your kit, mark the profile verified,
+   run checks, and commit it. Export stays `partial` until that review; do not
+   treat simulated MIDI tests as physical verification.
+
+Exports contain note/channel mappings and review metadata. Browser device IDs,
+latency offsets, and practice preferences are not exported. Browser MIDI profiles
+and repository defaults are separate; applying defaults does not overwrite local
+learning. Removal of a default mapping is remembered when applying the profile
+again. Downloading the file does not write to Git or publish anything.
+
+`hi_hat` is now labelled **Hi-hat (any)** for older lessons. Explicit hi-hat
+mappings can play these lessons through the generic lane. For strict new lessons,
+use `hi_hat_closed`, `hi_hat_open`, or `hi_hat_pedal`; old generic mappings cannot
+satisfy an explicit action. Learning an existing generic note under its explicit
+action moves the assignment rather than duplicating it. Do not mix generic and
+explicit hi-hat tracks in one lesson. Half-open, pedal splash, continuous pedal
+position, and zone-specific scoring remain later work.
 
 Only the selected device is listened to. Note Off, zero-velocity Note On, clocks,
 CC (including hi-hat controller movement), pressure, and SysEx are ignored.
@@ -287,8 +336,8 @@ For a manual browser and real-kit check in Chrome:
 9. Hold a key or type in a focused control: no repeated or unintended hits.
 10. Stop: totals freeze. Restart: totals reset. Change tolerance/offset and verify
     that restarting applies the new settings.
-11. With the kit, complete MIDI learn for four instruments, both hi-hat pad/pedal,
-    and ride zones. Confirm the monitor identifies the intended instruments.
+11. With the kit, learn each instrument, separate hi-hat actions, and desired
+    zones. Export the profile and verify it before committing. Confirm the monitor identifies the intended instruments.
 12. Practice simultaneous hits; unplug/reconnect and verify the loop stays stopped
     until Start. Reload and reconnect to confirm saved mapping restoration.
 13. Remap/swap keys and reload: inputs and lane hints agree, practice controls
@@ -307,7 +356,9 @@ replace that acceptance.
 
 Examples are in `lessons/`. A lesson uses version 1, a title, quarter-note BPM,
 `time_signature: [4, 4]`, 1–16 bars, and an ordered list of instrument tracks.
-Supported instruments are `kick`, `snare`, `hi_hat`, and `ride`.
+Supported instruments are `kick`, `snare`, `ride`, `tom_1`–`tom_4`, `crash_1`,
+`crash_2`, `hi_hat_closed`, `hi_hat_open`, and `hi_hat_pedal`. Older lessons may use
+`hi_hat` for any hi-hat action. Track order and lane count follow the lesson.
 
 Each note is an absolute integer tick from the lesson start: 96 ticks per beat,
 384 per bar. Note lists must be sorted and unique within each track, with no
@@ -352,7 +403,9 @@ src/midi-view.js        MIDI setup controls and last-hit monitor
 src/lesson-catalog.js   Bundled lesson selector entries
 src/practice-settings.js Local practice preferences and validation
 src/keyboard-view.js    Keyboard remapping controls
-lessons/                Three bundled JSON lessons
+lessons/                Bundled JSON lessons, including the MPS-850 pad check
+config/drumkits/        Portable kit profiles with review status
+src/kit-profile.js      Profile validation, merging, and export
 test/                   Node tests for lesson and playback logic
 scripts/browser-smoke.mjs Isolated Chrome checks and temporary static servers
 legacy.html, legacy.css Original metronome interface

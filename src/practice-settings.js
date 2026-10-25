@@ -50,6 +50,14 @@ export function loadPracticeSettings(storage) {
                 delete settings.keyBindings.Space;
             }
         }
+        if (settings?.version === 1 && settings.keyBindings
+            && ["kick", "snare", "hi_hat", "ride"].every(instrument => Object.values(settings.keyBindings).includes(instrument))) {
+            for (const [preferred, instrument] of Object.entries(DEFAULT_KEY_BINDINGS)) {
+                if (Object.values(settings.keyBindings).includes(instrument)) continue;
+                const code = [preferred, ...KEY_CODES].find(code => !Object.hasOwn(settings.keyBindings, code));
+                if (code) settings.keyBindings[code] = instrument;
+            }
+        }
         if (!validPracticeSettings(settings)) throw new SyntaxError("Invalid practice settings");
         return { settings, warning: "" };
     } catch (error) {

@@ -68,8 +68,27 @@ export class DrumAudio {
                 this.noiseVoice(time, 1400, 0.15, 0.5);
                 this.tone(time, 180, 90, 0.09, 0.18, this.guide, "triangle");
                 break;
+            case "hi_hat_closed":
             case "hi_hat":
                 this.noiseVoice(time, 7000, 0.055, 0.35);
+                break;
+            case "hi_hat_open":
+                this.noiseVoice(time, 6500, 0.45, 0.3);
+                break;
+            case "hi_hat_pedal":
+                this.noiseVoice(time, 5500, 0.035, 0.25);
+                break;
+            case "tom_1":
+            case "tom_2":
+            case "tom_3":
+            case "tom_4": {
+                const frequency = { tom_1: 220, tom_2: 175, tom_3: 130, tom_4: 100 }[instrument];
+                this.tone(time, frequency, frequency * 0.65, 0.28, 0.5, this.guide);
+                break;
+            }
+            case "crash_1":
+            case "crash_2":
+                this.noiseVoice(time, instrument === "crash_1" ? 4000 : 3000, 0.85, 0.25);
                 break;
             case "ride":
                 this.noiseVoice(time, 4500, 0.38, 0.14);

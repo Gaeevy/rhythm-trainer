@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "id": "mps-850",
+  "name": "Millenium MPS-850",
+  "verification": "verified",
+  "notes": "Basic pad mappings verified from this user\u2019s MPS-850 observations on 2026-10-24 and 2026-10-25, all on channel 10. Snare D1=38 anchors MIDI Monitor\u2019s octave naming: closed/open/pedal hi-hat F#1/A#1/G#1=42/46/44; Tom 1\u20134 C2/A1/G1/F1=48/45/43/41; Crash 1\u20132 C#2/A2=49/57. Kick 36 and ride 59 were previously confirmed in the app. Rims and separate cymbal bow/edge/bell mappings are excluded at the user\u2019s request. Pedal Control/Aftertouch messages are not scoring hits. This profile verifies basic note mappings on this kit, not end-to-end latency, full practice acceptance, or universal factory defaults.",
+  "mappings": {
+    "kick": [
+      {
+        "note": 36,
+        "channel": 10
+      }
+    ],
+    "snare": [
+      {
+        "note": 38,
+        "channel": 10
+      }
+    ],
+    "hi_hat": [],
+    "hi_hat_closed": [
+      {
+        "note": 42,
+        "channel": 10
+      }
+    ],
+    "hi_hat_open": [
+      {
+        "note": 46,
+        "channel": 10
+      }
+    ],
+    "hi_hat_pedal": [
+      {
+        "note": 44,
+        "channel": 10
+      }
+    ],
+    "tom_1": [
+      {
+        "note": 48,
+        "channel": 10
+      }
+    ],
+    "tom_2": [
+      {
+        "note": 45,
+        "channel": 10
+      }
+    ],
+    "tom_3": [
+      {
+        "note": 43,
+        "channel": 10
+      }
+    ],
+    "tom_4": [
+      {
+        "note": 41,
+        "channel": 10
+      }
+    ],
+    "crash_1": [
+      {
+        "note": 49,
+        "channel": 10
+      }
+    ],
+    "crash_2": [
+      {
+        "note": 57,
+        "channel": 10
+      }
+    ],
+    "ride": [
+      {
+        "note": 59,
+        "channel": 10
+      }
+    ]
+  }
+}

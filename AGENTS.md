@@ -27,7 +27,14 @@
 - Add lessons as JSON files in `lessons/` and register them in
   `src/lesson-catalog.js`. The user generates lessons with AI, commits, and deploys.
   Do not add a browser lesson importer or editor unless requested.
-- Keep keyboard and MIDI mappings in player settings, outside lesson files.
+- Keep keyboard and MIDI mappings outside lesson files. Store portable kit
+  defaults in `config/drumkits/`; browser mappings override them. Preserve local
+  learning, explicit removals, and existing settings when adding instruments.
+- Use `hi_hat_closed`, `hi_hat_open`, and `hi_hat_pedal` for explicit actions.
+  Keep legacy `hi_hat` lessons compatible without allowing generic mappings to
+  satisfy explicit actions. Do not combine generic and explicit tracks in a lesson.
+- Complete physical MPS-850 mapping and config review with the user before
+  committing the completed profile or starting the recorded-sample phase.
 - Reserve Space for start/stop. Default drum keys are D/F/J/K. Preserve saved
   preferences when migrating old Space bindings; do not reset MIDI profiles.
 - Apply disabled instruments consistently to guide playback and assessment.

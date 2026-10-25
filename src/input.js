@@ -1,5 +1,10 @@
+import { INSTRUMENTS } from "./instruments.js";
+
 export const DEFAULT_KEY_BINDINGS = Object.freeze({
     KeyD: "kick", KeyF: "snare", KeyJ: "hi_hat", KeyK: "ride",
+    KeyL: "hi_hat_closed", KeyU: "hi_hat_open", KeyH: "hi_hat_pedal",
+    KeyQ: "tom_1", KeyW: "tom_2", KeyE: "tom_3", KeyR: "tom_4",
+    KeyA: "crash_1", KeyS: "crash_2",
 });
 
 export const KEY_CODES = Object.freeze([
@@ -36,6 +41,7 @@ export function instrumentKeyLabel(instrument, bindings = DEFAULT_KEY_BINDINGS) 
 /** Swap an occupied key so every instrument keeps exactly one distinct binding. */
 export function remapKey(bindings, instrument, code) {
     if (!KEY_CODES.includes(code)) throw new RangeError("Choose a letter or a digit; Space starts and stops playback");
+    if (!Object.hasOwn(INSTRUMENTS, instrument)) throw new RangeError("Unknown keyboard instrument");
     const previous = Object.keys(bindings).find(key => bindings[key] === instrument);
     if (!previous) throw new RangeError("Unknown keyboard instrument");
     const next = { ...bindings };

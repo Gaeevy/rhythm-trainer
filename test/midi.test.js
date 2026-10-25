@@ -276,3 +276,36 @@ test("switching and disconnecting release the old port; stale open failures are 
     h.midi.disconnect();
     assert.equal(secondCloses, 1);
 });
+
+test("closed, open, and pedal hi-hat learn and emit independent actions", async () => {
+    const h = await ready();
+    for (const [instrument, note] of [["hi_hat_closed", 42], ["hi_hat_open", 46], ["hi_hat_pedal", 44]]) {
+        h.midi.startLearn(instrument);
+        h.ports[0].onmidimessage({ data: [0xb9, 4, 127], timeStamp: 1 });
+        assert.equal(h.midi.learning, instrument);
+        h.ports[0].onmidimessage(message(note));
+    }
+    assert.equal(h.hits.length, 0);
+    for (const note of [42, 46, 44]) h.ports[0].onmidimessage(message(note));
+    assert.deepEqual(h.hits.map(hit => hit.instrument), ["hi_hat_closed", "hi_hat_open", "hi_hat_pedal"]);
+    assert.deepEqual(h.midi.profile.mappings.hi_hat, []);
+    assert.match(h.midi.learnMessage("hi_hat_closed"), /before clicking/);
+    assert.match(h.midi.learnMessage("hi_hat_pedal"), /without striking/);
+});
+
+test("observed pedal burst produces one chick hit despite controller, note-off, and aftertouch messages", async () => {
+    const h = await ready();
+    h.midi.startLearn("hi_hat_pedal");
+    h.ports[0].onmidimessage(message(44));
+    const burst = [
+        ...[15, 26, 38, 50, 63, 80].map(value => [0xb9, 4, value]),
+        [0x99, 44, 46], [0x99, 44, 0],
+        [0xa9, 46, 127], [0xa9, 46, 0], [0xa9, 26, 127], [0xa9, 26, 0],
+        [0xa9, 21, 127], [0xa9, 21, 0],
+        ...[91, 103, 118].map(value => [0xb9, 4, value]),
+    ];
+    for (const data of burst) h.ports[0].onmidimessage({ data, timeStamp: 1000 });
+    assert.equal(h.hits.length, 1);
+    assert.equal(h.hits[0].instrument, "hi_hat_pedal");
+    assert.equal(h.hits[0].velocity, 46);
+});

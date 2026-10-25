@@ -20,6 +20,9 @@ export function validMidiSettings(settings) {
             || typeof profile.name !== "string" || !profile.mappings || deviceIds.has(profile.deviceId)) return false;
         deviceIds.add(profile.deviceId);
         if (Object.keys(profile.mappings).some(instrument => !Object.hasOwn(INSTRUMENTS, instrument))) return false;
+        if (profile.overriddenInstruments !== undefined && (!Array.isArray(profile.overriddenInstruments)
+            || profile.overriddenInstruments.some(instrument => !Object.hasOwn(INSTRUMENTS, instrument))
+            || new Set(profile.overriddenInstruments).size !== profile.overriddenInstruments.length)) return false;
         const assigned = new Set();
         for (const instrument of Object.keys(INSTRUMENTS)) {
             const notes = profile.mappings[instrument];
@@ -42,6 +45,14 @@ export function loadMidiSettings(storage) {
         const text = storage.getItem(MIDI_SETTINGS_KEY);
         if (text === null) return { settings: emptySettings(), warning: "" };
         const settings = JSON.parse(text);
+        if (settings?.version === 1 && Array.isArray(settings.profiles)) {
+            for (const profile of settings.profiles) {
+                if (!profile?.mappings || !["kick", "snare", "hi_hat", "ride"].every(instrument => Array.isArray(profile.mappings[instrument]))) continue;
+                for (const instrument of Object.keys(INSTRUMENTS)) {
+                    if (!Object.hasOwn(profile.mappings, instrument)) profile.mappings[instrument] = [];
+                }
+            }
+        }
         if (!validMidiSettings(settings)) throw new SyntaxError("Invalid MIDI settings");
         return { settings, warning: "" };
     } catch (error) {

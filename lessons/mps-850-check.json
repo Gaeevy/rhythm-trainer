@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "title": "MPS-850 pad check",
+  "bpm": 80,
+  "time_signature": [
+    4,
+    4
+  ],
+  "bars": 4,
+  "tracks": [
+    {
+      "instrument": "hi_hat_closed",
+      "notes": [
+        0
+      ]
+    },
+    {
+      "instrument": "hi_hat_open",
+      "notes": [
+        96
+      ]
+    },
+    {
+      "instrument": "hi_hat_pedal",
+      "notes": [
+        192
+      ]
+    },
+    {
+      "instrument": "ride",
+      "notes": [
+        288
+      ]
+    },
+    {
+      "instrument": "crash_1",
+      "notes": [
+        384
+      ]
+    },
+    {
+      "instrument": "crash_2",
+      "notes": [
+        480
+      ]
+    },
+    {
+      "instrument": "snare",
+      "notes": [
+        576
+      ]
+    },
+    {
+      "instrument": "tom_1",
+      "notes": [
+        672
+      ]
+    },
+    {
+      "instrument": "tom_2",
+      "notes": [
+        768
+      ]
+    },
+    {
+      "instrument": "tom_3",
+      "notes": [
+        864
+      ]
+    },
+    {
+      "instrument": "tom_4",
+      "notes": [
+        960
+      ]
+    },
+    {
+      "instrument": "kick",
+      "notes": [
+        1056
+      ]
+    }
+  ]
+}

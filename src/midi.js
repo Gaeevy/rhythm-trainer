@@ -1,4 +1,5 @@
 import { INSTRUMENTS } from "./instruments.js";
+import { validateKitProfile, mergeKitMappings, exportKitProfile } from "./kit-profile.js";
 import { emptyMappings, loadMidiSettings, saveMidiSettings } from "./midi-settings.js";
 
 export const MidiState = Object.freeze({
@@ -123,7 +124,7 @@ export class MidiInput {
         if (next) {
             this.state = MidiState.CONNECTED;
             this.message = this.learning
-                ? `Strike the ${INSTRUMENTS[this.learning].label} pad or pedal once. The hit will be learned, not scored.`
+                ? this.learnMessage(this.learning)
                 : `Listening to ${next.name || "MIDI input"}. Learn each pad or pedal below.`;
         } else if (this.selectedDeviceId) {
             this.state = MidiState.DISCONNECTED;
@@ -153,12 +154,39 @@ export class MidiInput {
         this.onActivity();
     }
 
+    get overriddenInstruments() {
+        return this.profile?.overriddenInstruments ?? Object.entries(this.profile?.mappings ?? {})
+            .filter(([, notes]) => notes.length > 0).map(([instrument]) => instrument);
+    }
+
+    applyKitProfile(profile) {
+        validateKitProfile(profile);
+        if (!this.profile || !this.input) return;
+        this.cancelLearn();
+        const overrides = this.overriddenInstruments;
+        this.profile.mappings = mergeKitMappings(this.profile.mappings, profile.mappings, overrides);
+        this.profile.overriddenInstruments = overrides;
+        this.persist();
+        this.message = `${profile.name} profile applied (${profile.verification}). Learned mappings and local removals kept. Learn the remaining pads below.`;
+        this.onChange();
+    }
+
+    exportKitProfile() {
+        if (!this.profile) throw new Error("Select your drum kit first");
+        return exportKitProfile(this.profile.mappings);
+    }
+
+    learnMessage(instrument) {
+        return INSTRUMENTS[instrument].learnHint
+            ?? `Strike the ${INSTRUMENTS[instrument].label} pad or pedal once. The hit will be learned, not scored.`;
+    }
+
     startLearn(instrument) {
         if (!Object.hasOwn(INSTRUMENTS, instrument)) throw new RangeError("Unknown instrument");
         if (!this.input) return;
         if (this.learning === instrument) return this.cancelLearn();
         this.learning = instrument;
-        this.message = `Strike the ${INSTRUMENTS[instrument].label} pad or pedal once. The hit will be learned, not scored.`;
+        this.message = this.learnMessage(instrument);
         this.onChange();
     }
 
@@ -171,6 +199,7 @@ export class MidiInput {
 
     removeMapping(instrument, entry) {
         if (!this.profile || !Object.hasOwn(INSTRUMENTS, instrument)) return;
+        this.profile.overriddenInstruments = [...new Set([...this.overriddenInstruments, instrument])];
         this.profile.mappings[instrument] = this.profile.mappings[instrument].filter(note => !sameNote(note, entry));
         this.persist();
         this.message = `Removed note ${entry.note}, channel ${entry.channel} from ${INSTRUMENTS[instrument].label}.`;
@@ -182,11 +211,16 @@ export class MidiInput {
         if (!note || !this.input || !this.profile) return;
         if (this.learning) {
             const instrument = this.learning;
+            const overrides = new Set([...this.overriddenInstruments, instrument]);
             let reassignedFrom = null;
             for (const [other, notes] of Object.entries(this.profile.mappings)) {
-                if (other !== instrument && notes.some(entry => sameNote(entry, note))) reassignedFrom = other;
+                if (other !== instrument && notes.some(entry => sameNote(entry, note))) {
+                    reassignedFrom = other;
+                    overrides.add(other);
+                }
                 this.profile.mappings[other] = notes.filter(entry => !sameNote(entry, note));
             }
+            this.profile.overriddenInstruments = [...overrides];
             this.profile.mappings[instrument].push({ note: note.note, channel: note.channel });
             this.learning = null;
             this.lastNote = { ...note, instrument };

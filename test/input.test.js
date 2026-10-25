@@ -8,7 +8,7 @@ test("keyboard bindings and labels agree for all four instruments", () => {
         assert.equal(keyboardInstrument({ code }), instrument);
         assert.equal(instrumentKeyLabel(instrument), label);
     }
-    assert.equal(keyboardInstrument({ code: "KeyQ" }), null);
+    assert.equal(keyboardInstrument({ code: "KeyZ" }), null);
     assert.equal(keyboardInstrument({ code: "toString" }), null);
     assert.equal(instrumentKeyLabel("tom"), "");
 });
@@ -41,7 +41,7 @@ test("remapping to an occupied key swaps assignments without changing the origin
     assert.equal(keyboardInstrument({ code: "KeyD" }, swapped), "snare");
     assert.equal(keyboardInstrument({ code: "KeyF" }, swapped), "kick");
     assert.equal(DEFAULT_KEY_BINDINGS.KeyD, "kick");
-    assert.equal(Object.keys(swapped).length, 4);
+    assert.equal(Object.keys(swapped).length, Object.keys(DEFAULT_KEY_BINDINGS).length);
     assert.deepEqual(remapKey(DEFAULT_KEY_BINDINGS, "snare", "KeyF"), DEFAULT_KEY_BINDINGS);
 });
 

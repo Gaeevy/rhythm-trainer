@@ -227,7 +227,7 @@ async function trackFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), count);
         assert.equal(await page.evaluate(() => window.smoke.assessment.tracks.has("ride")), false);
         assert.equal(await page.evaluate(index => window.smoke.scheduled.slice(index).some(([instrument]) => instrument === "ride"), restartedAt), false);
-        for (const name of ["Hi-hat", "Snare", "Kick"]) {
+        for (const name of ["Hi-hat (any)", "Snare", "Kick"]) {
             await page.getByRole("button", { name: `Disable ${name} track`, exact: true }).click();
         }
         await page.keyboard.press("Space");
@@ -296,6 +296,12 @@ async function failureRecovery(browser, url) {
         await page.locator("#lesson").selectOption("basic-straight");
         await page.waitForFunction(() => document.querySelector("#bpm-level").textContent === "300");
         assert.match(await page.locator("#status").textContent(), /Tempo set to 300 BPM/);
+        await page.route("**/config/drumkits/mps-850.json", route => route.fulfill({ status: 404, body: "Missing profile" }));
+        await page.reload();
+        await ready(page);
+        await page.waitForFunction(() => document.querySelector("#midi-profile-status").textContent.includes("Could not load"));
+        assert.equal(await page.locator("#midi-profile-apply").isDisabled(), true);
+        assert.equal(await page.locator("#start-stop").isEnabled(), true);
         console.log(`PASS loading failure recovery: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
@@ -377,6 +383,43 @@ async function midiFlow(browser, url) {
         await page.locator("#midi-connect").click();
         await page.waitForFunction(() => document.querySelector("#midi-status").textContent.includes("Listening"));
         assert.equal(await page.locator("#midi-device").inputValue(), "kit");
+        assert.deepEqual(errors, []);
+        await page.waitForFunction(() => !document.querySelector("#midi-profile-apply").disabled);
+        await page.locator("#midi-profile-apply").click();
+        assert.equal(await page.locator(".midi-note").count(), 12);
+        for (const [instrument, note] of [["hi_hat_closed", 42], ["hi_hat_open", 46], ["hi_hat_pedal", 44]]) {
+            await page.locator(`.midi-learn[data-instrument="${instrument}"]`).click();
+            await page.evaluate(note => window.midiTest.send(note), note);
+        }
+        assert.equal(await page.locator('[data-instrument="hi_hat"] .midi-note').count(), 0);
+        const [download] = await Promise.all([
+            page.waitForEvent("download"), page.locator("#midi-profile-export").click(),
+        ]);
+        const exported = JSON.parse(await readFile(await download.path(), "utf8"));
+        assert.equal(download.suggestedFilename(), "mps-850.json");
+        assert.equal(exported.verification, "partial");
+        assert.deepEqual(exported.mappings.hi_hat_closed, [{ note: 42, channel: 10 }]);
+        assert.deepEqual(exported.mappings.hi_hat_pedal, [{ note: 44, channel: 10 }]);
+        assert.equal(Object.hasOwn(exported, "deviceId"), false);
+        await page.locator("#lesson").selectOption("mps-850-check");
+        await page.waitForFunction(() => document.querySelectorAll(".track").length === 12);
+        await page.locator("#bpm").fill("300");
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        for (const [note, beat, expected] of [[42, 0, "on_time"], [42, 1, "extra"], [46, 1, "on_time"], [44, 2, "on_time"]]) {
+            const result = await page.evaluate(({ note, beat }) => {
+                window.midiTest.send(note, 88, window.smoke.stamp(beat));
+                return window.smoke.assessment.hits.at(-1);
+            }, { note, beat });
+            assert.equal(result.status, expected);
+        }
+        assert.equal(await page.locator("#score-on_time").textContent(), "3");
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
+        for (const instrument of ["hi_hat_closed", "hi_hat_open", "hi_hat_pedal", "tom_1", "tom_2", "tom_3", "tom_4", "crash_1", "crash_2"]) {
+            assert.ok(await page.evaluate(instrument => window.smoke.scheduled.some(([value]) => value === instrument), instrument));
+        }
         assert.deepEqual(errors, []);
         console.log(`PASS simulated MIDI: ${new URL(url).pathname}`);
     } finally { await context.close(); }

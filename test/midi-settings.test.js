@@ -49,3 +49,19 @@ test("unavailable storage is nonfatal and produces a visible persistence warning
     }
     assert.deepEqual(loadMidiSettings({ getItem: () => null }).settings.profiles, []);
 });
+
+test("old four-instrument profiles expand without changing existing mappings or device selection", () => {
+    const old = { version: 1, selectedDeviceId: "kit", profiles: [{ deviceId: "kit", name: "e-drum", mappings: {
+        kick: [{ note: 36, channel: 10 }], snare: [{ note: 38, channel: 10 }],
+        hi_hat: [{ note: 42, channel: 10 }, { note: 44, channel: 10 }], ride: [{ note: 59, channel: 10 }],
+    } }] };
+    const loaded = loadMidiSettings({ getItem: () => JSON.stringify(old) });
+    assert.equal(loaded.warning, "");
+    assert.equal(loaded.settings.selectedDeviceId, "kit");
+    for (const instrument of ["kick", "snare", "hi_hat", "ride"]) {
+        assert.deepEqual(loaded.settings.profiles[0].mappings[instrument], old.profiles[0].mappings[instrument]);
+    }
+    assert.deepEqual(loaded.settings.profiles[0].mappings.hi_hat_closed, []);
+    assert.deepEqual(loaded.settings.profiles[0].mappings.tom_4, []);
+    assert.equal(validMidiSettings(loaded.settings), true);
+});

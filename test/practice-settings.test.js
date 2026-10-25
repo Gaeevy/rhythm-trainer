@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { defaultPracticeSettings, loadPracticeSettings, savePracticeSettings, validPracticeSettings, PRACTICE_SETTINGS_KEY } from "../src/practice-settings.js";
 import { MIDI_SETTINGS_KEY } from "../src/midi-settings.js";
-import { remapKey } from "../src/input.js";
+import { remapKey, DEFAULT_KEY_BINDINGS } from "../src/input.js";
 
 test("defaults are valid and do not share mutable bindings or tempo overrides", () => {
     const first = defaultPracticeSettings();
@@ -72,7 +72,7 @@ test("existing Space bindings migrate to a free letter without losing practice s
         assert.equal(loaded.settings.guideVolume, 17);
         assert.deepEqual(loaded.settings.tempos, saved.tempos);
         assert.equal(Object.hasOwn(loaded.settings.keyBindings, "Space"), false);
-        assert.equal(new Set(Object.values(loaded.settings.keyBindings)).size, 4);
+        assert.equal(new Set(Object.values(loaded.settings.keyBindings)).size, Object.keys(DEFAULT_KEY_BINDINGS).length);
         assert.equal(loaded.settings.keyBindings.KeyD, "kick");
         assert.deepEqual(loaded.settings.disabledInstruments, []);
     }

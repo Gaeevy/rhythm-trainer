@@ -25,11 +25,12 @@ that an agent can run and test.
 
 ## Tracks and display
 
-- Initial instruments: kick, snare, hi-hat, ride.
-- Use stable instrument IDs: `kick`, `snare`, `hi_hat`, `ride`.
+- Instruments: kick, snare, four toms, two crashes, ride, and hi-hat actions.
+- Use stable IDs: `kick`, `snare`, `tom_1`–`tom_4`, `crash_1`, `crash_2`, `ride`,
+  `hi_hat_closed`, `hi_hat_open`, `hi_hat_pedal`. Retain `hi_hat` for older lessons.
 - Each track uses one reusable `Track` component/class. Create lanes from the
   tracks present in the lesson and preserve their listed order.
-- Support subsets of the four instruments; do not require four tracks per lesson.
+- Support instrument subsets; show only tracks present in each lesson.
 - New instruments can be registered later without rewriting lane rendering.
 - Use a fixed playhead with upcoming notes scrolling toward it.
 - Display actual hits over their corresponding lane, with color plus a text or
@@ -119,7 +120,7 @@ Show a useful error and do not partially start an invalid lesson.
 Version 1 rejects unknown fields at lesson and track level rather than silently
 ignoring them. Validation preserves track order and does not sort or repair data.
 
-Velocity scoring, separate articulations, and arbitrary tuplets are outside MVP.
+Velocity scoring, zone-specific articulations, and arbitrary tuplets are outside MVP.
 Do not add per-note objects until a concrete requirement needs extra fields.
 
 ## Practice controls and lesson behavior
@@ -149,6 +150,35 @@ Do not add per-note objects until a concrete requirement needs extra fields.
 - The session summary includes elapsed practice time excluding count-in and
   completed loops. Both freeze with counts on Stop and reset on Start or a
   successful lesson change. These activity records remain in memory only.
+
+## MPS-850 expansion and configuration checkpoint
+
+- Add the remaining standard pads and three explicit hi-hat actions. Keep
+  head/rim/bow/edge/bell zones grouped under their instrument for now. MIDI Learn
+  consumes a Note On and retains multiple zones; controller movement remains
+  ignored until physical messages establish a need for it.
+- Keep `hi_hat` lessons compatible: an explicit action can satisfy a generic
+  hi-hat track, but a generic mapping cannot satisfy an explicit action track.
+  Reject lessons mixing the generic track with explicit hi-hat tracks.
+- Preserve existing keyboard/MIDI mappings while extending their instrument sets.
+  Add free keyboard keys for new tracks without replacing existing bindings.
+- Store portable defaults in `config/drumkits/mps-850.json`, with `version`, `id`,
+  `name`, `verification` (`partial` or `verified`), review notes, and mappings.
+  Keep browser device IDs, latency, and other personal preferences out of it.
+- Provide an explicit Use MPS-850 profile action. Never infer the kit model from
+  a generic MIDI port name. Learned mappings and explicit local removals override
+  repository defaults; conflicting pairs cannot be assigned twice.
+- Export current mappings as a downloadable MPS-850 config for the user to pass
+  back or save to the repo. Exports are partial until reviewed with the user.
+- Store only observed mappings. The user has now observed closed/open/pedal
+  hi-hat as 42/46/44 on channel 10, alongside the prior kick/snare/ride mappings.
+  Tom 1–4 and Crash 1–2 are now observed as 48/45/43/41 and 49/57. Do not
+  add guessed zones: the user excludes rims and separate bow/edge/bell for now.
+  External MIDI Monitor output is sufficient; the lesson is optional.
+- Add a pad-check lesson with all twelve explicit instruments. Keep synthesized
+  placeholder voices for these additions until the sample phase.
+- Stop after implementation/tests to fill and review the config with the real
+  kit, then commit it with the user. Recorded samples come after that checkpoint.
 
 ## Input and device setup
 
@@ -569,6 +599,42 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   narrow (390×844) screenshots were inspected. Controls wrap without horizontal
   overflow on narrow screens. Changes remain uncommitted; real-kit acceptance
   is deferred.
+
+- **2026-10-25 — Instrument expansion ready for physical mapping:** added
+  four toms, two crashes, three explicit hi-hat actions, and a twelve-track pad
+  check lesson. Legacy hi-hat lessons remain compatible. Added partial repository
+  defaults, explicit application, local override/removal precedence, and portable
+  config download. Existing mappings/settings expand without reset. New voices
+  remain synthesized placeholders; metronome unchanged. **Verification:** all
+  101 Node tests pass. All eight isolated Chrome scenarios pass at root and
+  `/rhythm-trainer/`, including separate hi-hat learn/scoring, profile application
+  preserving learning, downloading/re-reading a portable config, all twelve pad
+  lanes and new synthesized voices, and missing-profile fallback without blocking
+  lessons. Expanded MIDI setup was visually checked at 1440 px and 390 px;
+  narrow layout has no horizontal overflow. Browser tests use simulated MIDI,
+  not the physical kit. Local server is running at `http://127.0.0.1:8000`.
+  **Next:** the user learns physical pads and exports the config; review and
+  commit together, then add recorded samples. No changes have been committed,
+  pushed, or deployed in this checkpoint.
+
+- **2026-10-25 — Physical hi-hat MIDI observations:** user supplied external MIDI
+  Monitor Note On logs: open A#1, closed F#1, pedal G#1; existing snare D1 = 38
+  identifies the displayed octave convention. Recorded notes 46/42/44 on channel
+  10 in the partial profile; velocity values 26/34/46 are separate from note IDs.
+  The pedal screenshot also establishes Foot Control movement plus aftertouch,
+  alongside one chick Note On. Kept scoring Note On only and added a regression
+  for this burst producing one hit. All 102 Node tests and all eight browser
+  scenarios pass after updating the profile. **Remaining:** collect toms, crashes, and
+  additional zones; review the complete config with the user before committing.
+
+- **2026-10-25 — Basic MPS-850 mapping complete:** user supplied Tom 1–4
+  C2/A1/G1/F1 and Crash 1–2 C#2/A2, interpreted as 48/45/43/41 and 49/57
+  under the established D1=38 convention, all channel 10. Added these observed
+  mappings and marked the basic profile verified. Rims and separate cymbal
+  bow/edge/bell are explicitly out of scope. This verifies note mappings only;
+  full practice and latency acceptance remain deferred. **Verification:**
+  102 passing Node tests and all eight passing browser scenarios. **Next:**
+  commit this checkpoint, then add recorded guide samples.
 
 ## Verification and acceptance
 
