@@ -309,6 +309,12 @@ startButton.addEventListener("click", async () => {
         await audio.context.resume();
         if (request !== startRequest) return;
         if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
+        showStatus("Loading drum sounds…");
+        const samplesReady = await audio.loadSamples();
+        if (request !== startRequest) return;
+        if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
+        element("guide-sound-status").textContent = samplesReady ? "Guide drums: acoustic recordings."
+            : "Recorded drums unavailable; using synthesized guide sounds. Start again to retry loading.";
         updateVolumes(false);
         playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
         assessment = new Assessment(lesson, {

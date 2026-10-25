@@ -39,6 +39,9 @@
   preferences when migrating old Space bindings; do not reset MIDI profiles.
 - Apply disabled instruments consistently to guide playback and assessment.
   Keep disabled lanes visible; changing enabled tracks stops and resets practice.
+- Keep sample sources and licenses under `assets/drums/`. Preserve the current
+  metronome sound. Load recordings before scheduling, and keep a retryable
+  synthesized fallback if loading fails.
 - Use the Web Audio clock for scheduled playback. Use input event timestamps,
   converted to the same time base, for assessment. Animation must not determine
   hit timing. Never compare timestamps from different clocks directly.

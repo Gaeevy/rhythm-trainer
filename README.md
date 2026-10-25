@@ -11,8 +11,8 @@ The new trainer is being built one milestone at a time. See
 - JSON lessons with dynamic lanes: kick, snare, four toms, two crashes, ride,
   and separate closed/open/pedal hi-hat actions.
 - A fixed playhead, scrolling notes, beat/bar lines, and continuous looping.
-- Synthesized guide drums and a metronome, with independent volume/mute.
-  Recorded samples are planned after the physical kit profile is verified.
+- Recorded acoustic guide drums and the original synthesized metronome, with
+  independent volume/mute.
 - An optional one-bar count-in and adjustable tempo from 20–300 BPM.
 - Straight, swing, and mixed-subdivision example lessons.
 - Sixteenth-note triplets and thirty-second notes, including mixed subdivisions.
@@ -166,8 +166,23 @@ Start opens Practice settings when a timing field needs correction.
 Preferences and MIDI mappings use separate storage keys. Settings belong to
 this browser and site address; localhost and GitHub Pages have separate storage.
 
-The guide sounds are synthesized in the browser; no external samples or audio
-services are used. They are functional practice sounds, not a sampled drum kit.
+Guide drums use twelve bundled acoustic recordings from Karoryfer Samples’
+**Big Rusty Drums**, dedicated under CC0. The selected files total about 1.8 MiB
+and are loaded/decoded once on first Start. No external audio service is used at
+runtime. The metronome sound is unchanged. Closing the guide hi-hat with a closed
+hit or pedal chick cuts off its open recording at the scheduled audio time.
+
+If any recording fails to load, practice continues with synthesized guide drums.
+Practice settings shows the fallback; Start retries loading on the next run.
+Stopping during loading cannot start a delayed loop. Guide mute, disabled tracks,
+and Stop still cancel or silence sounds without changing assessment timing.
+Samples play expected notes; they do not double the sound of your own MIDI hits.
+
+See [sample credits, license, and source revision](assets/drums/README.md).
+The optional `python3 scripts/prepare_samples.py` regenerates these WAVs on macOS
+using its built-in `afconvert`; running the app requires neither conversion nor
+an additional Python package. Listening quality and instrument balance still
+need the user’s review.
 For now, the swing example has notes only in the ride and hi-hat lanes; snare
 and kick lanes are intentionally empty.
 
@@ -221,7 +236,9 @@ number display for notes to avoid octave-name ambiguity. The last Note On data
 column is velocity, not the note number. Pedal Control/Aftertouch events do not
 add scoring hits.
 
-1. Apply the profile if you want its known defaults, then learn the remaining
+1. If moving from old generic hi-hat mappings, remove their chips under
+   **Hi-hat (any)** first so they do not block the explicit profile defaults.
+   Apply the profile if you want its known defaults, then learn any other
    pads and the three hi-hat actions. Strike each again while stopped and check
    the input monitor's label. Learn additional zones if wanted.
 2. Select **MPS-850 pad check** to practice the explicit actions. Only its listed
@@ -391,7 +408,10 @@ src/lesson.js           JSON parsing and validation
 src/music-time.js       Musical timing constants and conversion
 src/instruments.js      Instrument labels and colors
 src/playback.js         Shared playback timeline and look-ahead scheduler
-src/audio.js            Synthesized drum voices and independent audio buses
+src/audio.js            Recorded drums, synthesized fallback, and audio buses
+src/drum-samples.js     Playback files and per-instrument balance
+assets/drums/           Prepared recordings, source provenance, and CC0 license
+scripts/prepare_samples.py Optional macOS sample preparation
 src/track.js            Reusable Track component and lane drawing
 src/input.js            Keyboard filtering and default player mappings
 src/clock.js            Event timestamps mapped to the audio clock

@@ -47,6 +47,11 @@ async function observePlayback(page) {
         const { Assessment } = await import("./src/assessment.js");
         const { DrumAudio } = await import("./src/audio.js");
         window.smoke = { scheduled: [], nativeSetInterval: window.setInterval, nativeClearInterval: window.clearInterval };
+        const loadSamples = DrumAudio.prototype.loadSamples;
+        DrumAudio.prototype.loadSamples = function (...args) {
+            window.smoke.audio = this;
+            return loadSamples.apply(this, args);
+        };
         const schedule = DrumAudio.prototype.schedule;
         DrumAudio.prototype.schedule = function (...args) {
             window.smoke.audio = this;
@@ -113,6 +118,7 @@ async function practiceFlow(browser, url) {
         await page.keyboard.press("f");
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), 0);
         await playing(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 12);
         await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
         for (const [code, beat, errorMs, expected] of [
             ["KeyK", 0, 0, "on_time"], ["KeyJ", 1, -20, "early"], ["KeyK", 1, 20, "late"],
@@ -269,6 +275,7 @@ async function trackFlow(browser, url) {
 
 async function failureRecovery(browser, url) {
     const context = await browser.newContext();
+    let releaseSamples = () => {};
     try {
         const page = await context.newPage();
         await page.route("**/src/lesson-catalog.js", route => route.abort("connectionfailed"));
@@ -302,8 +309,36 @@ async function failureRecovery(browser, url) {
         await page.waitForFunction(() => document.querySelector("#midi-profile-status").textContent.includes("Could not load"));
         assert.equal(await page.locator("#midi-profile-apply").isDisabled(), true);
         assert.equal(await page.locator("#start-stop").isEnabled(), true);
+        const pendingSamples = new Promise(resolve => { releaseSamples = resolve; });
+        await page.route("**/assets/drums/kick.wav", async route => { await pendingSamples; await route.continue(); });
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent === "Loading drum sounds…");
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        releaseSamples();
+        await page.waitForFunction(() => window.smoke.audio.samples.size === 12);
+        await stopped(page);
+        assert.equal(await page.evaluate(() => window.smoke.scheduled.length), 0);
+        await page.unroute("**/assets/drums/kick.wav");
+        await page.reload();
+        await ready(page);
+        await page.route("**/assets/drums/kick.wav", route => route.fulfill({ status: 404, body: "Missing sample" }));
+        await page.locator("#practice-panel summary").click();
+        await page.locator("#count-in").uncheck();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.match(await page.locator("#guide-sound-status").textContent(), /synthesized/);
+        assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 0);
+        await page.locator("#start-stop").click();
+        await page.unroute("**/assets/drums/kick.wav");
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 12);
+        assert.match(await page.locator("#guide-sound-status").textContent(), /acoustic recordings/);
         console.log(`PASS loading failure recovery: ${new URL(url).pathname}`);
-    } finally { await context.close(); }
+    } finally { releaseSamples(); await context.close(); }
 }
 
 async function midiFlow(browser, url) {

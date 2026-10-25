@@ -1,8 +1,14 @@
-/** Small synthesized drum voices; no samples, downloads, or external services. */
+import { DRUM_SAMPLES } from "./drum-samples.js";
+
+/** Recorded guide drums, with a synthesized metronome and offline-safe fallback. */
 export class DrumAudio {
     constructor(context) {
         this.context = context;
         this.sources = new Set();
+        this.samples = new Map();
+        this.samplePromise = null;
+        this.openHiHats = new Set();
+        this.hiHatClosures = [];
         this.guide = context.createGain();
         this.metronome = context.createGain();
         this.guide.gain.value = 0.55;
@@ -12,6 +18,65 @@ export class DrumAudio {
         this.noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
         const data = this.noise.getChannelData(0);
         for (let index = 0; index < data.length; index++) data[index] = Math.random() * 2 - 1;
+    }
+
+    /** Load once per audio context before scheduling; a failure can retry on Start. */
+    loadSamples(fetcher = fetch) {
+        if (this.samplePromise) return this.samplePromise;
+        const files = [...new Set(Object.values(DRUM_SAMPLES).map(sample => sample.file))];
+        this.samplePromise = Promise.all(files.map(async file => {
+            const response = await fetcher(new URL(`../assets/drums/${file}`, import.meta.url));
+            if (!response.ok) throw new Error(`Could not load ${file} (HTTP ${response.status})`);
+            return [file, await this.context.decodeAudioData(await response.arrayBuffer())];
+        })).then(entries => {
+            this.samples = new Map(entries);
+            return true;
+        }).catch(() => {
+            this.samplePromise = null;
+            return false;
+        });
+        return this.samplePromise;
+    }
+
+    chokeVoice(voice, time) {
+        if (voice.start > time || voice.end <= time) return;
+        voice.gain.gain.setValueAtTime(voice.volume, time);
+        voice.gain.gain.linearRampToValueAtTime(0, time + 0.015);
+        voice.source.stop(time + 0.02);
+        voice.end = time;
+    }
+
+    chokeHiHat(time) {
+        this.hiHatClosures = this.hiHatClosures.filter(value => value >= this.context.currentTime);
+        this.hiHatClosures.push(time);
+        for (const voice of this.openHiHats) this.chokeVoice(voice, time);
+    }
+
+    sampleVoice(instrument, time) {
+        const sample = DRUM_SAMPLES[instrument];
+        const buffer = sample && this.samples.get(sample.file);
+        if (!buffer) return false;
+        const source = this.context.createBufferSource();
+        source.buffer = buffer;
+        const gain = this.context.createGain();
+        gain.gain.setValueAtTime(sample.gain, time);
+        source.connect(gain);
+        gain.connect(this.guide);
+        const voice = { source, gain, start: time, end: time + buffer.duration, volume: sample.gain };
+        this.sources.add(source);
+        source.onended = () => {
+            this.sources.delete(source);
+            this.openHiHats.delete(voice);
+            source.disconnect();
+            gain.disconnect();
+        };
+        source.start(time);
+        if (instrument === "hi_hat_open") {
+            this.openHiHats.add(voice);
+            const close = this.hiHatClosures.filter(value => value >= time).sort((a, b) => a - b)[0];
+            if (close !== undefined) this.chokeVoice(voice, close);
+        }
+        return true;
     }
 
     setVolume(bus, volume, muted) {
@@ -57,6 +122,8 @@ export class DrumAudio {
     }
 
     schedule(instrument, time, accent = false) {
+        if (["hi_hat", "hi_hat_closed", "hi_hat_pedal"].includes(instrument)) this.chokeHiHat(time);
+        if (instrument !== "metronome" && this.sampleVoice(instrument, time)) return;
         switch (instrument) {
             case "metronome":
                 this.tone(time, accent ? 1400 : 1000, accent ? 1400 : 1000, 0.035, 0.25, this.metronome);
@@ -104,5 +171,7 @@ export class DrumAudio {
     stop() {
         for (const source of this.sources) source.stop();
         this.sources.clear();
+        this.openHiHats.clear();
+        this.hiHatClosures = [];
     }
 }

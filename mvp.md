@@ -221,8 +221,15 @@ Do not add per-note objects until a concrete requirement needs extra fields.
 - Provide an independent guide-volume slider and mute control.
 - Provide a metronome with independent volume and mute control.
 - Guide mute must not affect timeline movement or scoring.
-- Use bundled, licensed samples or synthesized sounds; do not require a remote
-  sample service. Record sample licenses if samples are bundled.
+- Use the bundled CC0 acoustic recordings from Karoryfer Big Rusty Drums;
+  retain exact source paths, pinned upstream revision, and the full license.
+  No remote sample service is required for playback. Keep the metronome unchanged.
+- Load/decode the twelve unique WAVs once before starting the scheduler. File
+  loading must not change note offsets, clock conversion, or scoring. Stop
+  during loading must invalidate the pending Start. Retry on the next Start if
+  loading fails and use synthesized guide drums in the meantime.
+- Close open hi-hat guide recordings at the scheduled closed-hit/pedal time.
+  Stop cancels all active or scheduled sources, including long cymbal tails.
 - MIDI carries performance events, not the kit's audio. The user must hear the
   kit and browser audio together through a suitable audio connection.
 - Browser playback of the player's own hits is optional and should default off
@@ -635,6 +642,24 @@ issues, and the next concrete action. Keep evidence concise; do not paste raw lo
   full practice and latency acceptance remain deferred. **Verification:**
   102 passing Node tests and all eight passing browser scenarios. **Next:**
   commit this checkpoint, then add recorded guide samples.
+
+- **2026-10-25 — Recorded guide drums implemented:** committed the instrument
+  expansion and observed basic kit profile as `e140e3c`. Added twelve acoustic
+  recordings from Karoryfer Big Rusty Drums (CC0) at pinned revision
+  `f07ce00df34a46b6b08375be56fe116cf15782bc`, about 1.8 MiB total, with license
+  and per-file provenance. The optional standard-library Python/macOS preparation
+  script trims silence/tails, normalizes, and outputs 44.1 kHz mono 16-bit WAVs.
+  Playback loads them once before scheduling; metronome unchanged. Open guide
+  hi-hat chokes on scheduled closed hits/pedal chicks. Failed loads use the
+  synthesized fallback and can retry. Stop during loading cannot start later.
+  **Verification:** all 106 Node tests pass, including real non-silent WAV
+  format/size checks, shared loading, retry, exact scheduling, unchanged metronome
+  frequency, hi-hat closure, and source cleanup. All eight isolated Chrome
+  scenarios pass at root and `/rhythm-trainer/`, including actual decoding of all
+  twelve recordings, missing-file fallback/retry, and Stop while a sample request
+  is held pending. Existing keyboard/MIDI assessment and disabled-track checks
+  still pass. **Remaining:** user listening review and balancing; recorded-sample changes remain uncommitted. Real-kit timing
+  acceptance is still separate from verified basic note mappings.
 
 ## Verification and acceptance
 
