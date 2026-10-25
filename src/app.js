@@ -8,7 +8,7 @@ import { audioTimeForEvent } from "./clock.js";
 import { keyboardInstrument, keyboardTransport, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
 import { MidiInput } from "./midi.js";
 import { renderMidi, renderMidiActivity } from "./midi-view.js";
-import { BUNDLED_LESSONS } from "./lesson-catalog.js";
+import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 import { loadPracticeSettings, savePracticeSettings } from "./practice-settings.js";
 import { renderKeyboardBindings } from "./keyboard-view.js";
 import { INSTRUMENTS } from "./instruments.js";

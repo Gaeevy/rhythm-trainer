@@ -21,7 +21,7 @@ test("practice controls and per-lesson tempo overrides survive storage without t
         disabledInstruments: ["kick"], guideVolume: 20, guideMuted: true, metronomeVolume: 75, metronomeMuted: false,
         keyBindings: remapKey(defaultPracticeSettings().keyBindings, "snare", "KeyQ"),
         tempos: { "swing-ride": 92.5, "basic-straight": 110, "mixed-subdivisions": 80 },
-        lastBundledLessonId: "basic-straight",
+        lastBundledLessonId: "swing-01",
     };
     assert.equal(validPracticeSettings(settings), true);
     assert.equal(savePracticeSettings(storage, settings), "");
@@ -36,7 +36,7 @@ test("corrupt or incompatible preferences restore defaults with a useful warning
         ["disabledInstruments", null], ["disabledInstruments", ["tom"]], ["disabledInstruments", ["kick", "kick"]],
         ["countIn", "false"], ["guideMuted", 1], ["metronomeMuted", null],
         ["toleranceMs", -1], ["toleranceMs", 151], ["latencyOffsetMs", 501],
-        ["guideVolume", -1], ["metronomeVolume", 101], ["lastBundledLessonId", "unknown"],
+        ["guideVolume", -1], ["metronomeVolume", 101],
         ["tempos", { "swing-ride": 301 }], ["tempos", []], ["keyBindings", {}],
         ["keyBindings", { Space: "snare", KeyF: "snare", KeyJ: "hi_hat", KeyK: "ride" }],
         ["keyBindings", { Space: "kick", Escape: "snare", KeyJ: "hi_hat", KeyK: "ride" }],
@@ -88,4 +88,13 @@ test("old generic hi-hat preferences become closed hi-hat without resetting cont
     assert.deepEqual(settings.disabledInstruments, ["hi_hat_closed"]);
     assert.equal(settings.guideVolume, 17);
     assert.equal(settings.latencyOffsetMs, 23);
+});
+
+test("removing a selected repository lesson preserves other practice preferences", () => {
+    const saved = { ...defaultPracticeSettings(), lastBundledLessonId: "basic-straight", guideVolume: 23, latencyOffsetMs: 12 };
+    const loaded = loadPracticeSettings({ getItem: () => JSON.stringify(saved) });
+    assert.equal(loaded.warning, "");
+    assert.equal(loaded.settings.lastBundledLessonId, defaultPracticeSettings().lastBundledLessonId);
+    assert.equal(loaded.settings.guideVolume, 23);
+    assert.equal(loaded.settings.latencyOffsetMs, 12);
 });

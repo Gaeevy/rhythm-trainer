@@ -10,9 +10,10 @@ Practice short, repeating drum lessons with immediate timing feedback. Prioritiz
 jazz, the user's Millenium MPS-850, Chrome on macOS, and simple local iteration.
 
 - Extend this repository using static HTML/CSS, small JavaScript ES modules, and
-  JSON lessons/config. No framework, build step, backend, account, or database.
+  JSON lessons/config. No framework, backend, account, or database. A small Python
+  step generates the catalog and copies runtime assets for Pages.
 - Keep GitHub Pages hosting and relative asset URLs under `/rhythm-trainer/`.
-- Serve with `python3 -m http.server 8000`; use pinned Node for checks.
+- Serve with `python3 scripts/site.py`; use pinned Node for checks.
 - Use the Web Audio clock for scheduling and timestamped input for assessment.
   Animation draws the timeline; it must not determine hit timing.
 
@@ -29,11 +30,12 @@ jazz, the user's Millenium MPS-850, Chrome on macOS, and simple local iteration.
   on different instruments are allowed. No per-note objects or velocity scoring.
 - Supported IDs: `kick`, `snare`, `hi_hat_closed`, `hi_hat_open`, `hi_hat_pedal`,
   `tom_1`–`tom_4`, `crash_1`, `crash_2`, `ride`. There is no generic hi-hat track.
-- Straight lessons use closed hi-hat. Jazz swing/mixed lessons use pedal chick.
+- Jazz swing lessons use pedal chick; closed stick hits remain a separate action.
   Open, closed, and pedal actions are scored independently.
-- Generate/edit JSON outside the app, add it to `lessons/`, and register it in
-  `src/lesson-catalog.js`. Tests check catalog/file agreement. No lesson importer
-  or editor is needed.
+- Generate/edit JSON outside the app and add it to `lessons/` only. Generate
+  the catalog from filenames and JSON titles; do not maintain a manual registry.
+  Local refresh discovers additions/deletions. Actions validates and packages
+  the static site for Pages. No lesson importer or editor is needed.
 - Each track uses the same `Track` class. Build only the lesson's lanes in their
   listed order. Keep an eight-beat window; never squeeze 16 bars onto one screen.
 - A fixed playhead, bar lines, quarter lines, and minimal top-lane labels show
@@ -157,9 +159,48 @@ Implementation checkpoints (full development history is in Git):
   files are ignored without deleting unrelated user files.
   **Delivery:** user reviewed the cleanup and approved committing it on 2026-10-25.
 
+- **2026-10-25 — Swing lesson 01:** transcribed the supplied one-bar notation:
+  ride ticks 0/96/160/192/288/352, pedal 96/288, snare 0/160, kick 0/96/192/288.
+  Starts at 80 BPM and repeats. Kept the user's staged deletions of the straight,
+  mixed-subdivision, and pad-check lessons; removed their stale catalog entries.
+  Browser-only fixtures preserve regression coverage without restoring app demos.
+  A removed selected lesson now falls back without resetting other preferences.
+  **Verification:** all 94 Node tests and ten browser scenarios pass at root
+  and `/rhythm-trainer/`, including the real two-lesson catalog. The lesson changes and user-requested deletions are included in the release
+  pull request.
+
+- **2026-10-25 — Automatic lesson catalog:** replaced manual registration with
+  Python discovery of `lessons/*.json`, ordered by filename and titled from JSON.
+  The local server regenerates the catalog on each refresh; deployment packages
+  runtime files only in ignored `_site/`. Generated catalog files are not tracked.
+  Added an Actions workflow for validation, isolated Chrome checks of the actual
+  artifact at root/subpath, and Pages deployment after successful checks on main.
+  **Verification:** all 94 JavaScript tests, five Python tests, and ten browser
+  scenarios pass. Python checks include live addition/deletion without restart;
+  Chrome checks use the generated artifact at both root and `/rhythm-trainer/`.
+  No audio/input behavior changed; real-kit acceptance remains pending.
+  **Delivery:** included in the release pull request; not deployed. Pages source
+  was verified as GitHub Actions on 2026-10-25. Next: review/merge, then verify
+  deployment and the live site.
+
+- **2026-10-25 — Swing lesson 02:** added a two-bar, 80 BPM lesson from the
+  supplied snare notation. Snare ticks 0/160 in bar 1 and 384/544/640 in bar 2;
+  offbeat eighth notes use swing triplet timing. Ride, kick quarters, and pedal
+  chick repeat the Swing 01 pattern in both bars. Catalog discovery needs no
+  registration change. **Verification:** all 94 JavaScript tests and ten browser
+  scenarios pass, including catalog loading at root and `/rhythm-trainer/`.
+  Included in the release pull request; listening/real-kit review remains pending.
+
+- **2026-10-25 — Release pull request preparation:** user approved committing
+  the pending lessons, catalog tooling, and Pages workflow. Verified Pages source
+  is GitHub Actions. The PR also includes nine saved local milestone commits that
+  have not reached remote main. Automated PR checks must pass before merge;
+  deployment and real-kit acceptance remain pending.
+
 ## Verification and next steps
 
-Run `npm test` and `npm run test:browser` with pinned Node and Chrome installed.
+Run `npm test`, `npm run test:tools`, and `npm run test:browser` with pinned Node
+and Chrome installed.
 Tests must cover validation, subdivisions, simultaneous notes, duplicates,
 misses/extras, latency, loop edges, native timers, and stop/restart. Browser checks
 use disposable profiles, simulated MIDI, and temporary servers at both `/` and

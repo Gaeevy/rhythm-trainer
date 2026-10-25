@@ -24,8 +24,9 @@
 - Separate lesson data, audio scheduling, input mapping, timing assessment, and
   rendering. Avoid unnecessary abstractions and inheritance hierarchies.
 - Use JSON lesson files and integer musical ticks. Follow the format in `mvp.md`.
-- Add lessons as JSON files in `lessons/` and register them in
-  `src/lesson-catalog.js`. The user generates lessons with AI, commits, and deploys.
+- Add lessons as JSON files in `lessons/` only. `scripts/site.py` generates
+  `generated/lesson-catalog.js`; never edit or commit that catalog. The user
+  generates lessons with AI, commits, and deploys.
   Do not add a browser lesson importer or editor unless requested.
 - Use `config/drumkits/mps-850.json` as the sole MIDI mapping source. Connect
   all available inputs automatically as MPS-850 inputs. Keep a permission/retry
@@ -55,7 +56,9 @@
 
 ## Verification and delivery
 
-- Keep local startup to one documented command; no external services required.
+- Keep local startup to `python3 scripts/site.py`; no external services required.
+  Run `npm run test:tools` for the Python server/catalog/build checks.
+  Package only runtime assets in `_site/` for the Pages Actions workflow.
 - Use the Node version in `.node-version` for development checks (`fnm install`
   and `fnm use` after initializing fnm). Run `npm test`. For browser checks, run
   `npm ci` and `npm run test:browser` with Chrome installed. Keep the README

@@ -4,10 +4,11 @@ import { readFile } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { BUNDLED_LESSONS } from "../src/lesson-catalog.js";
+import { FIXTURE_LESSONS } from "./fixtures/lessons.js";
+import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 // Serve only the selected mount. A root-relative asset fails in the subpath run.
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../_site");
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".wav": "audio/wav" };
 async function serve(mount) {
     const server = createServer(async (request, response) => {
@@ -15,7 +16,7 @@ async function serve(mount) {
             const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
             if (!pathname.startsWith(mount)) throw new Error("Outside test mount");
             const path = resolve(root, pathname.slice(mount.length) || "index.html");
-            if (!path.startsWith(root + sep)) throw new Error("Outside repository");
+            if (!path.startsWith(root + sep)) throw new Error("Outside site artifact");
             const body = await readFile(path);
             response.writeHead(200, { "Content-Type": types[extname(path)] || "application/octet-stream" });
             response.end(body);
@@ -53,6 +54,38 @@ async function mockMidi(context, options = {}) {
             return access;
         } });
     }, options);
+}
+
+async function mockFixtureLessons(context) {
+    const catalog = [...BUNDLED_LESSONS, ...Object.entries(FIXTURE_LESSONS).map(([id, lesson]) => ({ id, title: lesson.title }))];
+    await context.route("**/generated/lesson-catalog.js", route => route.fulfill({
+        contentType: "text/javascript", body: `export const BUNDLED_LESSONS = ${JSON.stringify(catalog)};`,
+    }));
+    for (const [id, lesson] of Object.entries(FIXTURE_LESSONS)) {
+        await context.route(`**/lessons/${id}.json`, route => route.fulfill({
+            contentType: "application/json", body: JSON.stringify(lesson),
+        }));
+    }
+}
+
+async function catalogFlow(browser, url) {
+    const context = await browser.newContext();
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`); });
+        await page.goto(url);
+        await ready(page);
+        assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length);
+        for (const { id, title } of BUNDLED_LESSONS) {
+            await page.locator("#lesson").selectOption(id);
+            await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, title);
+        }
+        assert.deepEqual(errors, []);
+        console.log(`PASS repository lesson catalog: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
 }
 
 async function ready(page) {
@@ -106,6 +139,7 @@ async function timedKey(page, code, beat, errorMs = 0) {
 async function practiceFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
     await mockMidi(context);
+    await mockFixtureLessons(context);
     try {
         const page = await context.newPage();
         const errors = [];
@@ -115,7 +149,7 @@ async function practiceFlow(browser, url) {
         page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`); });
         await page.goto(url);
         await ready(page);
-        assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length);
+        assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length + Object.keys(FIXTURE_LESSONS).length);
         for (const { id } of BUNDLED_LESSONS) {
             const lesson = JSON.parse(await readFile(resolve(root, "lessons", `${id}.json`), "utf8"));
             await page.locator("#lesson").selectOption(id);
@@ -229,6 +263,7 @@ async function practiceFlow(browser, url) {
 async function trackFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     await mockMidi(context);
+    await mockFixtureLessons(context);
     try {
         const page = await context.newPage();
         const errors = [];
@@ -300,13 +335,14 @@ async function failureRecovery(browser, url) {
     const context = await browser.newContext();
     let releaseSamples = () => {};
     await mockMidi(context);
+    await mockFixtureLessons(context);
     try {
         const page = await context.newPage();
-        await page.route("**/src/lesson-catalog.js", route => route.abort("connectionfailed"));
+        await page.route("**/generated/lesson-catalog.js", route => route.abort("connectionfailed"));
         await page.goto(url);
         await page.getByRole("button", { name: "Reload page", exact: true }).waitFor();
         assert.equal(await page.locator("#start-stop").isDisabled(), true);
-        await page.unroute("**/src/lesson-catalog.js");
+        await page.unroute("**/generated/lesson-catalog.js");
         await page.getByRole("button", { name: "Reload page", exact: true }).click();
         await ready(page);
         const previousTitle = await page.locator("#lesson-title").textContent();
@@ -319,7 +355,7 @@ async function failureRecovery(browser, url) {
         await page.unroute("**/lessons/basic-straight.json");
         await page.locator("#lesson").selectOption("basic-straight");
         await page.waitForFunction(() => document.querySelectorAll(".track").length === 3);
-        const fastLesson = JSON.parse(await readFile(resolve(root, "lessons/basic-straight.json"), "utf8"));
+        const fastLesson = structuredClone(FIXTURE_LESSONS["basic-straight"]);
         fastLesson.bpm = 400;
         await page.route("**/lessons/basic-straight.json", route => route.fulfill({ contentType: "application/json", body: JSON.stringify(fastLesson) }));
         await page.locator("#lesson").selectOption("swing-ride");
@@ -369,6 +405,7 @@ async function failureRecovery(browser, url) {
 async function midiFlow(browser, url) {
     const context = await browser.newContext();
     await mockMidi(context, { ports: ["kit", "other"] });
+    await mockFixtureLessons(context);
     try {
         const page = await context.newPage();
         const errors = [];
@@ -460,6 +497,7 @@ try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
         const server = await serve(mount);
         try {
+            await catalogFlow(browser, server.url);
             await practiceFlow(browser, server.url);
             await trackFlow(browser, server.url);
             await failureRecovery(browser, server.url);

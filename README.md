@@ -2,7 +2,8 @@
 
 A static drum-practice app for the **Millenium MPS-850**, using Chrome on macOS.
 Lessons loop with scrolling instrument lanes, recorded guide drums, a metronome,
-and early/on-time/late feedback. No account, backend, or build step is required.
+and early/on-time/late feedback. No account or backend is required. A small Python
+script generates the lesson list and packages the static files for deployment.
 
 See [mvp.md](mvp.md) for scope and verification status, and [AGENTS.md](AGENTS.md)
 for development instructions. Local changes are not published until pushed.
@@ -12,7 +13,7 @@ for development instructions. Local changes are not published until pushed.
 From the repository folder:
 
 ```sh
-python3 -m http.server 8000
+python3 scripts/site.py
 ```
 
 Open [localhost:8000](http://localhost:8000) in Chrome. Use HTTP rather than opening
@@ -75,8 +76,8 @@ reserved for start/stop. Keyboard setup can remap letters/digits; occupied keys
 swap assignments. Held keys, browser shortcuts, and typing in controls are ignored.
 
 Closed, open, and pedal hi-hat tracks are distinct. A stick hit cannot satisfy a
-pedal note. The swing and mixed-subdivision lessons use pedal chick; the straight
-groove uses closed stick hits. Lane count and order follow the lesson.
+pedal note. The swing lessons use pedal chick; closed stick hits have their own
+track. Lane count and order follow the lesson.
 
 On-time tolerance defaults to **±30 ms**. Matching allows up to **±150 ms**,
 limited by the midpoint to neighboring notes on the same instrument, including
@@ -116,11 +117,34 @@ python3 scripts/prepare_samples.py
 Regeneration uses Python's standard library and macOS `afconvert`. Running the
 app needs neither audio conversion nor extra Python packages.
 
+## Swing lessons
+
+- **Swing ride and hi-hat:** ride pattern and pedal chick on beats 2 and 4.
+- **Swing 01: kick quarters and snare:** the first supplied notation, one looping
+  4/4 bar at 80 BPM. Kick on beats 1–4; pedal chick on 2 and 4; snare on beat 1
+  and the last eighth-note triplet of beat 2. Ride plays on 1, 2, the last triplet
+  of 2, 3, 4, and the last triplet of 4.
+
+- **Swing 02: two-bar snare phrase:** same ride, kick, and pedal pattern in both
+  bars at 80 BPM. Snare on beat 1 and the swung “and” of 2 in both bars, plus
+  the swung “and” of 3 in bar 2.
+
+The old straight, mixed-subdivision, and pad-check examples have been removed.
+Browser-only lesson fixtures retain subset/full-kit coverage without appearing
+in the app's lesson selector.
+
 ## Add a lesson
 
-1. Save JSON in `lessons/my-lesson.json`.
-2. Add `{ id: "my-lesson", title: "My lesson" }` to `src/lesson-catalog.js`.
+1. Save JSON in `lessons/my-lesson.json`. Use a lowercase, hyphenated filename.
+2. Refresh the local app. The lesson appears automatically, using its JSON `title`.
 3. Run checks, try it locally, then commit and deploy.
+
+The filename defines the lesson ID. Lessons appear in filename order. Adding,
+renaming, or deleting a JSON file updates the list without a registry edit or a
+local server restart. Keep filenames stable to preserve saved lesson preferences.
+`generated/lesson-catalog.js` and `_site/` are generated and ignored by Git.
+The existing JavaScript validator checks the full lesson format; Python only
+collects catalog metadata. Invalid lessons fail checks before deployment.
 
 ```json
 {
@@ -158,10 +182,14 @@ fnm install
 fnm use
 npm ci
 npm test
+npm run test:tools
 npm run test:browser
 ```
 
-`npm test` uses Node's built-in runner. Playwright is a development dependency;
+`npm test` generates the catalog, then uses Node's built-in runner.
+`npm run test:tools` checks discovery, live refresh, errors, and packaging.
+`npm run test:browser` builds and serves the actual `_site/` artifact.
+Playwright is a development dependency;
 the app itself has no npm runtime dependencies. Browser checks require Chrome,
 start temporary loopback servers, and use disposable browser profiles and
 simulated MIDI. They do not access your existing Chrome profile or physical kit.
@@ -176,10 +204,15 @@ still require manual checks.
 
 ## Deployment and remaining acceptance
 
-GitHub Pages uses **main**, **/ (root)** at
+The [Pages workflow](.github/workflows/pages.yml) checks pull requests and pushes
+to `main`: Node tests, Python tests, and isolated Chrome checks. Successful pushes
+to `main` publish `_site/` to
 [gaeevy.github.io/rhythm-trainer](https://gaeevy.github.io/rhythm-trainer/).
-No build or new hosting service is required. Run both test commands, review and
-commit, then publish when ready:
+No extra hosting service or personal access token is needed.
+
+The repository Pages source is **GitHub Actions**, verified on 2026-10-25.
+Open a pull request for review; merging it into `main` runs the checks and deploys
+the generated site. For later updates, commit and push when ready:
 
 ```sh
 git push origin main
@@ -187,7 +220,11 @@ git push origin main
 
 Confirm Pages deployment finishes, then check the live app: lesson load,
 start/count-in, keyboard/MIDI hits, mute, stop/restart, and console errors. Local
-checks do not verify the live version. This cleanup has not been pushed/deployed.
+checks do not verify the live version. Deployment and live-site verification remain pending the pull request merge.
+
+For a local deployment artifact, run `npm run build` (lesson validation plus
+packaging). It recreates `_site/` using only runtime assets; no JavaScript compiler
+or frontend framework is involved. The workflow retains its artifact for one day.
 
 Physical acceptance remains: hear module and browser audio together, practice
 simultaneous hits and several loops, check unplug/reconnect, and tune latency

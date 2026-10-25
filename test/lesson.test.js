@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { LessonValidationError, parseLesson, validateLesson } from "../src/lesson.js";
 
-import { BUNDLED_LESSONS } from "../src/lesson-catalog.js";
+import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 function example() {
     return {
@@ -16,7 +16,7 @@ test("all bundled lessons parse and validate", async () => {
     const directory = new URL("../lessons/", import.meta.url);
     const files = (await readdir(directory)).filter(file => file.endsWith(".json"));
     assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ id }) => `${id}.json`).sort(),
-        "Each lesson JSON must have exactly one entry in src/lesson-catalog.js");
+        "Each lesson JSON must have exactly one entry in the generated catalog");
     for (const file of files) {
         parseLesson(await readFile(new URL(file, directory), "utf8"));
     }

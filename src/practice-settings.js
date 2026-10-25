@@ -1,6 +1,6 @@
 import { DEFAULT_KEY_BINDINGS, KEY_CODES } from "./input.js";
 import { INSTRUMENTS } from "./instruments.js";
-import { BUNDLED_LESSONS } from "./lesson-catalog.js";
+import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
 
@@ -73,6 +73,10 @@ export function loadPracticeSettings(storage) {
                     if (code) bindings[code] = instrument;
                 }
             }
+        }
+        if (settings?.version === 1 && typeof settings.lastBundledLessonId === "string"
+            && !BUNDLED_LESSONS.some(lesson => lesson.id === settings.lastBundledLessonId)) {
+            settings.lastBundledLessonId = BUNDLED_LESSONS[0].id;
         }
         if (!validPracticeSettings(settings)) throw new SyntaxError("Invalid practice settings");
         return { settings, warning: "" };

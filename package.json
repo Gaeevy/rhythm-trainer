@@ -8,7 +8,11 @@
   },
   "scripts": {
     "test": "node --test",
-    "test:browser": "node scripts/browser-smoke.mjs"
+    "test:browser": "node scripts/browser-smoke.mjs",
+    "pretest": "python3 scripts/site.py catalog",
+    "test:tools": "python3 -m unittest discover -s test -p 'test_*.py'",
+    "pretest:browser": "python3 scripts/site.py catalog && python3 scripts/site.py build",
+    "build": "npm test && python3 scripts/site.py build"
   },
   "private": true,
   "devDependencies": {

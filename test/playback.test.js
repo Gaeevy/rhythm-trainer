@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readFile } from "node:fs/promises";
+import { FIXTURE_LESSONS } from "../scripts/fixtures/lessons.js";
 import { lessonEvents, Playback } from "../src/playback.js";
 
 const lesson = {
@@ -144,8 +144,8 @@ test("default browser timers retain the global receiver on start and stop", cont
     assert.equal(activeTimers.size, 0);
 });
 
-test("mixed subdivisions keep exact note offsets at loop boundaries", async () => {
-    const mixed = JSON.parse(await readFile(new URL("../lessons/mixed-subdivisions.json", import.meta.url), "utf8"));
+test("mixed subdivisions keep exact note offsets at loop boundaries", () => {
+    const mixed = FIXTURE_LESSONS["mixed-subdivisions"];
     const h = harness();
     h.playback.start(mixed, { countIn: false });
     for (let step = 1; step <= 650; step++) h.advance(10 + step * 0.025);
