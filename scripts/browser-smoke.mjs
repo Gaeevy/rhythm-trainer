@@ -270,6 +270,9 @@ async function trackFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
+        // This scenario requires four specific tracks, regardless of catalog order.
+        await page.locator("#lesson").selectOption("swing-01");
+        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent === "Swing 01: kick quarters and snare");
         await page.locator("#bpm").fill("300");
         if (await page.locator("#practice-panel").getAttribute("open") === null) {
             await page.locator("#practice-panel summary").click();

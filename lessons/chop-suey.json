@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "title": "Chop Suey!",
+  "bpm": 80,
+  "time_signature": [4, 4],
+  "bars": 2,
+  "tracks": [
+    {"instrument": "hi_hat_closed", "notes": [0, 48, 96, 144, 192, 240, 288, 336, 384, 432, 480, 528, 576, 624, 672, 720]},
+    {"instrument": "snare", "notes": [96, 168, 288, 360, 480, 552, 672, 744]},
+    {"instrument": "kick", "notes": [0, 72, 192, 264, 384, 456, 576, 624]}
+  ]
+}
