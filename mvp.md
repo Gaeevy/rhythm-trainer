@@ -239,6 +239,19 @@ Implementation checkpoints (full development history is in Git):
   PR #2 is merged and its Pages deployment passed; release this correction after
   checks and verify the live mapping. Real-kit confirmation remains pending.
 
+- **2026-10-25 — Fascination Street:** added only source bars 9–12 as one
+  four-bar looping lesson at the confirmed 80 BPM for practice. Straight
+  sixteenth-note grid; all X heads are closed hi-hat, including the opening hit
+  (user requested replacing the crash). Diamonds are Snare; hi-hat rests there.
+  Relative snare
+  ticks by source bar: 9 [96,288], 10 [96,288,336], 11 [96,288,312],
+  12 [96,288,336]. Relative kick ticks: 9/11 [0,24,144,168,216],
+  10/12 [0,24,144,168,216,240]. Cross-stick dynamics/articulation are not added.
+  **Verification:** all 95 JavaScript tests and ten browser scenarios pass at
+  root and `/rhythm-trainer/`, including the nine-lesson catalog. User authorized
+  commit and deployment; publish after PR checks pass and verify the live lesson.
+  Tempo/instruments confirmed; listening review remains pending.
+
 ## Verification and next steps
 
 Run `npm test`, `npm run test:tools`, and `npm run test:browser` with pinned Node
