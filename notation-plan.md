@@ -1,6 +1,6 @@
 # Drum notation plan
 
-Status: milestones 1–2 accepted. Milestone 3 is next; milestones 4–7 have not started.
+Status: milestones 1–3 accepted. Milestone 4 is next; milestones 5–7 have not started.
 Created: 2026-11-04.
 
 ## Goal
@@ -92,7 +92,7 @@ they do not access the user's Chrome profile or physical kit.
 | --- | --- | --- | --- |
 | 1 | Static notation proof | accepted | Staff, symbols, spacing, readability |
 | 2 | Lesson-to-notation model and feel | accepted | Written rhythms and JSON examples |
-| 3 | Notation view in the app | planned | View switch, lesson changes, pages, controls |
+| 3 | Notation view in the app | accepted | View switch, lesson changes, pages, controls |
 | 4 | Playback marker and looping | planned | Reading along at several tempos |
 | 5 | Timing feedback on notation | planned | Useful feedback without hiding the score |
 | 6 | Full lesson coverage and regression checks | planned | Current catalog and difficult patterns |
@@ -319,3 +319,35 @@ database, and AI/MCP authoring are outside this iteration.
 
 - **2026-11-04 — Milestone 2 accepted:** user approved the lesson conversion
   preview and authorized committing it, then proceeding with milestone 3.
+
+- **2026-11-04 — Milestone 3 implementation:** committed accepted milestone 2 as
+  `70cef0d`. Added the main-app Lanes/Notation selector, lazy local renderer/fonts,
+  static bar navigation, dimmed disabled noteheads, instrument toggles, drum key,
+  and renderer/conversion error fallback with retry. Stored view choice migrates
+  at the storage boundary without resetting other controls or touching MIDI.
+  View changes preserve the active assessment origin and playback; changing
+  instruments retains the existing stop/reset semantics. Page selection survives
+  resize and view changes; a new lesson starts on bar 1. Browser integration
+  covers native keyboard, simulated normal/edge ride input, all-disabled practice,
+  saved views, empty tracks, four-bar navigation, unsupported rhythms, missing
+  renderer, and engraving failure recovery at root/subpath. Verification in
+  progress; next: finish final checks and desktop/narrow visual review, then user
+  review. No playback marker, automatic page following, or notation feedback yet.
+
+- **2026-11-04 — Milestone 3 ready for review:** all 105 JavaScript tests,
+  five Python tests, and fourteen browser scenarios pass at root/subpath. The
+  integrated app was checked with actual keyboard events and simulated MIDI,
+  including 51/59 ride mapping, uninterrupted view switching, disabled notehead
+  styling, metronome-only practice, saved view migration, four-bar navigation,
+  resize, unsupported lesson fallback, script-load failure, and engraving retry.
+  Desktop (1440×1000) and narrow (390×844) screenshots inspected. The renderer
+  is absent from Lanes network requests until Notation is requested. No changes
+  to audio scheduling, hit timestamps, or assessment rules. User should refresh
+  localhost, select Swing 03 → Notation → bar 2, switch views during a loop,
+  toggle instruments, and reload. Come Undone notation remains unsupported until
+  milestone 6 and falls back to Lanes. Hardware/readability review pending;
+  milestone 3 changes are uncommitted and not deployed. Next: user feedback
+  before milestone 4 playback marker/page following.
+
+- **2026-11-04 — Milestone 3 accepted:** user approved app view integration and
+  authorized committing it, then proceeding with milestone 4.

@@ -89,7 +89,8 @@ Milestone 2 supports quarters, straight eighths/sixteenths, swung eighths, and
 explicit eighth-note triplets. Thirty-second notes, sixteenth-note triplets,
 open/closed hi-hat marks, and full-kit collision handling remain milestone 6 work.
 A rhythm outside current notation support raises an explanation instead of
-rounding ticks or silently dropping notes. It remains playable in Lanes.
+rounding ticks or silently dropping notes. The app returns to Lanes and remains
+playable; **Retry notation** is available after a renderer/loading failure.
 
 Version 1 lessons keep their strict original schema and behavior. They do not
 accept a `notation` field. If converted for display, they use literal rhythms;
@@ -98,8 +99,9 @@ are migrated in milestone 2; other lessons remain version 1.
 
 ## Review
 
-Open `http://localhost:8000/scripts/notation-preview.html` after starting the
-normal server. The page fetches the three real lesson JSON files. Expand
+In the main app, choose **Notation** to read the selected lesson and use the
+arrows to change bars. A static three-example development page is also at
+`http://localhost:8000/scripts/notation-preview.html` after starting the normal server. The page fetches the three real lesson JSON files. Expand
 **Lesson notation metadata** beneath a score to see the exact version/feel/hints.
 Review Californication, Swing 01, and especially Swing 03's second bar.
 This step has no notation playback marker or feedback yet.

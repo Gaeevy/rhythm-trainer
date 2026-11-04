@@ -6,7 +6,7 @@ export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
 
 export function defaultPracticeSettings() {
     return {
-        version: 1, countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
+        version: 1, view: "lanes", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
         keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
@@ -18,7 +18,7 @@ function inRange(value, min, max) {
 }
 
 export function validPracticeSettings(settings) {
-    if (!settings || settings.version !== 1 || typeof settings.countIn !== "boolean"
+    if (!settings || settings.version !== 1 || !["lanes", "notation"].includes(settings.view) || typeof settings.countIn !== "boolean"
         || typeof settings.guideMuted !== "boolean" || typeof settings.metronomeMuted !== "boolean"
         || !inRange(settings.toleranceMs, 0, 150) || !inRange(settings.latencyOffsetMs, -500, 500)
         || !inRange(settings.guideVolume, 0, 100) || !inRange(settings.metronomeVolume, 0, 100)
@@ -43,6 +43,7 @@ export function loadPracticeSettings(storage) {
         const settings = JSON.parse(text);
         // Keep existing controls and MIDI profiles when reserving Space for transport.
         if (settings?.version === 1) {
+            if (!["lanes", "notation"].includes(settings.view)) settings.view = "lanes";
             if (settings.disabledInstruments === undefined) settings.disabledInstruments = [];
             if (settings.keyBindings && Object.hasOwn(settings.keyBindings, "Space")) {
                 const replacement = ["KeyD", ...KEY_CODES].find(code => !Object.hasOwn(settings.keyBindings, code));

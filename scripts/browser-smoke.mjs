@@ -131,7 +131,8 @@ async function timedKey(page, code, beat, errorMs = 0) {
     return page.evaluate(({ code, beat, errorMs }) => {
         const event = new KeyboardEvent("keydown", { code, bubbles: true, cancelable: true });
         Object.defineProperty(event, "timeStamp", { value: window.smoke.stamp(beat, errorMs) });
-        document.querySelector("#timeline").dispatchEvent(event);
+        (document.querySelector("#notation-panel:not([hidden]) #notation-score")
+            ?? document.querySelector("#timeline")).dispatchEvent(event);
         return window.smoke.assessment.hits.at(-1);
     }, { code, beat, errorMs });
 }
@@ -495,6 +496,128 @@ async function midiFlow(browser, url) {
     console.log(`PASS automatic MPS-850 MIDI and recovery: ${new URL(url).pathname}`);
 }
 
+async function notationFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context, { ports: ["kit"] });
+    try {
+        const page = await context.newPage();
+        const errors = [], rendererRequests = [];
+        page.on("pageerror", error => errors.push(error.message));
+        page.on("request", request => { if (request.url().includes("vexflow-bravura.js")) rendererRequests.push(request.url()); });
+        page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`); });
+        await page.goto(url);
+        await ready(page);
+        assert.equal(await page.locator("#timeline").isVisible(), true);
+        assert.equal(rendererRequests.length, 0, "Lanes does not load the notation library");
+        await page.locator("#lesson").selectOption("swing-03");
+        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Swing 03"));
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator("#timeline").isVisible(), false);
+        assert.equal(await page.locator("#notation-page").textContent(), "Bar 1 of 2");
+        await page.locator("#notation-next").click();
+        assert.equal(await page.locator("#notation-page").textContent(), "Bar 2 of 2");
+        assert.equal(await page.locator("#notation-score .vf-tuplet").count(), 1);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        assert.equal(await page.locator("#notation-page").textContent(), "Bar 2 of 2");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-app-narrow.png", fullPage: true });
+        await page.setViewportSize({ width: 1440, height: 1000 });
+        await page.locator("#practice-panel summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#bpm").fill("300");
+        await observePlayback(page);
+        await page.locator("#notation-score").focus();
+        await page.keyboard.press("Space");
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        const origin = await page.evaluate(() => window.smoke.assessment.origin);
+        await page.locator("#view-lanes").click();
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "true");
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        const result = await timedKey(page, "KeyF", 0);
+        assert.equal(result.status, "on_time");
+        for (const [note, expected] of [[51, "on_time"], [59, "extra"]]) {
+            assert.equal(await page.evaluate(({ note }) => {
+                window.midiTest.sendData("kit", [0x99, note, 77], window.smoke.stamp(0));
+                return window.smoke.assessment.hits.at(-1).status;
+            }, { note }), expected);
+        }
+        await page.locator("#notation-score").focus();
+        const beforeRealKey = await page.evaluate(() => window.smoke.assessment.hits.length);
+        await page.keyboard.press("f");
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), beforeRealKey + 1);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.hits.at(-1).source), "keyboard");
+        await page.getByRole("button", { name: "Disable Ride in notation", exact: true }).click();
+        await stopped(page);
+        assert.equal(await page.locator("#score-on_time").textContent(), "0");
+        assert.equal(await page.evaluate(() => [...document.querySelectorAll("#notation-score text")]
+            .some(node => getComputedStyle(node).fill === "rgb(164, 169, 159)")), true, "Disabled noteheads are dimmed");
+        for (const name of ["Hi-hat pedal", "Snare", "Kick"]) {
+            await page.getByRole("button", { name: `Disable ${name} in notation`, exact: true }).click();
+        }
+        await page.locator("#notation-score").focus();
+        await page.keyboard.press("Space");
+        await playing(page);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.tracks.size), 0);
+        await page.keyboard.press("Space");
+        await stopped(page);
+        await page.reload();
+        await ready(page);
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator('#notation-instruments button[aria-pressed="false"]').count(), 4);
+        assert.equal(await page.locator("#view-notation").getAttribute("aria-pressed"), "true");
+        await page.locator("#lesson").selectOption("fascination-street");
+        await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 4");
+        await page.locator("#notation-next").click();
+        assert.equal(await page.locator("#notation-page").textContent(), "Bar 2 of 4");
+        await page.locator("#lesson").selectOption("swing-ride");
+        await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 1");
+        assert.equal(await page.locator("#notation-instruments button").count(), 4, "Empty tracks retain their controls");
+        await page.locator("#lesson").selectOption("come-undone");
+        await page.locator("#notation-error").waitFor();
+        assert.equal(await page.locator("#timeline").isVisible(), true);
+        assert.equal(await page.locator("#start-stop").isEnabled(), true);
+        await page.locator("#lesson").selectOption("swing-03");
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator("#notation-error").isVisible(), false);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-app-desktop.png", fullPage: true });
+        assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+
+    const recovery = await browser.newContext();
+    await mockMidi(recovery);
+    try {
+        const page = await recovery.newPage();
+        await page.goto(url);
+        await ready(page);
+        await page.route("**/assets/vendor/vexflow/vexflow-bravura.js", route => route.fulfill({ status: 404, body: "Test renderer unavailable" }));
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-error").waitFor();
+        assert.equal(await page.locator("#timeline").isVisible(), true);
+        assert.equal(await page.locator("#start-stop").isEnabled(), true);
+        await page.unroute("**/assets/vendor/vexflow/vexflow-bravura.js");
+        await page.locator("#notation-retry").click();
+        await page.locator("#notation-score svg").waitFor();
+        await page.locator("#view-lanes").click();
+        await page.evaluate(() => {
+            const draw = window.VexFlow.Stave.prototype.draw;
+            window.restoreNotationDraw = () => { window.VexFlow.Stave.prototype.draw = draw; };
+            window.VexFlow.Stave.prototype.draw = () => { throw new Error("Test engraving failure"); };
+        });
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-error").waitFor();
+        assert.equal(await page.locator("#timeline").isVisible(), true);
+        await page.evaluate(() => window.restoreNotationDraw());
+        await page.locator("#notation-retry").click();
+        await page.locator("#notation-score svg").waitFor();
+    } finally { await recovery.close(); }
+    console.log(`PASS notation view, paging, controls, input, persistence, failure recovery: ${new URL(url).pathname}`);
+}
+
 let browser;
 try {
     // launch() creates a disposable profile. Never use connectOverCDP or launchPersistentContext.
@@ -507,6 +630,7 @@ try {
             await trackFlow(browser, server.url);
             await failureRecovery(browser, server.url);
             await midiFlow(browser, server.url);
+            await notationFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");

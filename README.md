@@ -11,23 +11,34 @@ for development instructions. Local changes are not published until pushed.
 The next feature, standard drum notation, has an incremental implementation and
 review plan in [notation-plan.md](notation-plan.md).
 
-Milestone 2's local preview is available at
-[localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html)
-after starting the normal server. It reads Californication, Swing 01, and Swing 03
-from their real lesson JSON files, including the snare triplet rest in Swing 03.
-Expand **Lesson notation metadata** to inspect the new fields.
-[Version 2 notation format and examples](notation-format.md) explains Straight,
-Swing, explicit triplets, and the current display limits. Existing performance
-ticks are unchanged. This preview is static; playback feedback comes later.
-On narrow screens, scroll each score horizontally to preserve note size.
+Milestone 3 adds **Lanes / Notation** below the lesson title in the main app.
+Lanes remains the default; your chosen view saves in this browser without resetting
+practice or MIDI preferences. Notation shows a static score with previous/next bar
+arrows, instrument buttons, and a foldable drum key. Switching views or score bars
+keeps playback running. Instrument buttons stop/reset practice just like lane
+controls; disabled noteheads stay visible and dimmed. Space works when the score
+has focus. On narrow screens, scroll the score horizontally to preserve note size.
 
-The preview page stays outside the production lesson catalog;
-preview HTML and scripts are excluded from the Pages artifact.
-The bundled renderer/fonts add about 711 KiB plus notices
-to packaged assets; the practice app does not load them yet.
+Start review at [localhost:8000](http://localhost:8000): select **Swing 03**, choose
+**Notation**, and inspect bar 2. Try resizing, switching views during playback,
+disabling an instrument, and reloading to confirm your view preference survives.
+There is no score playback marker or timing color feedback yet (milestones 4/5).
+
+Californication, Swing 01, and Swing 03 have reviewed version 2 metadata. Other
+version 1 lessons display literal rhythms where supported. Come Undone currently
+requires sixteenth-note triplet support planned for milestone 6; its notation
+falls back to Lanes with an explanation. A renderer failure also keeps Lanes
+available and offers retry. No notes are rounded or silently omitted.
+
+The renderer/fonts load locally only when Notation is selected, adding about
+711 KiB plus notices to packaged assets. No CDN is required.
 [Version, licenses, hashes, and reproduction](assets/vendor/vexflow/README.md).
-Run `npm run test:notation` for preview checks; `npm run test:browser` includes
-them alongside the existing keyboard and simulated-MIDI regression checks.
+[Version 2 format](notation-format.md) explains Straight, Swing, and explicit
+triplet hints. The earlier three-example development preview remains at
+[localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html);
+its HTML/scripts are excluded from the Pages artifact. `npm run test:notation`
+checks that preview; `npm run test:browser` also checks app integration,
+keyboard/simulated MIDI, persistence, pagination, and renderer recovery.
 
 ## Run locally
 

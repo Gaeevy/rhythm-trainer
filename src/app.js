@@ -1,6 +1,7 @@
 import { parseLesson } from "./lesson.js";
 import { DrumAudio } from "./audio.js";
 import { Playback } from "./playback.js";
+import { NotationView } from "./notation/view.js";
 import { Track } from "./track.js";
 import { BEATS_PER_BAR } from "./music-time.js";
 import { Assessment } from "./assessment.js";
@@ -45,6 +46,11 @@ function recordInputHit(hit) {
     if (result) tracks.find(track => track.data.instrument === instrument).showFeedback(result);
     updateSummary();
 }
+
+const notationView = new NotationView({
+    onToggle: instrument => toggleTrack(instrument),
+    onFallback: () => { if (lesson && !playback?.running) draw(); },
+});
 
 let browserStorage;
 try { browserStorage = window.localStorage; } catch { /* Storage can be disabled; input still works. */ }
@@ -143,9 +149,10 @@ function toggleTrack(instrument) {
     assessment = null;
     sessionElapsedSeconds = 0;
     for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
+    notationView.updateInstruments(preferences.disabledInstruments);
     persistPractice();
     draw();
-    element("timeline").focus({ preventScroll: true });
+    element(notationView.active ? "notation-panel" : "timeline").focus({ preventScroll: true });
 }
 
 function updateVolumes(save = true) {
@@ -164,7 +171,7 @@ function draw() {
     updateAssessment();
     const beat = playback?.running
         ? playback.beatAt(audioTimeForEvent(audio.context, performance.now())) : 0;
-    tracks.forEach((track, index) => track.render(beat, playback?.running ? assessment : null, index === 0));
+    if (!notationView.active) tracks.forEach((track, index) => track.render(beat, playback?.running ? assessment : null, index === 0));
     const positiveBeat = Math.max(0, beat);
     const loopBeats = lesson.bars * BEATS_PER_BAR;
     position.textContent = [
@@ -212,6 +219,8 @@ async function changeLesson(read, id, { initial = false } = {}) {
         for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
         element("tracks").style.setProperty("--track-count", tracks.length);
         element("tracks").replaceChildren(...tracks.map(track => track.element));
+        notationView.setLesson(lesson, preferences.disabledInstruments);
+        void notationView.show(preferences.view);
         element("lesson-title").textContent = lesson.title;
         element("lesson-detail").textContent = `4/4 · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
         const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
@@ -357,6 +366,15 @@ document.addEventListener("keydown", event => {
     event.preventDefault();
     recordInputHit({ instrument, originalTimeStamp: event.timeStamp, source: "keyboard" });
 });
+for (const view of ["lanes", "notation"]) {
+    element(`view-${view}`).addEventListener("click", () => {
+        preferences.view = view;
+        persistPractice();
+        void notationView.show(view);
+        if (lesson && !playback?.running) draw();
+    });
+}
+element("notation-retry").addEventListener("click", () => { void notationView.show("notation"); });
 element("midi-connect").addEventListener("click", () => midi.connect());
 lessonSelect.addEventListener("change", () => loadLesson());
 element("lesson-tempo").addEventListener("click", () => {

@@ -1,5 +1,5 @@
 // SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
-export function renderPreview(host, example) {
+export function renderPreview(host, example, disabledInstruments = []) {
     const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
     const style = getComputedStyle(host);
     const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
@@ -13,7 +13,13 @@ export function renderPreview(host, example) {
     stave.setContext(context).draw();
     const beams = [], tuplets = [];
     const voices = example.voices.map(part => {
-        const notes = part.notes.map(note => new StaveNote({ ...note, stemDirection: part.stem }));
+        const notes = part.notes.map(note => {
+            const engraved = new StaveNote({ ...note, stemDirection: part.stem });
+            for (const [index, ref] of (note.refs ?? []).entries()) {
+                if (disabledInstruments.includes(ref.instrument)) engraved.setKeyStyle(index, { fillStyle: "#a4a99f", strokeStyle: "#a4a99f" });
+            }
+            return engraved;
+        });
         for (const indices of part.beams) beams.push(new Beam(indices.map(index => notes[index])));
         for (const indices of part.tuplets ?? []) {
             tuplets.push(new Tuplet(indices.map(index => notes[index]), {
