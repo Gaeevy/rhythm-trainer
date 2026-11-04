@@ -42,7 +42,7 @@ test("one and sixteen bars accept first and last ticks", () => {
 });
 
 const invalidCases = [
-    ["version", 2, /lesson\.version/],
+    ["version", 3, /lesson\.version/],
     ["title", "  ", /lesson\.title/],
     ["title", 123, /lesson\.title/],
     ...[0, -1, NaN, Infinity, "80", null].map(value => ["bpm", value, /lesson\.bpm/]),

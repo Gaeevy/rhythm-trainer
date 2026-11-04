@@ -185,7 +185,8 @@ async function practiceFlow(browser, url) {
             const hit = await timedKey(page, code, beat, errorMs);
             assert.equal(hit.status, expected);
             assert.equal(hit.source, "keyboard");
-            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.01);
+            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.01,
+                `Native clock precision: expected ${errorMs} ms, got ${hit.errorMs} ms (${code}, beat ${beat})`);
         }
         assert.equal((await timedKey(page, "KeyK", 0)).status, "extra");
         await page.keyboard.press("f"); // A real browser key; snare has no expected notes.

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
@@ -40,9 +40,11 @@ try {
             await page.waitForFunction(() => document.documentElement.dataset.previewReady === "true" || document.querySelector("#preview-status").dataset.error);
             assert.equal(await page.locator("#preview-status").getAttribute("data-error"), null,
                 await page.locator("#preview-status").textContent());
-            assert.equal(await page.locator(".score svg").count(), 2);
+            assert.equal(await page.locator(".score svg").count(), 4);
             assert.equal(await page.locator("#drum-key li").count(), 5);
-            assert.match(await page.locator('[data-example="swing"] .feel').textContent(), /2:1/);
+            assert.equal(await page.locator('[data-example="swing-03"] .score').count(), 2);
+            assert.equal(await page.locator('[data-example="swing-03"] .vf-tuplet').count(), 1);
+            assert.match(await page.locator('[data-example="swing-01"] .feel').textContent(), /2:1/);
             for (const [name, viewport] of [["desktop", { width: 1440, height: 1100 }], ["narrow", { width: 390, height: 844 }]]) {
                 await page.setViewportSize(viewport);
                 await page.waitForFunction(() => [...document.querySelectorAll(".score svg")].every(svg =>

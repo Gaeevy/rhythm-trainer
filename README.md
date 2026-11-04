@@ -11,15 +11,18 @@ for development instructions. Local changes are not published until pushed.
 The next feature, standard drum notation, has an incremental implementation and
 review plan in [notation-plan.md](notation-plan.md).
 
-Milestone 1's local preview is available at
+Milestone 2's local preview is available at
 [localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html)
-after starting the normal server. It shows one straight groove, Swing 01, and a
-foldable drum key. This is a static notation preview; it does not play audio or
-change the practice app. On narrow screens, scroll the score horizontally to
-preserve note size. Review staff positions, symbols, rests, beams, and spacing.
+after starting the normal server. It reads Californication, Swing 01, and Swing 03
+from their real lesson JSON files, including the snare triplet rest in Swing 03.
+Expand **Lesson notation metadata** to inspect the new fields.
+[Version 2 notation format and examples](notation-format.md) explains Straight,
+Swing, explicit triplets, and the current display limits. Existing performance
+ticks are unchanged. This preview is static; playback feedback comes later.
+On narrow screens, scroll each score horizontally to preserve note size.
 
-The preview and its fixtures stay outside the production lesson catalog;
-preview HTML, scripts, and fixtures are excluded from the Pages artifact.
+The preview page stays outside the production lesson catalog;
+preview HTML and scripts are excluded from the Pages artifact.
 The bundled renderer/fonts add about 711 KiB plus notices
 to packaged assets; the practice app does not load them yet.
 [Version, licenses, hashes, and reproduction](assets/vendor/vexflow/README.md).
@@ -216,7 +219,9 @@ bar. Supported spacing: eighth 48, sixteenth 24, thirty-second 12, eighth-note
 triplet 32, sixteenth-note triplet 16. Lessons support 1–16 bars and any subset
 of the twelve IDs in [src/instruments.js](src/instruments.js). Empty tracks are
 allowed if the lesson has a note elsewhere. Unknown fields/instruments are rejected.
-The visible window stays eight beats wide regardless of lesson length.
+The Lanes window stays eight beats wide regardless of lesson length.
+Version 2 additionally requires `notation`; see [notation-format.md](notation-format.md).
+Version 1 remains supported with its original fields.
 
 Loading another lesson stops practice; a failed load keeps the previous lesson
 usable. Choose it again to retry. Lessons are generated/edited outside the app

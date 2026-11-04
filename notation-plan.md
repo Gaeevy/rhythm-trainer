@@ -1,6 +1,6 @@
 # Drum notation plan
 
-Status: milestone 1 accepted. Milestone 2 is next; milestones 3–7 have not started.
+Status: milestones 1–2 accepted. Milestone 3 is next; milestones 4–7 have not started.
 Created: 2026-11-04.
 
 ## Goal
@@ -67,10 +67,10 @@ they do not access the user's Chrome profile or physical kit.
   Existing lesson notes must retain their exact times and instrument identities.
 - Existing version 1 lessons must remain valid and playable. Without explicit
   notation information, render literal rhythms; never guess feel from a title.
-- Introduce version 2 only when the notation metadata is needed. Proposed shape:
-  the existing lesson fields plus `notation`, containing `feel` and optional
-  grouping/voice hints. Finalize and document the exact JSON fields in milestone 2
-  using one straight and two swing examples before migrating the catalog.
+- Version 2 extends the existing fields with required `notation`: `feel` and
+  optional `triplets` references to existing notes. The exact milestone 2 schema
+  and three migrated examples are documented in [notation-format.md](notation-format.md).
+  Custom voice/duration hints remain outside this implementation.
 - Hints reference existing notes by instrument and performance tick. They do not
   define a separate set of playable notes. Validate missing references, duplicate
   references, impossible durations/groups, and inconsistent swing interpretations.
@@ -91,7 +91,7 @@ they do not access the user's Chrome profile or physical kit.
 | # | Deliverable | Status | User review |
 | --- | --- | --- | --- |
 | 1 | Static notation proof | accepted | Staff, symbols, spacing, readability |
-| 2 | Lesson-to-notation model and feel | planned | Written rhythms and JSON examples |
+| 2 | Lesson-to-notation model and feel | accepted | Written rhythms and JSON examples |
 | 3 | Notation view in the app | planned | View switch, lesson changes, pages, controls |
 | 4 | Playback marker and looping | planned | Reading along at several tempos |
 | 5 | Timing feedback on notation | planned | Useful feedback without hiding the score |
@@ -289,3 +289,33 @@ database, and AI/MCP authoring are outside this iteration.
 
 - **2026-11-04 — Milestone 1 accepted:** user approved the preview and authorized
   committing it on a feature branch, then proceeding with milestone 2.
+
+- **2026-11-04 — Milestone 2 implementation:** committed accepted milestone 1 as
+  `4e86fad` on feature branch `codex/notation-preview`. Added strict version 2
+  metadata (`feel`, optional existing-note `triplets` references); version 1
+  remains unchanged. The deterministic converter preserves note references and
+  performance ticks, derives rests/beams/tuplets, and uses a separate instrument
+  voice when required to show an explicit triplet rest. The preview now reads
+  actual Californication, Swing 01, and Swing 03 JSON files, with visible metadata.
+  Those three files alone are migrated. Saved original fixtures test exact
+  scheduled-event equality at three tempos. Format/examples and limits are in
+  [notation-format.md](notation-format.md). Verification in progress; next: inspect
+  final scores and complete the application regression checks before user review.
+
+- **2026-11-04 — Milestone 2 ready for review:** all 104 JavaScript tests,
+  five Python tests, and twelve browser scenarios pass at root/subpath. Verified
+  exact pre/post-migration scheduled events at 60/96/180 BPM, note identity/count,
+  beat-local beams, aligned half/bar rests, explicit triplet/rest mapping,
+  unsupported-rhythm errors, and strict metadata validation. Desktop and narrow
+  screenshots inspected. The first full browser run encountered the existing
+  native-clock 0.01 ms precision assertion; added failure diagnostics and reran
+  successfully with the same threshold and no clock/input changes. Production
+  Lanes/playback remain usable for version 1 and 2. Only three example lessons
+  are migrated; notation overlay/feedback and broader subdivisions remain later
+  milestones. User should refresh `/scripts/notation-preview.html`, compare the
+  three scores (especially Swing 03 bar 2), and expand the metadata examples.
+  Milestone 2 changes are uncommitted and not deployed. Next: user review and
+  corrections before milestone 3; do not start app view integration yet.
+
+- **2026-11-04 — Milestone 2 accepted:** user approved the lesson conversion
+  preview and authorized committing it, then proceeding with milestone 3.

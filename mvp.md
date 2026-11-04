@@ -255,8 +255,10 @@ Implementation checkpoints (full development history is in Git):
 ## Verification and next steps
 
 The incremental notation feature is tracked in [notation-plan.md](notation-plan.md).
-Milestone 1 has a separate local static preview; notation is not integrated into
-practice yet. Its verification and user acceptance are recorded in that plan.
+Milestones 1–2 use a separate local static preview; notation is not integrated
+into practice yet. Version 2 notation metadata is described in
+[notation-format.md](notation-format.md); version 1 and performance ticks remain
+supported unchanged. Its verification and user acceptance are recorded in that plan.
 Follow its milestones and user review points for notation work; retain this
 document's playback, input, and timing requirements.
 

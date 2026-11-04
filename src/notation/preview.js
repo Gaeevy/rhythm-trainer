@@ -1,7 +1,6 @@
-// Milestone 1 engraving proof: receives hand-authored VexFlow note structures.
-// Playback and production lesson conversion are deliberately not involved here.
+// SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
 export function renderPreview(host, example) {
-    const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline } = globalThis.VexFlow;
+    const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
     const style = getComputedStyle(host);
     const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
     host.replaceChildren();
@@ -12,15 +11,22 @@ export function renderPreview(host, example) {
     const stave = new Stave(12, 50, width - 24);
     stave.addClef("percussion").addTimeSignature("4/4").setEndBarType(Barline.type.DOUBLE);
     stave.setContext(context).draw();
-    const beams = [];
+    const beams = [], tuplets = [];
     const voices = example.voices.map(part => {
         const notes = part.notes.map(note => new StaveNote({ ...note, stemDirection: part.stem }));
         for (const indices of part.beams) beams.push(new Beam(indices.map(index => notes[index])));
+        for (const indices of part.tuplets ?? []) {
+            tuplets.push(new Tuplet(indices.map(index => notes[index]), {
+                numNotes: 3, notesOccupied: 2, bracketed: true, location: part.stem === -1 ? -1 : 1,
+            }));
+        }
+        // Tuplet multipliers must be applied before the strict voice totals its ticks.
         return new Voice({ numBeats: 4, beatValue: 4 }).addTickables(notes);
     });
     new Formatter().joinVoices(voices).formatToStave(voices, stave);
     for (const voice of voices) voice.draw(context, stave);
     for (const beam of beams) beam.setContext(context).draw();
+    for (const tuplet of tuplets) tuplet.setContext(context).draw();
     const svg = host.querySelector("svg");
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `${example.title}. ${example.feel}. ${example.description}`);

@@ -1,3 +1,4 @@
+import { validateNotation } from "./notation/metadata.js";
 import { TICKS_PER_BAR } from "./music-time.js";
 import { INSTRUMENTS } from "./instruments.js";
 
@@ -23,14 +24,16 @@ function validateFields(value, fields, path) {
         requireCondition(Object.hasOwn(value, field), `${path}.${field}`, "is required");
     }
     for (const field of Object.keys(value)) {
-        requireCondition(fields.includes(field), `${path}.${field}`, "is not supported in version 1");
+        requireCondition(fields.includes(field), `${path}.${field}`, "is not supported");
     }
 }
 
-/** Validate version 1 lesson data. Return it unchanged or throw a path-specific error. */
+/** Validate version 1 or 2 lesson data. Return it unchanged or throw a path-specific error. */
 export function validateLesson(lesson) {
-    validateFields(lesson, ["version", "title", "bpm", "time_signature", "bars", "tracks"], "lesson");
-    requireCondition(lesson.version === 1, "lesson.version", "must be 1");
+    const fields = ["version", "title", "bpm", "time_signature", "bars", "tracks"];
+    if (lesson?.version === 2) fields.push("notation");
+    validateFields(lesson, fields, "lesson");
+    requireCondition(lesson.version === 1 || lesson.version === 2, "lesson.version", "must be 1 or 2");
     requireCondition(
         typeof lesson.title === "string" && lesson.title.trim().length > 0,
         "lesson.title", "must be a nonempty string",
@@ -80,6 +83,10 @@ export function validateLesson(lesson) {
         }
     }
     requireCondition(noteCount > 0, "lesson.tracks", "must contain at least one note across all tracks");
+    if (lesson.version === 2) {
+        try { validateNotation(lesson.notation, lesson.tracks); }
+        catch (error) { throw new LessonValidationError("lesson.notation", error.message); }
+    }
     return lesson;
 }
 

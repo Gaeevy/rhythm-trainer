@@ -1,0 +1,153 @@
+{
+  "californication": {
+    "version": 1,
+    "title": "Californication",
+    "bpm": 96,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "hi_hat_closed",
+        "notes": [
+          0,
+          48,
+          96,
+          144,
+          192,
+          240,
+          288,
+          336
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          96,
+          120,
+          168,
+          216,
+          288,
+          360
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          240
+        ]
+      }
+    ]
+  },
+  "swing-01": {
+    "version": 1,
+    "title": "Swing 01: kick quarters and snare",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288
+        ]
+      }
+    ]
+  },
+  "swing-03": {
+    "version": 1,
+    "title": "Swing 03: snare triplet pair",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 2,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352,
+          384,
+          480,
+          544,
+          576,
+          672,
+          736
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288,
+          480,
+          672
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160,
+          384,
+          544,
+          608,
+          640
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288,
+          384,
+          480,
+          576,
+          672
+        ]
+      }
+    ]
+  }
+}
