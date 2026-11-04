@@ -8,10 +8,11 @@ export const FEEDBACK = Object.freeze({
     [TimingStatus.EXTRA]: { label: "Extra", color: "#c2aacd", symbol: "+" },
 });
 
-export function feedbackText(result) {
+export function feedbackText(result, precision = 0) {
     const { label, symbol } = FEEDBACK[result.status];
     if (result.errorMs === null) return `${symbol} ${label}`;
-    const error = Math.round(result.errorMs);
-    const signedError = error === 0 ? "0" : error > 0 ? `+${error}` : `−${Math.abs(error)}`;
+    const error = precision === 0 ? Math.round(result.errorMs) : Number(result.errorMs.toFixed(precision));
+    const magnitude = Math.abs(error).toFixed(precision);
+    const signedError = error === 0 ? magnitude : error > 0 ? `+${magnitude}` : `−${magnitude}`;
     return `${symbol} ${label} ${signedError} ms`;
 }

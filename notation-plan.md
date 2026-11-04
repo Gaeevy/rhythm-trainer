@@ -1,6 +1,6 @@
 # Drum notation plan
 
-Status: milestones 1–4 accepted. Milestone 5 is next; milestones 6–7 have not started.
+Status: milestones 1–5 accepted. Finish milestones 6–7 locally; final user review pending.
 Created: 2026-11-04.
 
 ## Goal
@@ -94,7 +94,7 @@ they do not access the user's Chrome profile or physical kit.
 | 2 | Lesson-to-notation model and feel | accepted | Written rhythms and JSON examples |
 | 3 | Notation view in the app | accepted | View switch, lesson changes, pages, controls |
 | 4 | Playback marker and looping | accepted | Reading along at several tempos |
-| 5 | Timing feedback on notation | planned | Useful feedback without hiding the score |
+| 5 | Timing feedback on notation | accepted | Useful feedback without hiding the score |
 | 6 | Full lesson coverage and regression checks | planned | Current catalog and difficult patterns |
 | 7 | Release and live acceptance | planned | Published app and real-kit practice |
 
@@ -383,3 +383,31 @@ database, and AI/MCP authoring are outside this iteration.
 
 - **2026-11-04 — Milestone 4 accepted:** user approved playback following and
   authorized committing it, then proceeding with milestone 5.
+
+- **2026-11-04 — Milestone 5 ready for review:** committed accepted milestone 4
+  as `391e14e`. Added independent notehead bindings to original instrument/note
+  indices and projected the existing assessment by loop iteration. On-time,
+  early, late, and missed colors use darker versions of the existing hues for
+  paper contrast; shared stems/beams remain unchanged. Visible text and notehead
+  tooltips show instrument/status and matched error to 0.1 ms without changing
+  stored precision. Extra hits are short-lived + overlays at precise hit times,
+  not written notes. Old-loop colors/text reset while totals persist; legitimate
+  early next-loop hits remain. Stop preserves heads, Start clears them, disabled
+  heads stay gray, and delayed hits correct misses. The renderer/clock cache is
+  retained; no assessment or audio scheduling rules changed.
+  **Verification:** 117 JavaScript tests, five Python tests, and eighteen browser
+  scenarios pass at root/subpath. Coverage includes independent shared-stem
+  colors, both ride MIDI notes, notehead count preservation for extras, transient
+  expiry, miss correction, loop/restart resets, disabled heads, and identical
+  complete input assessment with repeated notation projections. Desktop feedback
+  screenshot inspected; existing narrow resize/overflow checks pass. Step 5 is
+  uncommitted and not deployed. User should refresh localhost, try Swing 01 at a
+  slow tempo, intentionally play early/late/miss/extra and simultaneous hits,
+  then compare Lanes. Real-kit usefulness/timing remains for user review.
+  Next: user feedback before milestone 6 coverage and migration.
+
+- **2026-11-04 — Milestone 5 accepted / final work authorized:** user approved
+  feedback and requested its commit, then completion of all remaining local work
+  without intermediate review stops. Leave all subsequent changes uncommitted
+  and undeployed for the final review tomorrow. This overrides the earlier
+  milestone-by-milestone pause rule for this final iteration only.

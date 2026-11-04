@@ -28,13 +28,26 @@ marker hidden; Stop hides the marker and keeps the displayed bar available for
 reading. Start returns to bar 1. The final bar previews bar 1 of the next loop.
 Wide screens show current/upcoming bars side by side; narrow screens stack them
 and scroll the current score as needed to keep its marker visible. Scores are
-cached between loops, not re-engraved every animation frame. Timing feedback on
-individual noteheads remains milestone 5 work.
+cached between loops, not re-engraved every animation frame. Milestone 5 colors individual noteheads for on time (green), early (blue), late
+(amber), and missed (red), using darker shades for the paper background. Stems,
+beams, rests, and printed note positions stay unchanged. A text line names the
+instrument/result and displays matched error to 0.1 ms; hover a notehead for its
+result. The underlying measured error remains unrounded. Extras appear briefly
+as a purple + below the staff at their actual timing position, never as new notes.
 
-For milestone 4 review, try Swing 03 at 80 BPM and Fascination Street across
+Feedback follows the current loop; session totals accumulate. Stop preserves
+notehead results for reading, Start clears them, and disabled heads stay gray.
+A delayed timestamped hit can correct a miss. Both ride MIDI notes still count
+as Ride. The same assessment supplies both views; no second scoring engine.
+
+For playback review, try Swing 03 at 80 BPM and Fascination Street across
 several four-bar loops. Check count-in, stop/restart, tempo changes, view switching,
 and whether the marker feels aligned with what you hear. Real-kit/audio routing
 and latency acceptance still require the user's practice session.
+For milestone 5 review, use Swing 01 slowly, deliberately play early/late, skip a
+note, add a hit, and check the next loop clears the prior colors while totals
+remain. Try simultaneous ride/snare hits and switch back to Lanes for comparison.
+
 
 Californication, Swing 01, and Swing 03 have reviewed version 2 metadata. Other
 version 1 lessons display literal rhythms where supported. Come Undone currently

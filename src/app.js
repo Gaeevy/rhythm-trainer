@@ -43,7 +43,10 @@ function recordInputHit(hit) {
     const result = assessment.recordHit({
         ...hit, instrument, audioTime: audioTimeForEvent(audio.context, hit.originalTimeStamp),
     });
-    if (result) tracks.find(track => track.data.instrument === instrument).showFeedback(result);
+    if (result) {
+        tracks.find(track => track.data.instrument === instrument).showFeedback(result);
+        notationView.showFeedback(result);
+    }
     updateSummary();
 }
 
@@ -123,6 +126,7 @@ function updateAssessment() {
         sessionElapsedSeconds = Math.max(0, now - assessment.origin);
         for (const result of assessment.advance(now)) {
             tracks.find(track => track.data.instrument === result.instrument)?.showFeedback(result);
+            notationView.showFeedback(result);
         }
     }
     updateSummary();
@@ -171,7 +175,7 @@ function draw() {
     updateAssessment();
     const beat = playback?.running
         ? playback.beatAt(audioTimeForEvent(audio.context, performance.now())) : 0;
-    notationView.updatePlayback(beat, Boolean(playback?.running));
+    notationView.updatePlayback(beat, Boolean(playback?.running), assessment);
     if (!notationView.active) tracks.forEach((track, index) => track.render(beat, playback?.running ? assessment : null, index === 0));
     const positiveBeat = Math.max(0, beat);
     const loopBeats = lesson.bars * BEATS_PER_BAR;

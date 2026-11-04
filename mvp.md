@@ -257,7 +257,8 @@ Implementation checkpoints (full development history is in Git):
 The incremental notation feature is tracked in [notation-plan.md](notation-plan.md).
 The Notation view now follows the existing audio clock with a moving marker,
 automatic bar changes, and an upcoming-bar preview (milestone 4). Lanes and
-saved practice controls remain available. Notehead feedback remains milestone 5. Version 2 notation metadata is described in
+saved practice controls remain available. Milestone 5 projects the same assessment
+onto individual noteheads, with text/precise error and transient extra-hit marks. Version 2 notation metadata is described in
 [notation-format.md](notation-format.md); version 1 and performance ticks remain
 supported unchanged. Its verification and user acceptance are recorded in that plan.
 Follow its milestones and user review points for notation work; retain this

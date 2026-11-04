@@ -107,5 +107,8 @@ Review Californication, Swing 01, and especially Swing 03's second bar.
 The main app now follows playback using measured engraving positions, performance
 ticks, and the existing audio/output clock. At swung offbeats the marker reaches
 the written eighth at its stored tick 64, not tick 48; explicit triplets keep
-their literal positions. The development preview stays static. Notehead timing
-feedback remains milestone 5 work.
+their literal positions. The development preview stays static. Each reference also carries the original note index for looking up the existing
+assessment result. Milestone 5 colors that reference for the current loop,
+including delayed corrections. Extras use precise performance time in an overlay;
+they do not change the notation model or create a written note. Score conversion
+and hit grading remain separate.

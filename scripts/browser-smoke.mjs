@@ -780,6 +780,97 @@ async function scoreFollowingFlow(browser, url) {
     } finally { await context.close(); }
 }
 
+async function notationFeedbackFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+    await mockMidi(context, { ports: ["kit"] });
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#lesson").selectOption("swing-01");
+        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Swing 01"));
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        await page.locator("#practice-panel summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#tolerance").fill("10");
+        await page.locator("#bpm").fill("60");
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        const headsBefore = await page.locator("#notation-score [data-note-id]").count();
+        const stemBefore = await page.locator("#notation-score .vf-stem path").first().evaluate(node => getComputedStyle(node).stroke);
+        assert.equal((await timedKey(page, "KeyK", 0, -20)).status, "early");
+        assert.equal((await timedKey(page, "KeyF", 0, 20)).status, "late");
+        assert.equal((await timedKey(page, "KeyH", 1)).status, "on_time");
+        await page.waitForFunction(() => document.querySelector('[data-note-id="snare:0"]').dataset.timing === "late");
+        const shared = await page.evaluate(() => {
+            const ride = document.querySelector('#notation-score [data-note-id="ride:0"]');
+            const snare = document.querySelector('#notation-score [data-note-id="snare:0"]');
+            const pedal = document.querySelector('#notation-score [data-note-id="hi_hat_pedal:96"]');
+            return { sameStem: ride.closest(".vf-stavenote") === snare.closest(".vf-stavenote"),
+                states: [ride.dataset.timing, snare.dataset.timing, pedal.dataset.timing],
+                colors: [ride, snare, pedal].map(head => getComputedStyle(head.querySelector("text")).fill),
+                stem: getComputedStyle(ride.closest(".vf-stavenote").querySelector(".vf-stem path")).stroke };
+        });
+        assert.equal(shared.sameStem, true);
+        assert.deepEqual(shared.states, ["early", "late", "on_time"]);
+        assert.equal(new Set(shared.colors).size, 3);
+        assert.equal(shared.stem, stemBefore, "Keep shared stems/beam unchanged");
+        for (const [note, beat] of [[51, 1], [59, 2]]) {
+            assert.equal(await page.evaluate(({ note, beat }) => {
+                window.midiTest.sendData("kit", [0x99, note, 77], window.smoke.stamp(beat));
+                return window.smoke.assessment.hits.at(-1).status;
+            }, { note, beat }), "on_time");
+        }
+        await page.waitForFunction(() => document.querySelector('#notation-score [data-note-id="ride:192"]').dataset.timing === "on_time");
+        await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 59, 114], window.smoke.stamp(0, 17)));
+        await page.locator("#notation-score .notation-extra-hit").waitFor();
+        assert.equal(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing"), "early");
+        assert.equal(await page.locator("#notation-score [data-note-id]").count(), headsBefore, "Extra hits do not create written noteheads");
+        assert.match(await page.locator("#notation-feedback").textContent(), /Ride.*Extra/);
+        await page.waitForFunction(() => document.querySelector('#notation-score [data-note-id="kick:0"]').dataset.timing === "missed");
+        assert.equal((await timedKey(page, "KeyD", 0, 5)).status, "on_time");
+        await page.waitForFunction(() => document.querySelector('#notation-score [data-note-id="kick:0"]').dataset.timing === "on_time");
+        assert.match(await page.locator('#notation-score [data-note-id="kick:0"] title').textContent(), /Kick.*On time \+5.0 ms/);
+        await page.waitForFunction(() => document.querySelector('#notation-score [data-note-id="snare:160"]').dataset.timing === "missed");
+        await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 59, 114], window.smoke.stamp(0, 17)));
+        await page.locator("#notation-score .notation-extra-hit").waitFor();
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-feedback-desktop.png", fullPage: true });
+        await page.waitForFunction(() => document.querySelectorAll("#notation-score .notation-extra-hit").length === 0);
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
+        const newLoop = await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-iteration");
+        assert.equal(newLoop, "1");
+        assert.ok(["waiting", "missed"].includes(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing")), "Do not reuse the prior loop's early hit");
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        const summary = await page.locator(".session-summary").textContent();
+        const state = await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing");
+        await page.locator("#view-lanes").click();
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator(".session-summary").textContent(), summary);
+        assert.equal(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing"), state);
+        await page.locator("#count-in").check();
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
+        assert.equal(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing"), "waiting");
+        assert.equal(await page.locator("#notation-feedback").textContent(), "Play to see timing feedback.");
+        await page.locator("#start-stop").click();
+        await page.getByRole("button", { name: "Disable Snare in notation", exact: true }).click();
+        assert.equal(await page.locator('#notation-score [data-note-id="snare:0"]').getAttribute("data-timing"), "disabled");
+        assert.equal(await page.locator("#score-on_time").textContent(), "0");
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        assert.deepEqual(errors, []);
+        console.log(`PASS independent notehead feedback, precise text, MIDI zones, miss correction, extras, loop reset: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 let browser;
 try {
     // launch() creates a disposable profile. Never use connectOverCDP or launchPersistentContext.
@@ -794,6 +885,7 @@ try {
             await midiFlow(browser, server.url);
             await notationFlow(browser, server.url);
             await scoreFollowingFlow(browser, server.url);
+            await notationFeedbackFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");

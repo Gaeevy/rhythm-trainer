@@ -36,8 +36,8 @@ export function lessonNotation(lesson) {
     for (const track of lesson.tracks) {
         const id = voiceFor(track.instrument);
         if (!parts.has(id)) parts.set(id, []);
-        for (const performanceTick of track.notes) parts.get(id).push({
-            instrument: track.instrument, performanceTick,
+        for (const [noteIndex, performanceTick] of track.notes.entries()) parts.get(id).push({
+            instrument: track.instrument, performanceTick, noteIndex,
             id: `${track.instrument}:${performanceTick}`, key: DRUM_KEY[track.instrument].key,
         });
     }

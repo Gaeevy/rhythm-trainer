@@ -165,3 +165,6 @@ output { font-variant-numeric: tabular-nums; }
   .notation-scores:has(#notation-upcoming:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
   #notation-upcoming { border-left: 0; border-top: 1px solid #d9ddcf; }
 }
+
+.notation-feedback { min-height: 20px; color: var(--muted); font-size: 12px; line-height: 1.6; margin: 10px 0; }
+.notation-extra-hit { font: 600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; pointer-events: none; }

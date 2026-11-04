@@ -1,3 +1,4 @@
+import { noteAppearance, extraPosition, notationFeedbackText, NOTATION_COLORS, feedbackColor } from "./feedback.js";
 import { scorePosition, markerX } from "./position.js";
 import { lessonNotation } from "./model.js";
 import { renderPreview, renderDrumKey } from "./preview.js";
@@ -39,6 +40,12 @@ export class NotationView {
         this.active = false;
         this.running = false;
         this.beat = 0;
+        this.assessment = null;
+        this.feedbackIteration = 0;
+        this.latestResult = null;
+        this.extras = [];
+        this.extraSequence = 0;
+        this.lastPlayedAt = -Infinity;
         this.cache = new Map();
         element("notation-previous").onclick = () => this.changePage(-1);
         element("notation-next").onclick = () => this.changePage(1);
@@ -59,6 +66,11 @@ export class NotationView {
         this.lesson = lesson;
         this.disabled = disabled;
         this.model = null;
+        this.assessment = null;
+        this.latestResult = null;
+        this.extras = [];
+        this.feedbackIteration = 0;
+        this.lastPlayedAt = -Infinity;
         this.cache.clear();
         this.geometry = null;
         this.page = 0;
@@ -114,9 +126,17 @@ export class NotationView {
         this.renderSafely();
     }
 
-    updatePlayback(beat, running) {
+    updatePlayback(beat, running, assessment) {
         this.beat = beat;
         this.running = running;
+        if (assessment !== this.assessment) {
+            this.assessment = assessment;
+            this.latestResult = null;
+            this.extras = [];
+            this.feedbackIteration = 0;
+            this.lastPlayedAt = -Infinity;
+        }
+        if (running && this.model) this.selectFeedbackIteration(scorePosition(beat, this.model.bars.length).loop - 1);
         if (!this.active || !this.model) return;
         const state = scorePosition(beat, this.model.bars.length);
         if (running && state.barIndex !== this.page) {
@@ -144,6 +164,12 @@ export class NotationView {
             marker.setAttribute("aria-hidden", "true");
             geometry.svg.append(marker);
             geometry.marker = marker;
+            const extraLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            extraLayer.classList.add("notation-extra-hits");
+            extraLayer.setAttribute("aria-hidden", "true");
+            geometry.svg.append(extraLayer);
+            geometry.extraLayer = extraLayer;
+            geometry.extraSignature = "";
             this.cache.set(key, geometry);
         } else host.replaceChildren(geometry.svg);
         geometry.marker.style.display = "none";
@@ -152,7 +178,11 @@ export class NotationView {
 
     renderSafely() {
         try {
-            if (this.running) this.page = scorePosition(this.beat, this.model.bars.length).barIndex;
+            if (this.running) {
+                const state = scorePosition(this.beat, this.model.bars.length);
+                this.page = state.barIndex;
+                this.selectFeedbackIteration(state.loop - 1);
+            }
             element("notation-page").textContent = `Bar ${this.page + 1} of ${this.model.bars.length}`;
             const feel = this.model.feel === "swing" ? "Swing · 2:1 eighths" : "Straight · literal rhythm";
             element("notation-feel").textContent = feel;
@@ -167,8 +197,11 @@ export class NotationView {
             if (!upcoming.hidden) {
                 const next = (this.page + 1) % this.model.bars.length;
                 element("notation-upcoming-label").textContent = `${next === 0 ? "Next loop" : "Next"} · Bar ${next + 1}`;
-                this.engraving(element("notation-next-score"), next);
-            } else element("notation-next-score").replaceChildren();
+                this.nextGeometry = this.engraving(element("notation-next-score"), next);
+            } else {
+                this.nextGeometry = null;
+                element("notation-next-score").replaceChildren();
+            }
             this.updateMarker();
         } catch (error) { this.fallback(error); }
     }
@@ -185,12 +218,84 @@ export class NotationView {
         const x = markerX(state.tick, this.geometry.anchors);
         marker.setAttribute("x1", String(x));
         marker.setAttribute("x2", String(x));
+        this.updateFeedback();
         if (this.running && !state.countIn) {
             const host = element("notation-score");
             const left = x + this.geometry.paddingLeft;
             if (left < host.scrollLeft + 20 || left > host.scrollLeft + this.geometry.viewportWidth - 20) {
                 host.scrollLeft = Math.max(0, left - this.geometry.viewportWidth / 2);
             }
+        }
+    }
+
+    selectFeedbackIteration(iteration) {
+        if (iteration !== this.feedbackIteration) {
+            const resultIteration = this.latestResult?.expected?.iteration
+                ?? (this.latestResult ? extraPosition(this.latestResult, this.assessment, this.lesson.bars)?.iteration : undefined);
+            // Preserve a legitimate early hit for the new loop, but not old-loop text.
+            if (resultIteration !== iteration) {
+                this.latestResult = null;
+                this.lastPlayedAt = -Infinity;
+            }
+        }
+        this.feedbackIteration = iteration;
+    }
+
+    showFeedback(result) {
+        const now = performance.now();
+        if (result.status !== "missed" || now - this.lastPlayedAt > 800) this.latestResult = result;
+        if (result.status !== "missed") this.lastPlayedAt = now;
+        if (result.status === "extra") {
+            const position = extraPosition(result, this.assessment, this.lesson.bars);
+            if (position) this.extras = [...this.extras.filter(extra => extra.expires > now),
+                { ...position, result, id: ++this.extraSequence, expires: now + 900 }].slice(-6);
+        }
+    }
+
+    updateFeedback() {
+        const apply = (geometry, iteration, page) => {
+            if (!geometry) return;
+            for (const head of geometry.noteheads) {
+                const appearance = noteAppearance(this.assessment, head.ref, iteration, this.disabled);
+                const signature = `${iteration}:${appearance.status}:${appearance.errorMs}`;
+                if (head.appearance === signature) continue;
+                head.appearance = signature;
+                head.node.dataset.timing = appearance.status;
+                head.node.dataset.iteration = String(iteration);
+                head.node.setAttribute("aria-label", appearance.text);
+                head.title.textContent = appearance.text;
+                for (const glyph of head.node.querySelectorAll("text, path")) {
+                    glyph.style.fill = appearance.color;
+                    glyph.style.stroke = glyph.tagName.toLowerCase() === "text" ? "none" : appearance.color;
+                }
+            }
+            const visible = this.running ? this.extras.filter(extra => extra.expires > performance.now()
+                && extra.iteration === iteration && extra.barIndex === page).slice(-3) : [];
+            const signature = visible.map(extra => extra.id).join(":");
+            if (signature !== geometry.extraSignature) {
+                geometry.extraSignature = signature;
+                geometry.extraLayer.replaceChildren();
+                for (const [index, extra] of visible.entries()) {
+                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    text.classList.add("notation-extra-hit");
+                    text.setAttribute("x", String(markerX(extra.tick, geometry.anchors)));
+                    text.setAttribute("y", String(178 + index * 14));
+                    text.setAttribute("fill", NOTATION_COLORS.extra);
+                    text.dataset.instrument = extra.result.instrument;
+                    text.dataset.tick = String(extra.tick);
+                    text.textContent = "+";
+                    geometry.extraLayer.append(text);
+                }
+            }
+        };
+        apply(this.geometry, this.feedbackIteration, this.page);
+        const next = (this.page + 1) % this.model.bars.length;
+        apply(this.nextGeometry, this.feedbackIteration + (next === 0 ? 1 : 0), next);
+        const output = element("notation-feedback");
+        const text = this.latestResult ? notationFeedbackText(this.latestResult) : "Play to see timing feedback.";
+        if (output.textContent !== text) {
+            output.textContent = text;
+            output.style.color = this.latestResult ? feedbackColor(this.latestResult.status) : "";
         }
     }
 

@@ -46,7 +46,18 @@ export function renderPreview(host, example, disabledInstruments = []) {
     })));
     const barStart = Math.floor(example.voices[0].notes[0].writtenTick / 384) * 384;
     const anchors = scoreAnchors(positions, { barStart, endX: stave.getNoteEndX() - 3, feel: example.rhythmFeel ?? "straight" });
-    return { svg, width, anchors };
+    const noteheads = engravedParts.flatMap(({ part, notes }) => notes.flatMap((engraved, index) => {
+        return part.notes[index].refs.map((ref, headIndex) => {
+            const node = engraved.noteHeads[headIndex].getSVGElement();
+            if (!node) throw new Error("A score notehead could not be identified.");
+            node.dataset.noteId = ref.id;
+            node.dataset.instrument = ref.instrument;
+            const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+            node.prepend(title);
+            return { ref, node, title, appearance: null };
+        });
+    }));
+    return { svg, width, anchors, noteheads };
 }
 
 export function renderDrumKey(host, entries) {
