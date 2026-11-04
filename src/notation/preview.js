@@ -1,0 +1,52 @@
+// Milestone 1 engraving proof: receives hand-authored VexFlow note structures.
+// Playback and production lesson conversion are deliberately not involved here.
+export function renderPreview(host, example) {
+    const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline } = globalThis.VexFlow;
+    const style = getComputedStyle(host);
+    const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    host.replaceChildren();
+    const renderer = new Renderer(host, Renderer.Backends.SVG);
+    renderer.resize(width, 220);
+    const context = renderer.getContext();
+    context.setFillStyle("#242820").setStrokeStyle("#242820");
+    const stave = new Stave(12, 50, width - 24);
+    stave.addClef("percussion").addTimeSignature("4/4").setEndBarType(Barline.type.DOUBLE);
+    stave.setContext(context).draw();
+    const beams = [];
+    const voices = example.voices.map(part => {
+        const notes = part.notes.map(note => new StaveNote({ ...note, stemDirection: part.stem }));
+        for (const indices of part.beams) beams.push(new Beam(indices.map(index => notes[index])));
+        return new Voice({ numBeats: 4, beatValue: 4 }).addTickables(notes);
+    });
+    new Formatter().joinVoices(voices).formatToStave(voices, stave);
+    for (const voice of voices) voice.draw(context, stave);
+    for (const beam of beams) beam.setContext(context).draw();
+    const svg = host.querySelector("svg");
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", `${example.title}. ${example.feel}. ${example.description}`);
+}
+
+export function renderDrumKey(host, entries) {
+    const { Renderer, Stave, StaveNote, Formatter } = globalThis.VexFlow;
+    host.replaceChildren();
+    for (const entry of entries) {
+        const item = document.createElement("li");
+        const symbol = document.createElement("div");
+        symbol.className = "key-symbol";
+        const renderer = new Renderer(symbol, Renderer.Backends.SVG);
+        renderer.resize(100, 160);
+        const context = renderer.getContext();
+        const stave = new Stave(5, 25, 90).setContext(context);
+        stave.draw();
+        const note = new StaveNote({ keys: [entry.key], duration: "4", stemDirection: entry.instrument === "hi_hat_pedal" ? -1 : 1 });
+        Formatter.FormatAndDraw(context, stave, [note]);
+        const label = document.createElement("strong");
+        label.textContent = entry.label;
+        const position = document.createElement("span");
+        position.textContent = entry.position;
+        const svg = symbol.querySelector("svg");
+        svg.setAttribute("aria-hidden", "true");
+        item.append(symbol, label, position);
+        host.append(item);
+    }
+}

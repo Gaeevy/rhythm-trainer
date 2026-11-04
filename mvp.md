@@ -254,6 +254,12 @@ Implementation checkpoints (full development history is in Git):
 
 ## Verification and next steps
 
+The incremental notation feature is tracked in [notation-plan.md](notation-plan.md).
+Milestone 1 has a separate local static preview; notation is not integrated into
+practice yet. Its verification and user acceptance are recorded in that plan.
+Follow its milestones and user review points for notation work; retain this
+document's playback, input, and timing requirements.
+
 Run `npm test`, `npm run test:tools`, and `npm run test:browser` with pinned Node
 and Chrome installed.
 Tests must cover validation, subdivisions, simultaneous notes, duplicates,

@@ -8,6 +8,24 @@ script generates the lesson list and packages the static files for deployment.
 See [mvp.md](mvp.md) for scope and verification status, and [AGENTS.md](AGENTS.md)
 for development instructions. Local changes are not published until pushed.
 
+The next feature, standard drum notation, has an incremental implementation and
+review plan in [notation-plan.md](notation-plan.md).
+
+Milestone 1's local preview is available at
+[localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html)
+after starting the normal server. It shows one straight groove, Swing 01, and a
+foldable drum key. This is a static notation preview; it does not play audio or
+change the practice app. On narrow screens, scroll the score horizontally to
+preserve note size. Review staff positions, symbols, rests, beams, and spacing.
+
+The preview and its fixtures stay outside the production lesson catalog;
+preview HTML, scripts, and fixtures are excluded from the Pages artifact.
+The bundled renderer/fonts add about 711 KiB plus notices
+to packaged assets; the practice app does not load them yet.
+[Version, licenses, hashes, and reproduction](assets/vendor/vexflow/README.md).
+Run `npm run test:notation` for preview checks; `npm run test:browser` includes
+them alongside the existing keyboard and simulated-MIDI regression checks.
+
 ## Run locally
 
 From the repository folder:

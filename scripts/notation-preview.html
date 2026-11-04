@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drum notation — milestone 1</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./notation-preview.css">
+  <script src="../assets/vendor/vexflow/vexflow-bravura.js"></script>
+  <script type="module" src="./notation-preview.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <a href="../">← Practice app</a>
+      <p class="eyebrow">NOTATION / MILESTONE 1</p>
+      <h1>Read the groove.</h1>
+      <p class="intro">Two static examples to review the staff, symbols, and spacing.</p>
+    </header>
+    <p id="preview-status" role="status">Loading notation…</p>
+    <div id="examples"></div>
+    <details class="legend" open>
+      <summary>Drum key</summary>
+      <p>Both examples use this staff layout. Stems up group the cymbals and snare; stems down group the feet.</p>
+      <ul id="drum-key"></ul>
+    </details>
+    <footer>Preview only · No playback or timing feedback yet. Lessons and practice settings are unchanged.</footer>
+  </main>
+</body>
+</html>
