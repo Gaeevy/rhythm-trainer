@@ -1,6 +1,6 @@
 # Drum notation plan
 
-Status: milestones 1–3 accepted. Milestone 4 is next; milestones 5–7 have not started.
+Status: milestones 1–4 accepted. Milestone 5 is next; milestones 6–7 have not started.
 Created: 2026-11-04.
 
 ## Goal
@@ -93,7 +93,7 @@ they do not access the user's Chrome profile or physical kit.
 | 1 | Static notation proof | accepted | Staff, symbols, spacing, readability |
 | 2 | Lesson-to-notation model and feel | accepted | Written rhythms and JSON examples |
 | 3 | Notation view in the app | accepted | View switch, lesson changes, pages, controls |
-| 4 | Playback marker and looping | planned | Reading along at several tempos |
+| 4 | Playback marker and looping | accepted | Reading along at several tempos |
 | 5 | Timing feedback on notation | planned | Useful feedback without hiding the score |
 | 6 | Full lesson coverage and regression checks | planned | Current catalog and difficult patterns |
 | 7 | Release and live acceptance | planned | Published app and real-kit practice |
@@ -351,3 +351,35 @@ database, and AI/MCP authoring are outside this iteration.
 
 - **2026-11-04 — Milestone 3 accepted:** user approved app view integration and
   authorized committing it, then proceeding with milestone 4.
+
+- **2026-11-04 — Milestone 4 implementation:** committed accepted milestone 3 as
+  `d9f9cd6`. Added a score marker driven by the existing output-clock beat, measured
+  per-note/performance anchors, beat interpolation, automatic bar/loop following,
+  and an upcoming-bar preview (bar 1 labeled Next loop at the end). Cached SVGs
+  and geometry are reused across loops; resize/instrument changes invalidate the
+  cache. Only the overlay moves each frame. Count-in keeps bar 1 with the marker
+  hidden; Stop hides it and preserves the page; Start returns to bar 1. Bar arrows
+  are disabled during playback. Narrow view stacks scores and follows the marker
+  with horizontal scrolling. Starting practice now focuses the visible view.
+  Audio scheduling/input/assessment are unchanged. Verification in progress;
+  next: complete actual-glyph geometry, native-loop, packaging, and screenshot
+  checks, then user review before milestone 5.
+
+- **2026-11-04 — Milestone 4 ready for review:** all 110 JavaScript tests,
+  five Python tests, and sixteen browser scenarios pass at root/subpath. Pure
+  tests cover count-in, exact bar/loop boundaries, nonuniform geometry, swung
+  offbeats, explicit triplets/rests, and displaced-voice priorities. Browser checks
+  measure actual engraved notehead centers before/on/after straight, swing, and
+  explicit triplet hits, plus the span of a silent bar with a centered whole-bar
+  rest. Native output-clock tests run several dense Fascination Street loops,
+  confirm SVG reuse, hold only animation while native audio scheduling continues,
+  then verify catch-up, view switching, resize/scroll, tempo change, restart, and
+  tab hiding. Desktop/narrow screenshots inspected; no page-level overflow.
+  Audio/input/assessment behavior is unchanged. User should refresh localhost,
+  select Notation, try Swing 03 at 80 BPM and Fascination Street over several
+  four-bar loops, then check count-in/stop/restart and marker alignment by ear.
+  Real-kit/audible acceptance remains pending. Milestone 4 changes are uncommitted
+  and not deployed. Next: user review before milestone 5 timing feedback.
+
+- **2026-11-04 — Milestone 4 accepted:** user approved playback following and
+  authorized committing it, then proceeding with milestone 5.

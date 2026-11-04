@@ -1,3 +1,5 @@
+import { scoreAnchors } from "./position.js";
+
 // SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
 export function renderPreview(host, example, disabledInstruments = []) {
     const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
@@ -11,7 +13,7 @@ export function renderPreview(host, example, disabledInstruments = []) {
     const stave = new Stave(12, 50, width - 24);
     stave.addClef("percussion").addTimeSignature("4/4").setEndBarType(Barline.type.DOUBLE);
     stave.setContext(context).draw();
-    const beams = [], tuplets = [];
+    const beams = [], tuplets = [], engravedParts = [];
     const voices = example.voices.map(part => {
         const notes = part.notes.map(note => {
             const engraved = new StaveNote({ ...note, stemDirection: part.stem });
@@ -26,6 +28,7 @@ export function renderPreview(host, example, disabledInstruments = []) {
                 numNotes: 3, notesOccupied: 2, bracketed: true, location: part.stem === -1 ? -1 : 1,
             }));
         }
+        engravedParts.push({ part, notes });
         // Tuplet multipliers must be applied before the strict voice totals its ticks.
         return new Voice({ numBeats: 4, beatValue: 4 }).addTickables(notes);
     });
@@ -36,6 +39,14 @@ export function renderPreview(host, example, disabledInstruments = []) {
     const svg = host.querySelector("svg");
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `${example.title}. ${example.feel}. ${example.description}`);
+    const positions = engravedParts.flatMap(({ part, notes }) => notes.map((engraved, index) => ({
+        note: part.notes[index], voice: part.id,
+        x: part.notes[index].rest && part.notes[index].durationTicks === 384
+            ? stave.getNoteStartX() + 8 : (engraved.getNoteHeadBeginX() + engraved.getNoteHeadEndX()) / 2,
+    })));
+    const barStart = Math.floor(example.voices[0].notes[0].writtenTick / 384) * 384;
+    const anchors = scoreAnchors(positions, { barStart, endX: stave.getNoteEndX() - 3, feel: example.rhythmFeel ?? "straight" });
+    return { svg, width, anchors };
 }
 
 export function renderDrumKey(host, entries) {

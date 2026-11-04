@@ -57,9 +57,16 @@
             <span id="notation-page" aria-live="polite"></span>
             <button id="notation-next" type="button" aria-label="Next score bar">→</button></div>
           </div>
-          <div id="notation-score" class="notation-score" tabindex="0" aria-label="Score; scroll horizontally if needed"></div>
+          <div class="notation-scores">
+            <div><p class="notation-bar-label">Current bar</p>
+              <div id="notation-score" class="notation-score" tabindex="0" aria-label="Current score; scroll horizontally if needed"></div>
+            </div>
+            <div id="notation-upcoming" hidden><p id="notation-upcoming-label" class="notation-bar-label"></p>
+              <div id="notation-next-score" class="notation-score" tabindex="0" aria-label="Upcoming score; scroll horizontally if needed"></div>
+            </div>
+          </div>
         </div>
-        <p class="notation-caption">Static score · Change bars with the arrows. Playback highlighting comes next.</p>
+        <p class="notation-caption">Score follows playback. Use the bar arrows while stopped.</p>
         <details class="notation-legend"><summary>Drum key</summary><ul id="notation-key"></ul></details>
       </section>
       <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: start / stop. D: kick. F: snare. J: hi-hat. K: ride.">

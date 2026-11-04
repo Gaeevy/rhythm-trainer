@@ -77,8 +77,8 @@ needed for the current three examples.
 `lessonNotation(lesson)` produces bars containing voices, note/rest durations,
 beam groups, and tuplet groups. Every printed notehead references its original
 instrument and performance tick. It also records its written tick and stable
-`instrument:tick` identity. Future playback overlays will add the loop iteration;
-this static model does not store an active playback session.
+`instrument:tick` identity. The playback overlay adds the loop iteration from the existing session clock;
+the notation model itself does not store or schedule an active session.
 
 Durations partition every bar into exactly four beats per voice. Rhythms are
 split at beats for readable beams; aligned quarter rests combine into half/bar
@@ -104,4 +104,8 @@ arrows to change bars. A static three-example development page is also at
 `http://localhost:8000/scripts/notation-preview.html` after starting the normal server. The page fetches the three real lesson JSON files. Expand
 **Lesson notation metadata** beneath a score to see the exact version/feel/hints.
 Review Californication, Swing 01, and especially Swing 03's second bar.
-This step has no notation playback marker or feedback yet.
+The main app now follows playback using measured engraving positions, performance
+ticks, and the existing audio/output clock. At swung offbeats the marker reaches
+the written eighth at its stored tick 64, not tick 48; explicit triplets keep
+their literal positions. The development preview stays static. Notehead timing
+feedback remains milestone 5 work.

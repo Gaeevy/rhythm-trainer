@@ -255,9 +255,9 @@ Implementation checkpoints (full development history is in Git):
 ## Verification and next steps
 
 The incremental notation feature is tracked in [notation-plan.md](notation-plan.md).
-Milestone 3 adds a static Notation view alongside Lanes in the main app, with
-bar navigation and saved view preference. Playback following and note feedback
-remain later milestones. Version 2 notation metadata is described in
+The Notation view now follows the existing audio clock with a moving marker,
+automatic bar changes, and an upcoming-bar preview (milestone 4). Lanes and
+saved practice controls remain available. Notehead feedback remains milestone 5. Version 2 notation metadata is described in
 [notation-format.md](notation-format.md); version 1 and performance ticks remain
 supported unchanged. Its verification and user acceptance are recorded in that plan.
 Follow its milestones and user review points for notation work; retain this

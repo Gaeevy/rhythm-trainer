@@ -1,3 +1,4 @@
+import { scorePosition, markerX } from "./position.js";
 import { lessonNotation } from "./model.js";
 import { renderPreview, renderDrumKey } from "./preview.js";
 import { DRUM_KEY } from "./drum-key.js";
@@ -25,7 +26,7 @@ function loadRenderer() {
 
 const element = id => document.getElementById(id);
 
-/** Static notation navigation; never starts/stops playback or records input. */
+/** Score following uses the app clock; this view never schedules audio or input. */
 export class NotationView {
     constructor({ onToggle, onFallback }) {
         this.onToggle = onToggle;
@@ -36,12 +37,18 @@ export class NotationView {
         this.page = 0;
         this.request = 0;
         this.active = false;
+        this.running = false;
+        this.beat = 0;
+        this.cache = new Map();
         element("notation-previous").onclick = () => this.changePage(-1);
         element("notation-next").onclick = () => this.changePage(1);
         this.observer = new ResizeObserver(() => {
             cancelAnimationFrame(this.resizeFrame);
             this.resizeFrame = requestAnimationFrame(() => {
-                if (this.active && this.model) this.renderSafely();
+                if (this.active && this.model) {
+                    this.cache.clear();
+                    this.renderSafely();
+                }
             });
         });
         this.observer.observe(element("notation-score"));
@@ -52,12 +59,15 @@ export class NotationView {
         this.lesson = lesson;
         this.disabled = disabled;
         this.model = null;
+        this.cache.clear();
+        this.geometry = null;
         this.page = 0;
         this.updateInstruments(disabled);
     }
 
     updateInstruments(disabled) {
         this.disabled = disabled;
+        this.cache.clear();
         const buttons = this.lesson?.tracks.map(track => {
             const enabled = !disabled.includes(track.instrument);
             const button = document.createElement("button");
@@ -99,23 +109,89 @@ export class NotationView {
     }
 
     changePage(delta) {
-        if (!this.model) return;
+        if (!this.model || this.running) return;
         this.page = Math.max(0, Math.min(this.model.bars.length - 1, this.page + delta));
         this.renderSafely();
     }
 
+    updatePlayback(beat, running) {
+        this.beat = beat;
+        this.running = running;
+        if (!this.active || !this.model) return;
+        const state = scorePosition(beat, this.model.bars.length);
+        if (running && state.barIndex !== this.page) {
+            this.page = state.barIndex;
+            element("notation-score").scrollLeft = 0;
+            this.renderSafely();
+        } else this.updateMarker();
+    }
+
+    engraving(host, index) {
+        const style = getComputedStyle(host);
+        const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+        const key = `${index}:${width}`;
+        let geometry = this.cache.get(key);
+        if (!geometry) {
+            const bar = this.model.bars[index];
+            geometry = renderPreview(host, {
+                title: this.model.title, feel: this.model.feel, rhythmFeel: this.model.feel,
+                description: `Bar ${index + 1}`, voices: bar.voices,
+            }, this.disabled);
+            const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            marker.classList.add("notation-playhead");
+            marker.setAttribute("y1", "32");
+            marker.setAttribute("y2", "188");
+            marker.setAttribute("aria-hidden", "true");
+            geometry.svg.append(marker);
+            geometry.marker = marker;
+            this.cache.set(key, geometry);
+        } else host.replaceChildren(geometry.svg);
+        geometry.marker.style.display = "none";
+        return geometry;
+    }
+
     renderSafely() {
         try {
-            const bar = this.model.bars[this.page];
+            if (this.running) this.page = scorePosition(this.beat, this.model.bars.length).barIndex;
             element("notation-page").textContent = `Bar ${this.page + 1} of ${this.model.bars.length}`;
-            element("notation-previous").disabled = this.page === 0;
-            element("notation-next").disabled = this.page === this.model.bars.length - 1;
             const feel = this.model.feel === "swing" ? "Swing · 2:1 eighths" : "Straight · literal rhythm";
             element("notation-feel").textContent = feel;
-            renderPreview(element("notation-score"), {
-                title: this.model.title, feel, description: `Bar ${this.page + 1}`, voices: bar.voices,
-            }, this.disabled);
+            const host = element("notation-score");
+            const scroll = host.scrollLeft;
+            this.geometry = this.engraving(host, this.page);
+            this.geometry.viewportWidth = host.clientWidth;
+            this.geometry.paddingLeft = parseFloat(getComputedStyle(host).paddingLeft);
+            host.scrollLeft = scroll;
+            const upcoming = element("notation-upcoming");
+            upcoming.hidden = this.model.bars.length === 1;
+            if (!upcoming.hidden) {
+                const next = (this.page + 1) % this.model.bars.length;
+                element("notation-upcoming-label").textContent = `${next === 0 ? "Next loop" : "Next"} · Bar ${next + 1}`;
+                this.engraving(element("notation-next-score"), next);
+            } else element("notation-next-score").replaceChildren();
+            this.updateMarker();
         } catch (error) { this.fallback(error); }
+    }
+
+    updateMarker() {
+        element("notation-previous").disabled = this.running || this.page === 0;
+        element("notation-next").disabled = this.running || this.page === this.model.bars.length - 1;
+        if (!this.geometry) return;
+        const state = scorePosition(this.beat, this.model.bars.length);
+        const marker = this.geometry.marker;
+        marker.style.display = this.running && !state.countIn ? "" : "none";
+        marker.dataset.tick = String(state.tick);
+        marker.dataset.loop = String(state.loop);
+        const x = markerX(state.tick, this.geometry.anchors);
+        marker.setAttribute("x1", String(x));
+        marker.setAttribute("x2", String(x));
+        if (this.running && !state.countIn) {
+            const host = element("notation-score");
+            const left = x + this.geometry.paddingLeft;
+            if (left < host.scrollLeft + 20 || left > host.scrollLeft + this.geometry.viewportWidth - 20) {
+                host.scrollLeft = Math.max(0, left - this.geometry.viewportWidth / 2);
+            }
+        }
     }
 
     fallback(error) {

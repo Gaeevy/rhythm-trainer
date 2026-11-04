@@ -171,6 +171,7 @@ function draw() {
     updateAssessment();
     const beat = playback?.running
         ? playback.beatAt(audioTimeForEvent(audio.context, performance.now())) : 0;
+    notationView.updatePlayback(beat, Boolean(playback?.running));
     if (!notationView.active) tracks.forEach((track, index) => track.render(beat, playback?.running ? assessment : null, index === 0));
     const positiveBeat = Math.max(0, beat);
     const loopBeats = lesson.bars * BEATS_PER_BAR;
@@ -312,7 +313,7 @@ startButton.addEventListener("click", async () => {
         });
         sessionElapsedSeconds = 0;
         for (const track of tracks) track.showFeedback(null);
-        element("timeline").focus({ preventScroll: true });
+        element(notationView.active ? "notation-panel" : "timeline").focus({ preventScroll: true });
         starting = false;
         draw();
     } catch (error) {

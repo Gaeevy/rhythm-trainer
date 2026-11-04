@@ -618,6 +618,168 @@ async function notationFlow(browser, url) {
     console.log(`PASS notation view, paging, controls, input, persistence, failure recovery: ${new URL(url).pathname}`);
 }
 
+async function scoreFollowingFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#lesson").selectOption("fascination-street");
+        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Fascination"));
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-next-score svg").waitFor();
+        // Check the real engraver, not a hand-authored x-axis: hit centers must
+        // be reached at performance ticks even when written swing positions differ.
+        const geometryChecks = await page.evaluate(async () => {
+            const { lessonNotation } = await import("./src/notation/model.js");
+            const { renderPreview } = await import("./src/notation/preview.js");
+            const { markerX } = await import("./src/notation/position.js");
+            const host = document.createElement("div");
+            host.style.cssText = "position:absolute;left:-2000px;width:700px";
+            document.body.append(host);
+            const checks = [];
+            try {
+                for (const [id, barIndex, instrument, ticks] of [
+                    ["californication", 0, "snare", [120, 168]],
+                    ["swing-01", 0, "ride", [160, 352]],
+                    ["swing-03", 1, "snare", [608, 640]],
+                ]) {
+                    const response = await fetch(`./lessons/${id}.json`);
+                    const model = lessonNotation(await response.json());
+                    const bar = model.bars[barIndex];
+                    const engraved = [];
+                    const draw = window.VexFlow.StaveNote.prototype.draw;
+                    let geometry;
+                    try {
+                        window.VexFlow.StaveNote.prototype.draw = function (...args) { engraved.push(this); return draw.apply(this, args); };
+                        geometry = renderPreview(host, { title: id, feel: model.feel, rhythmFeel: model.feel, description: "Geometry check", voices: bar.voices });
+                    } finally { window.VexFlow.StaveNote.prototype.draw = draw; }
+                    const notes = bar.voices.flatMap(voice => voice.notes);
+                    if (engraved.length !== notes.length) throw new Error("Unexpected engraving note count");
+                    for (const tick of ticks) {
+                        const index = notes.findIndex(note => note.refs.some(ref => ref.instrument === instrument && ref.performanceTick === tick));
+                        const note = engraved[index];
+                        const center = (note.getNoteHeadBeginX() + note.getNoteHeadEndX()) / 2;
+                        const relative = tick - barIndex * 384;
+                        const actual = markerX(relative, geometry.anchors);
+                        if (Math.abs(actual - center) > 1e-6 || markerX(relative - 0.01, geometry.anchors) >= center
+                            || markerX(relative + 0.01, geometry.anchors) <= center) throw new Error(`${id}: marker missed note ${tick}`);
+                        checks.push(`${id}:${tick}`);
+                    }
+                }
+                const empty = lessonNotation({ version: 2, title: "Silent second bar", bpm: 80, bars: 2,
+                    time_signature: [4, 4], notation: { feel: "straight" }, tracks: [{ instrument: "snare", notes: [0] }] });
+                const geometry = renderPreview(host, { title: empty.title, feel: empty.feel, rhythmFeel: empty.feel,
+                    description: "Empty bar check", voices: empty.bars[1].voices });
+                if (geometry.anchors[0].x > geometry.width / 3 || geometry.anchors.at(-1).x < geometry.width * 0.8) {
+                    throw new Error("An empty bar must span the score, not begin at its centered whole-bar rest");
+                }
+                checks.push("empty-bar");
+            } finally { host.remove(); }
+            return checks;
+        });
+        assert.equal(geometryChecks.length, 7);
+        await page.locator("#bpm").fill("300");
+        await page.locator("#practice-panel summary").click();
+        await page.locator("#count-in").check();
+        await observePlayback(page);
+        await page.evaluate(() => {
+            window.scoreProbe = { frames: [], nodes: new Map(), replacements: 0 };
+            const probe = window.scoreProbe;
+            probe.observer = new MutationObserver(() => {
+                const marker = document.querySelector("#notation-score .notation-playhead");
+                if (!marker || marker.style.display === "none") return;
+                const bar = document.querySelector("#notation-page").textContent;
+                const svg = marker.ownerSVGElement;
+                if (probe.nodes.has(bar) && probe.nodes.get(bar) !== svg) probe.replacements++;
+                probe.nodes.set(bar, svg);
+                probe.frames.push({ bar, tick: Number(marker.dataset.tick), loop: Number(marker.dataset.loop), x: Number(marker.getAttribute("x1")) });
+            });
+            probe.observer.observe(document.querySelector("#notation-score"), { subtree: true, childList: true, attributes: true, attributeFilter: ["x1"] });
+        });
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
+        assert.equal(await page.locator("#notation-score .notation-playhead").isVisible(), false);
+        assert.equal(await page.locator("#notation-next").isDisabled(), true);
+        await playing(page);
+        await page.waitForFunction(() => window.scoreProbe.frames.length > 2);
+        const origin = await page.evaluate(() => window.smoke.assessment.origin);
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 2);
+        const probe = await page.evaluate(() => ({ frames: window.scoreProbe.frames, replacements: window.scoreProbe.replacements, bars: window.scoreProbe.nodes.size }));
+        assert.equal(probe.replacements, 0, "Use cached score SVGs across loops, not per-frame engraving");
+        assert.equal(probe.bars, 4);
+        assert.ok(probe.frames.some(frame => frame.loop >= 2 && frame.bar === "Bar 1 of 4"));
+        for (let index = 1; index < probe.frames.length; index++) {
+            const previous = probe.frames[index - 1], current = probe.frames[index];
+            if (current.loop === previous.loop && current.bar === previous.bar) {
+                assert.ok(current.tick >= previous.tick && current.x >= previous.x, "Marker advances monotonically within a bar");
+            }
+        }
+        await page.evaluate(() => window.scoreProbe.observer.disconnect());
+        // Hold only animation callbacks; keep native audio scheduling/timers active.
+        await page.evaluate(() => {
+            window.savedScoreRAF = window.requestAnimationFrame;
+            window.freezeScore = true;
+            window.requestAnimationFrame = callback => window.savedScoreRAF(time => {
+                if (window.freezeScore) window.heldScoreFrame = callback;
+                else callback(time);
+            });
+        });
+        await page.waitForFunction(() => Boolean(window.heldScoreFrame));
+        const beforePause = await page.evaluate(() => ({ tick: document.querySelector("#notation-score .notation-playhead").dataset.tick,
+            scheduled: window.smoke.scheduled.length, until: window.smoke.audio.context.currentTime + 0.45 }));
+        await page.waitForFunction(until => window.smoke.audio.context.currentTime >= until, beforePause.until);
+        assert.equal(await page.locator("#notation-score .notation-playhead").getAttribute("data-tick"), beforePause.tick);
+        assert.ok(await page.evaluate(count => window.smoke.scheduled.length > count, beforePause.scheduled));
+        await page.evaluate(() => {
+            window.freezeScore = false;
+            window.requestAnimationFrame = window.savedScoreRAF;
+            window.requestAnimationFrame(window.heldScoreFrame);
+            window.heldScoreFrame = null;
+        });
+        await page.waitForFunction(oldTick => document.querySelector("#notation-score .notation-playhead").dataset.tick !== oldTick, beforePause.tick);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        // Both views keep following the same session; geometry refreshes on resize.
+        await page.locator("#view-lanes").click();
+        await page.locator("#view-notation").click();
+        await page.waitForFunction(() => {
+            const marker = document.querySelector("#notation-score .notation-playhead");
+            return marker && marker.style.display !== "none";
+        });
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        await page.waitForFunction(() => document.querySelector("#notation-score").scrollLeft > 0);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-narrow.png", fullPage: true });
+        await page.setViewportSize({ width: 1440, height: 1100 });
+        await page.waitForFunction(() => document.querySelector("#notation-upcoming-label").textContent.startsWith("Next loop"));
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-desktop.png", fullPage: true });
+        await page.locator("#bpm").fill("180");
+        await stopped(page);
+        assert.equal(await page.locator("#notation-score .notation-playhead").isVisible(), false);
+        await page.locator("#count-in").uncheck();
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.equal(await page.locator("#notation-page").textContent(), "Bar 1 of 4");
+        assert.equal(await page.locator("#notation-score .notation-playhead").getAttribute("data-loop"), "1");
+        assert.notEqual(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        await page.evaluate(() => {
+            Object.defineProperty(document, "hidden", { configurable: true, value: true });
+            document.dispatchEvent(new Event("visibilitychange"));
+        });
+        await stopped(page);
+        assert.equal(await page.locator("#notation-score .notation-playhead").isVisible(), false);
+        await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event("visibilitychange")); });
+        await stopped(page);
+        assert.deepEqual(errors, []);
+        console.log(`PASS audio-clock score marker, next bar, loop cache, animation delay, resize, restart: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 let browser;
 try {
     // launch() creates a disposable profile. Never use connectOverCDP or launchPersistentContext.
@@ -631,6 +793,7 @@ try {
             await failureRecovery(browser, server.url);
             await midiFlow(browser, server.url);
             await notationFlow(browser, server.url);
+            await scoreFollowingFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");

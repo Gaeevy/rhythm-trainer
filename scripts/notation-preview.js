@@ -36,7 +36,7 @@ try {
             host.tabIndex = 0;
             host.dataset.bar = String(bar.index);
             host.setAttribute("aria-label", `${model.title}, ${label.textContent}; scroll horizontally if needed`);
-            const example = { title: `${model.title}, ${label.textContent}`, feel: feel.textContent,
+            const example = { title: `${model.title}, ${label.textContent}`, feel: feel.textContent, rhythmFeel: model.feel,
                 description: "Converted from the lesson JSON; playback ticks are unchanged.", voices: bar.voices };
             card.append(label, host);
             renderPreview(host, example);
