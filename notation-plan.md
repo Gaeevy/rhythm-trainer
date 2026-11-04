@@ -1,6 +1,7 @@
 # Drum notation plan
 
-Status: milestones 1–5 accepted. Finish milestones 6–7 locally; final user review pending.
+Status: milestones 1–5 accepted; milestone 6 ready for review. Milestone 7
+local release checks ready; deployment and real-kit acceptance pending.
 Created: 2026-11-04.
 
 ## Goal
@@ -95,8 +96,8 @@ they do not access the user's Chrome profile or physical kit.
 | 3 | Notation view in the app | accepted | View switch, lesson changes, pages, controls |
 | 4 | Playback marker and looping | accepted | Reading along at several tempos |
 | 5 | Timing feedback on notation | accepted | Useful feedback without hiding the score |
-| 6 | Full lesson coverage and regression checks | planned | Current catalog and difficult patterns |
-| 7 | Release and live acceptance | planned | Published app and real-kit practice |
+| 6 | Full lesson coverage and regression checks | ready for review | Current catalog and difficult patterns |
+| 7 | Release and live acceptance | in progress | Published app and real-kit practice |
 
 ### 1. Static notation proof
 
@@ -411,3 +412,45 @@ database, and AI/MCP authoring are outside this iteration.
   without intermediate review stops. Leave all subsequent changes uncommitted
   and undeployed for the final review tomorrow. This overrides the earlier
   milestone-by-milestone pause rule for this final iteration only.
+
+- **2026-11-04 — Milestone 6 / local release candidate:** committed accepted
+  milestone 5 as `a42c3e6`. Extended conversion to thirty-seconds, sixteenth-note
+  triplets, and mixed binary/half-beat triplet groups. Optional `unit: 16` hints
+  identify three sixteenths within an eighth; original two-field hints still
+  mean eighth-note triplets. Finer binary subdivisions in Swing stay literal;
+  ordinary eighths still map 48 written to 64 performed. All nine lessons now
+  have version 2 notation metadata. Saved originals verify exact scheduled-event
+  equality at 60/96/180 BPM and complete note identities; performance data and
+  MIDI mapping remain unchanged. Added open-circle/closed-plus hi-hat marks,
+  full twelve-instrument legend, and same-position head collision checks. Closed
+  marks repeat at bar starts/after opening, rather than on every dense hit.
+  Test-only fixtures cover thirty-seconds, sixteenth triplets, all twelve pads,
+  silent bars, and sixteen-bar paging without adding catalog exercises.
+  **Final verification:** clean `npm ci`, all 122 JavaScript tests, six Python
+  tests, and 22 browser scenarios pass. The browser suite uses the actual Pages
+  artifact at root/subpath, native clocks and simulated MIDI, and checks every
+  bar of every lesson plus full-kit/dense/silent/sixteen-bar fixtures. Every
+  tuplet bracket and source notehead is present. Final desktop/narrow screenshots
+  were inspected; a local Python-server check also confirmed Swing 03's lower
+  triplet bracket. Corrected the one-bar/multi-bar measurement order so engraving
+  uses the new column width immediately. Layout checks now wait for both score
+  widths before visual capture. No runtime errors in normal flows; injected
+  failures retain recovery. `git diff --check` passes.
+  User review: follow the short checklist near the top of README. In particular,
+  compare Come Undone, Swing 03 bar 2, and the four-bar Fascination Street phrase
+  with the supplied excerpts. Physical input, audible alignment, and reading
+  comfort need the user's review. All final changes remain uncommitted.
+
+- **2026-11-04 — Milestone 7 local preparation:** packaged the complete runtime
+  under one deterministic content hash, with a relative base URL in the generated
+  index. CSS/modules, catalog/lessons, config, recordings, and local notation fonts
+  share a release path. This prevents new HTML from mixing cached prior assets.
+  Python checks cover deterministic builds and hash changes for every input;
+  isolated Chrome checks seed a prior CSS/module release in its real HTTP cache
+  before opening the packaged app at root and subpath. No extra dependencies or
+  runtime services. Setup, authoring, limitations, and tomorrow's review checklist
+  are updated. **Release remains pending by explicit user instruction:** do not
+  commit these final changes, open/merge a PR, or deploy before review. After
+  approval, release the reviewed commit, wait for Actions/Pages, verify live
+  assets/practice in isolated Chrome, then record the user's real MPS-850 check.
+  Local checks do not fulfill live/hardware acceptance.

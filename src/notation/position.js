@@ -24,7 +24,7 @@ export function scoreAnchors(positions, { barStart, endX, feel }) {
     for (const { note, x, voice } of positions) {
         const written = note.writtenTick - barStart;
         const offset = written % 96;
-        const restTick = feel === "swing" && !note.triplet && offset === 48 ? written + 16 : written;
+        const restTick = (note.swung ?? (feel === "swing" && !note.triplet)) && offset === 48 ? written + 16 : written;
         const ticks = note.refs.length ? note.refs.map(ref => ref.performanceTick - barStart) : [restTick];
         // Actual notes take precedence over inferred rests; upper voice over displaced feet.
         const priority = (note.rest ? 10 : 0) + (voice === "hands" ? 0 : voice === "feet" ? 2 : 1);

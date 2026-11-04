@@ -1,14 +1,12 @@
-# Lesson notation format — milestone 2
+# Lesson notation format
 
-Version 2 adds written-notation metadata to the existing JSON lesson. Keep the
-same `title`, `bpm`, `time_signature`, `bars`, and `tracks`. Track `notes` remain
-**performance ticks**, at 96 ticks per quarter note and 384 ticks per 4/4 bar.
-Playback, MIDI/keyboard assessment, and the Lanes view continue to use those ticks.
-Adding a lesson still requires only one JSON file in `lessons/`.
+Version 2 adds written-notation metadata to the JSON lesson. Keep the existing
+`title`, `bpm`, `time_signature`, `bars`, and `tracks`. Track `notes` remain
+**performance ticks**: 96 per quarter note and 384 per 4/4 bar. Playback,
+MIDI/keyboard assessment, and Lanes use these exact ticks. Adding a lesson still
+requires only one JSON file in `lessons/`.
 
 ## Straight and Swing
-
-A complete minimal version 2 example:
 
 ```json
 {
@@ -27,28 +25,35 @@ A complete minimal version 2 example:
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `feel` | Yes | `straight` or `swing` |
-| `triplets` | No | Array of explicit eighth-note triplet group references |
+| `triplets` | No | Explicit triplet groups referencing existing notes |
 
-- **Straight:** notes keep their literal written/performance positions. For
-  example, offsets 0 and 48 within a beat are ordinary eighth notes. Offsets
-  0/24/48/72 are sixteenths. Literal eighth-note triplets use 0/32/64.
-- **Swing:** ordinary written eighth notes at offsets 0/48 refer to performance
-  offsets 0/64. The renderer shows eighth notes plus a Swing marking. It never
-  moves the stored notes or applies another timing delay.
-- Offsets are relative to each quarter-note beat; stored lesson ticks are absolute
-  from the start of the lesson, across all its bars.
+**Straight** keeps literal written/performance positions. **Swing** writes an
+ordinary eighth-note pair at offsets 0/48 but plays it at 0/64 (fixed 2:1). The
+renderer adds a Swing marking. It never moves stored notes or applies swing twice.
+Offsets are relative to a quarter-note beat; JSON ticks run from the start of
+the lesson, across all bars.
 
-The migrated examples are:
+| Subdivision | Performance spacing | Written duration |
+| --- | --- | --- |
+| Quarter | 96 | Quarter |
+| Straight eighth | 48 | Eighth |
+| Sixteenth | 24 | Sixteenth |
+| Thirty-second | 12 | Thirty-second |
+| Eighth-note triplet | 32 | Three eighths in a quarter |
+| Sixteenth-note triplet | 16 | Three sixteenths in an eighth |
 
-- `californication.json`: `"notation": {"feel": "straight"}`.
-- `swing-01.json`: `"notation": {"feel": "swing"}`.
-- `swing-03.json`: Swing plus the explicit group below.
+Straight rhythms infer a binary grid, or literal triplets when notes require it.
+Within Swing, ordinary eighths use 0/64. Explicit triplets stay literal. Beats
+containing finer binary subdivisions (e.g. tick 12 or 24) remain literal too;
+there is no sixteenth-note swing. Ambiguous mixtures of swung eighths and binary
+subdivisions within the same voice/beat fail rather than being rounded.
 
-## Explicit triplets within Swing
+## Explicit triplet groups
 
-Swing 03 contains a snare rest followed by two eighth-note triplets on beat 3
-of bar 2. This must remain a triplet group rather than becoming ordinary swung
-notation. It uses:
+A hint accepts `instrument`, `tick`, and optional `unit` (8 or 16; default 8).
+It references an **existing note**, not a second playable event list.
+
+Swing 03 has a snare rest followed by two eighth-note triplets on beat 3 of bar 2:
 
 ```json
 "notation": {
@@ -57,58 +62,81 @@ notation. It uses:
 }
 ```
 
-Each reference accepts exactly `instrument` and `tick`. It names an **existing
-note** on that instrument. The converter uses the quarter-note beat containing
-that note as the three-slot group. Here the beat starts at tick 576, with slots
-576/608/640: snare rest, snare note, snare note.
+For `unit: 8`, use the containing quarter-note beat. Its slots here are
+576/608/640: rest, snare, snare. One hint identifies the whole group.
 
-One reference is enough for a group. Referencing two notes in the same
-instrument/beat is rejected as a duplicate. Missing notes/instruments, extra
-fields, and beats containing notes outside the three slots are rejected.
+Come Undone has sixteenth-note triplets within the second eighth of beats 2/4:
 
-The referenced instrument receives its own voice throughout the lesson so its
-rests and triplet remain visible. Other hand instruments stay grouped in an
-upper voice; kick and pedal stay grouped in a lower voice. This keeps the ride's
-quarter note independent from the snare's triplet. No separate voice hints are
-needed for the current three examples.
+```json
+"notation": {
+  "feel": "straight",
+  "triplets": [
+    {"instrument": "ride", "tick": 144, "unit": 16},
+    {"instrument": "ride", "tick": 336, "unit": 16}
+  ]
+}
+```
 
-## Derived notation and limits
+For `unit: 16`, use the containing half-beat (48 ticks). Here the slots are
+144/160/176 (note/rest/note) and 336/352/368 (three notes). Adjacent half-beat
+groups are allowed. A hint is useful even where literal inference would work,
+because it states the intended written group and retains its rests.
 
-`lessonNotation(lesson)` produces bars containing voices, note/rest durations,
-beam groups, and tuplet groups. Every printed notehead references its original
-instrument and performance tick. It also records its written tick and stable
-`instrument:tick` identity. The playback overlay adds the loop iteration from the existing session clock;
-the notation model itself does not store or schedule an active session.
+Missing note references, unsupported fields/units, duplicate or overlapping groups
+on an instrument, and notes outside a group's three slots fail validation.
+A hinted instrument gets its own voice so its triplet rests remain visible beside
+other instruments. Half-beat groups use literal subdivisions within that beat.
+No custom voice/duration fields are needed.
 
-Durations partition every bar into exactly four beats per voice. Rhythms are
-split at beats for readable beams; aligned quarter rests combine into half/bar
-rests. Percussion note durations are inferred rhythmic notation, not sample
-sustain instructions. Explicit note-length/voice authoring is outside this step.
+## Staff positions and symbols
 
-Milestone 2 supports quarters, straight eighths/sixteenths, swung eighths, and
-explicit eighth-note triplets. Thirty-second notes, sixteenth-note triplets,
-open/closed hi-hat marks, and full-kit collision handling remain milestone 6 work.
-A rhythm outside current notation support raises an explanation instead of
-rounding ticks or silently dropping notes. The app returns to Lanes and remains
-playable; **Retry notation** is available after a renderer/loading failure.
+These are percussion staff positions, not MIDI pitches. The foldable Drum key
+shows only instruments present in the lesson. All twelve instruments share the
+same table in `src/notation/drum-key.js`.
 
-Version 1 lessons keep their strict original schema and behavior. They do not
-accept a `notation` field. If converted for display, they use literal rhythms;
-the converter never guesses Swing from a title. Only the three examples above
-are migrated in milestone 2; other lessons remain version 1.
+| Instrument | Staff position | Head / mark |
+| --- | --- | --- |
+| `hi_hat_closed` | Above staff (G5) | X; + at bar start and after an open hit |
+| `hi_hat_open` | Above staff (G5) | X with circle |
+| `hi_hat_pedal` | Below staff (D4) | X, lower voice |
+| `ride` | Top line (F5) | X |
+| `crash_1` | Above staff (A5) | X |
+| `crash_2` | Above staff (B5) | X |
+| `snare` | Third space (C5) | Normal |
+| `tom_1` | Top space (E5) | Normal |
+| `tom_2` | Fourth line (D5) | Normal |
+| `tom_3` | Middle line (B4) | Normal |
+| `tom_4` | Second space (A4) | Normal |
+| `kick` | Bottom space (F4) | Normal, lower voice |
 
-## Review
+Simultaneous heads share a stem where possible. Heads at the same/adjacent
+positions are displaced by the engraver; each retains its own instrument,
+performance tick, note index, and assessment result. No hits are merged.
 
-In the main app, choose **Notation** to read the selected lesson and use the
-arrows to change bars. A static three-example development page is also at
-`http://localhost:8000/scripts/notation-preview.html` after starting the normal server. The page fetches the three real lesson JSON files. Expand
-**Lesson notation metadata** beneath a score to see the exact version/feel/hints.
-Review Californication, Swing 01, and especially Swing 03's second bar.
-The main app now follows playback using measured engraving positions, performance
-ticks, and the existing audio/output clock. At swung offbeats the marker reaches
-the written eighth at its stored tick 64, not tick 48; explicit triplets keep
-their literal positions. The development preview stays static. Each reference also carries the original note index for looking up the existing
-assessment result. Milestone 5 colors that reference for the current loop,
-including delayed corrections. Extras use precise performance time in an overlay;
-they do not change the notation model or create a written note. Score conversion
-and hit grading remain separate.
+## Conversion, playback, and limits
+
+`lessonNotation(lesson)` derives bars, voices, note/rest durations, beams, and
+triplets without changing lesson data. Every printed head references exactly one
+source note. It retains its written tick, performance tick, original note index,
+and stable `instrument:tick` identity. The overlay adds the active loop iteration
+from the existing clock. It does not schedule audio or grade input.
+
+Each voice partitions every bar into four beats. Beams group by beat/tuplet;
+aligned quarter rests combine into half/bar rests. Empty tracks do not create
+redundant voices; silent bars remain visible. Durations describe reading rhythm,
+not sample sustain. The score uses one current bar and one upcoming bar, with
+pages for up to sixteen bars. Narrow screens scroll instead of shrinking notes.
+
+All nine bundled lessons use version 2. Tests compare their scheduled events with
+saved originals at three tempos. Version 1 remains valid with its original strict
+schema and literal notation; a title never implies Swing.
+
+Unsupported rhythms leave the lesson playable in Lanes with a clear explanation.
+Renderer/font failures offer Retry notation. No arbitrary ticks are rounded and
+no notes are silently omitted. General ties/dotted durations, arbitrary tuplets,
+custom voices, dynamics/ghost-note volume, rim/bell/edge notation, other meters,
+variable swing, editing, and printing remain outside this iteration.
+
+For visual review, use the main app's Notation view. The static development page
+at `/scripts/notation-preview.html` still fetches Californication, Swing 01, and
+Swing 03 and displays their exact metadata. The preview is not deployed.

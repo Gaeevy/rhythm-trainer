@@ -1,4 +1,11 @@
+import { DRUM_KEY } from "./drum-key.js";
 import { scoreAnchors } from "./position.js";
+
+function addHiHatMark(note, index, entry) {
+    if (!entry.articulation) return;
+    const { Articulation, Glyphs, Modifier } = globalThis.VexFlow;
+    note.addModifier(new Articulation(Glyphs[entry.articulation]).setPosition(Modifier.Position.ABOVE), index);
+}
 
 // SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
 export function renderPreview(host, example, disabledInstruments = []) {
@@ -13,11 +20,23 @@ export function renderPreview(host, example, disabledInstruments = []) {
     const stave = new Stave(12, 50, width - 24);
     stave.addClef("percussion").addTimeSignature("4/4").setEndBarType(Barline.type.DOUBLE);
     stave.setContext(context).draw();
+    // Mark closed at the start of each bar and after an open hit. Repeating +
+    // above every closed sixteenth would hide the rhythm in dense grooves.
+    const hiHatMarks = new Set();
+    let previousHiHat;
+    const hiHatRefs = example.voices.flatMap(part => part.notes.flatMap(note => note.refs ?? []))
+        .filter(ref => ["hi_hat_closed", "hi_hat_open"].includes(ref.instrument))
+        .sort((a, b) => a.performanceTick - b.performanceTick);
+    for (const ref of hiHatRefs) {
+        if (ref.instrument === "hi_hat_open" || previousHiHat !== "hi_hat_closed") hiHatMarks.add(ref.id);
+        previousHiHat = ref.instrument;
+    }
     const beams = [], tuplets = [], engravedParts = [];
     const voices = example.voices.map(part => {
         const notes = part.notes.map(note => {
             const engraved = new StaveNote({ ...note, stemDirection: part.stem });
             for (const [index, ref] of (note.refs ?? []).entries()) {
+                if (hiHatMarks.has(ref.id)) addHiHatMark(engraved, index, DRUM_KEY[ref.instrument]);
                 if (disabledInstruments.includes(ref.instrument)) engraved.setKeyStyle(index, { fillStyle: "#a4a99f", strokeStyle: "#a4a99f" });
             }
             return engraved;
@@ -73,6 +92,7 @@ export function renderDrumKey(host, entries) {
         const stave = new Stave(5, 25, 90).setContext(context);
         stave.draw();
         const note = new StaveNote({ keys: [entry.key], duration: "4", stemDirection: entry.instrument === "hi_hat_pedal" ? -1 : 1 });
+        addHiHatMark(note, 0, entry);
         Formatter.FormatAndDraw(context, stave, [note]);
         const label = document.createElement("strong");
         label.textContent = entry.label;

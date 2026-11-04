@@ -86,12 +86,16 @@ class SiteTests(unittest.TestCase):
             (self.root / name / ".secret").write_text("private")
         for name in ("index.html", "style.css", "AGENTS.md", "private.txt"):
             (self.root / name).write_text("test")
+        (self.root / "index.html").write_text("<!doctype html><html><head></head><body></body></html>")
         output = build_site(self.root)
-        self.assertEqual((output / CATALOG_PATH).read_text(), catalog_source(self.root))
-        self.assertTrue((output / "assets/asset.js").exists())
-        self.assertFalse((output / "assets/.secret").exists())
+        runtime = next((output / "runtime").iterdir())
+        self.assertEqual((runtime / CATALOG_PATH).read_text(), catalog_source(self.root))
+        self.assertTrue((runtime / "assets/asset.js").exists())
+        self.assertFalse((runtime / "assets/.secret").exists())
         self.assertFalse((output / "AGENTS.md").exists())
         self.assertFalse((output / "private.txt").exists())
+        self.assertRegex(runtime.name, r"^[a-f0-9]{16}$")
+        self.assertIn(f'<base href="./runtime/{runtime.name}/">', (output / "index.html").read_text())
         (output / "stale.txt").touch()
         build_site(self.root)
         self.assertFalse((output / "stale.txt").exists())
@@ -99,6 +103,29 @@ class SiteTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "symbolic links"):
             build_site(self.root)
         self.assertTrue((output / "index.html").exists())
+
+    def test_release_paths_are_deterministic_and_change_with_every_runtime_input(self) -> None:
+        for name in ("src", "config", "assets"):
+            (self.root / name).mkdir()
+            (self.root / name / "asset.js").write_text("original")
+        (self.root / "index.html").write_text("<html><head></head></html>")
+        (self.root / "style.css").write_text("original")
+        def release() -> str:
+            output = build_site(self.root)
+            return next((output / "runtime").iterdir()).name
+        previous = release()
+        self.assertEqual(release(), previous)
+        for name in ("style.css", "src/asset.js", "assets/asset.js", "config/asset.js", "lessons/swing-01.json", "index.html"):
+            path = self.root / name
+            path.write_text(path.read_text() + "\n")
+            current = release()
+            self.assertNotEqual(current, previous, name)
+            previous = current
+        self.add_lesson("new-lesson", "New lesson")
+        self.assertNotEqual(release(), previous, "Discovery changes the runtime/catalog version")
+        (self.root / "index.html").write_text('<head><base href="/wrong/"></head>')
+        with self.assertRaisesRegex(ValueError, "base URL"):
+            build_site(self.root)
 
 
 if __name__ == "__main__":

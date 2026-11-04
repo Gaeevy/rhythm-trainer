@@ -5,21 +5,26 @@ export function validateNotation(notation, tracks) {
     if (Object.keys(notation).some(key => !["feel", "triplets"].includes(key))) fail("contains an unsupported field");
     if (!["straight", "swing"].includes(notation.feel)) fail("feel must be straight or swing");
     if (notation.triplets !== undefined && !Array.isArray(notation.triplets)) fail("triplets must be an array");
-    const groups = new Set();
+    const groups = [];
     for (const [index, hint] of (notation.triplets ?? []).entries()) {
         const path = `triplets[${index}]`;
         if (!hint || typeof hint !== "object" || Array.isArray(hint)
-            || Object.keys(hint).length !== 2 || !Object.hasOwn(hint, "instrument") || !Object.hasOwn(hint, "tick")) {
-            fail(`${path}: requires only instrument and tick`);
+            || Object.keys(hint).some(key => !["instrument", "tick", "unit"].includes(key))
+            || !Object.hasOwn(hint, "instrument") || !Object.hasOwn(hint, "tick")) {
+            fail(`${path}: requires instrument, tick, and optional unit (8 or 16)`);
         }
         const track = tracks.find(track => track.instrument === hint.instrument);
         if (!Number.isSafeInteger(hint.tick) || !track?.notes.includes(hint.tick)) fail(`${path}: must reference an existing instrument/note tick`);
-        const beat = Math.floor(hint.tick / 96);
-        const key = `${hint.instrument}:${beat}`;
-        if (groups.has(key)) fail(`${path}: duplicates an instrument/beat group`);
-        groups.add(key);
-        if (track.notes.some(tick => Math.floor(tick / 96) === beat && tick % 32 !== 0)) {
-            fail(`${path}: this beat cannot be written as three eighth-note triplets`);
+        const unit = hint.unit ?? 8;
+        if (![8, 16].includes(unit)) fail(`${path}: unit must be 8 or 16`);
+        const span = unit === 8 ? 96 : 48;
+        const start = Math.floor(hint.tick / span) * span;
+        if (groups.some(group => group.instrument === hint.instrument && start < group.end && start + span > group.start)) {
+            fail(`${path}: duplicates or overlaps an instrument/triplet group`);
+        }
+        groups.push({ instrument: hint.instrument, start, end: start + span });
+        if (track.notes.some(tick => tick >= start && tick < start + span && (tick - start) % (span / 3) !== 0)) {
+            fail(`${path}: this group cannot be written as three ${unit === 8 ? "eighth" : "sixteenth"}-note triplets`);
         }
     }
     return notation;

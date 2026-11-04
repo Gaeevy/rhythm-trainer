@@ -186,14 +186,16 @@ export class NotationView {
             element("notation-page").textContent = `Bar ${this.page + 1} of ${this.model.bars.length}`;
             const feel = this.model.feel === "swing" ? "Swing · 2:1 eighths" : "Straight · literal rhythm";
             element("notation-feel").textContent = feel;
+            // The upcoming column changes current-bar width. Apply its layout
+            // before measuring/engraving, including one-bar ↔ multi-bar changes.
+            const upcoming = element("notation-upcoming");
+            upcoming.hidden = this.model.bars.length === 1;
             const host = element("notation-score");
             const scroll = host.scrollLeft;
             this.geometry = this.engraving(host, this.page);
             this.geometry.viewportWidth = host.clientWidth;
             this.geometry.paddingLeft = parseFloat(getComputedStyle(host).paddingLeft);
             host.scrollLeft = scroll;
-            const upcoming = element("notation-upcoming");
-            upcoming.hidden = this.model.bars.length === 1;
             if (!upcoming.hidden) {
                 const next = (this.page + 1) % this.model.bars.length;
                 element("notation-upcoming-label").textContent = `${next === 0 ? "Next loop" : "Next"} · Bar ${next + 1}`;

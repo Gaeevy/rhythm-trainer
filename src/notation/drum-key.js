@@ -1,7 +1,7 @@
 // Staff positions, not MIDI pitches. Keep all notation renderers on this table.
 export const DRUM_KEY = Object.freeze({
-    hi_hat_closed: { label: "Hi-hat closed", key: "g/5/x2", position: "Above the staff · X", voice: "hands" },
-    hi_hat_open: { label: "Hi-hat open", key: "g/5/x2", position: "Above the staff · X (open symbol later)", voice: "hands" },
+    hi_hat_closed: { label: "Hi-hat closed", key: "g/5/x2", position: "Above the staff · X with +", articulation: "brassMuteClosed", voice: "hands" },
+    hi_hat_open: { label: "Hi-hat open", key: "g/5/x2", position: "Above the staff · X with circle", articulation: "brassMuteOpen", voice: "hands" },
     ride: { label: "Ride", key: "f/5/x2", position: "Top line · X", voice: "hands" },
     snare: { label: "Snare", key: "c/5", position: "Third space · normal head", voice: "hands" },
     kick: { label: "Kick", key: "f/4", position: "Bottom space · normal head", voice: "feet" },

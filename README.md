@@ -8,62 +8,61 @@ script generates the lesson list and packages the static files for deployment.
 See [mvp.md](mvp.md) for scope and verification status, and [AGENTS.md](AGENTS.md)
 for development instructions. Local changes are not published until pushed.
 
-The next feature, standard drum notation, has an incremental implementation and
-review plan in [notation-plan.md](notation-plan.md).
+Standard drum notation is ready for **local review**. Its implementation and
+acceptance record is in [notation-plan.md](notation-plan.md). The final changes
+are uncommitted and undeployed, as requested.
 
-The app has **Lanes / Notation** below the lesson title in the main app.
-Lanes remains the default; your chosen view saves in this browser without resetting
-practice or MIDI preferences. Notation shows the current score with a playback
-marker, the upcoming bar, instrument buttons, and a foldable drum key. Previous/next arrows work while
-stopped; during playback the score advances automatically. Switching views keeps
-playback running. Instrument buttons stop/reset practice just like lane controls; disabled noteheads stay visible and dimmed. Space works when the score
-has focus. On narrow screens, scroll the score horizontally to preserve note size.
+Choose **Lanes / Notation** below the lesson title. Lanes is the default; your
+chosen view saves in this browser without resetting practice controls or keys.
+Both views use the same lesson, audio clock, input, assessment, and session totals.
+Switching views keeps playback running. Space starts/stops when the score has
+focus. Instrument buttons stop/reset practice; disabled noteheads stay gray.
 
-Start review at [localhost:8000](http://localhost:8000): select **Swing 03**, choose
-**Notation**, and inspect bar 2. Try resizing, switching views during playback,
-disabling an instrument, and reloading to confirm your view preference survives.
-Milestone 4 follows the existing audio/output clock, including swing and explicit
-triplets, without changing playback or scoring. Count-in shows bar 1 with the
-marker hidden; Stop hides the marker and keeps the displayed bar available for
-reading. Start returns to bar 1. The final bar previews bar 1 of the next loop.
-Wide screens show current/upcoming bars side by side; narrow screens stack them
-and scroll the current score as needed to keep its marker visible. Scores are
-cached between loops, not re-engraved every animation frame. Milestone 5 colors individual noteheads for on time (green), early (blue), late
-(amber), and missed (red), using darker shades for the paper background. Stems,
-beams, rests, and printed note positions stay unchanged. A text line names the
-instrument/result and displays matched error to 0.1 ms; hover a notehead for its
-result. The underlying measured error remains unrounded. Extras appear briefly
-as a purple + below the staff at their actual timing position, never as new notes.
+Notation shows one staff per bar, the current bar with a playback marker, and an
+upcoming bar. Arrows work while stopped; playback advances the bars automatically.
+The final bar previews bar 1 of the next loop. Count-in hides the marker on bar 1;
+Stop hides it and preserves the displayed bar/results; Start returns to bar 1.
+Wide screens show current/upcoming bars side by side. Narrow screens stack them
+and scroll horizontally to retain readable symbols. Engraved scores are cached
+between loops; animation moves only the overlay.
 
-Feedback follows the current loop; session totals accumulate. Stop preserves
-notehead results for reading, Start clears them, and disabled heads stay gray.
-A delayed timestamped hit can correct a miss. Both ride MIDI notes still count
-as Ride. The same assessment supplies both views; no second scoring engine.
+Individual noteheads show on time (green), early (blue), late (amber), or missed
+(red). Shared stems/beams stay legible. The text below the score and notehead
+hover text show the instrument/result and matched error to 0.1 ms. Measured error
+retains full precision. Extra hits appear briefly as purple + markers below the
+staff at their precise time; they do not add written notes. Feedback resets per
+loop while totals accumulate. Delayed hits can correct misses, and both ride
+MIDI notes count as Ride.
 
-For playback review, try Swing 03 at 80 BPM and Fascination Street across
-several four-bar loops. Check count-in, stop/restart, tempo changes, view switching,
-and whether the marker feels aligned with what you hear. Real-kit/audio routing
-and latency acceptance still require the user's practice session.
-For milestone 5 review, use Swing 01 slowly, deliberately play early/late, skip a
-note, add a hit, and check the next loop clears the prior colors while totals
-remain. Try simultaneous ride/snare hits and switch back to Lanes for comparison.
-
-
-Californication, Swing 01, and Swing 03 have reviewed version 2 metadata. Other
-version 1 lessons display literal rhythms where supported. Come Undone currently
-requires sixteenth-note triplet support planned for milestone 6; its notation
-falls back to Lanes with an explanation. A renderer failure also keeps Lanes
-available and offers retry. No notes are rounded or silently omitted.
+All nine current lessons have version 2 metadata, including Come Undone's
+sixteenth-note triplets. Their performance ticks are unchanged. The foldable
+**Drum key** explains the staff positions for the lesson's instruments. Hi-hat
+open uses a circle, closed uses + at the start of a bar and after an open hit,
+and pedal uses an X below the staff. Other closed notes retain plain X heads.
+Unsupported rhythms or renderer failures keep Lanes available with an explanation
+and retry. Notes are never rounded or silently dropped.
 
 The renderer/fonts load locally only when Notation is selected, adding about
-711 KiB plus notices to packaged assets. No CDN is required.
+711 KiB plus notices. No CDN is required.
 [Version, licenses, hashes, and reproduction](assets/vendor/vexflow/README.md).
-[Version 2 format](notation-format.md) explains Straight, Swing, and explicit
-triplet hints. The earlier three-example development preview remains at
+[Version 2 format](notation-format.md) covers supported rhythms and authoring.
+The static three-example development preview remains at
 [localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html);
-its HTML/scripts are excluded from the Pages artifact. `npm run test:notation`
-checks that preview; `npm run test:browser` also checks app integration,
-keyboard/simulated MIDI, persistence, pagination, and renderer recovery.
+it is excluded from the Pages artifact.
+
+For tomorrow's review, start [localhost:8000](http://localhost:8000) and choose
+**Notation**:
+
+1. **Come Undone:** inspect the two sixteenth-triplet groups, including the rest.
+2. **Swing 03, bar 2:** compare the written swung eighths with the explicit snare
+   triplet. **Fascination Street:** follow several four-bar loops.
+3. Play early/late, miss a note, add a hit, and try simultaneous ride/snare.
+   Check the next loop clears colors while totals remain, then compare Lanes.
+4. Check count-in, stop/restart, resizing, disabling instruments, and reloading.
+   Confirm marker/audio alignment and reading comfort with the real MPS-850.
+
+Real-kit/audio routing, physical latency, and final release acceptance remain
+pending. Automated simulated MIDI does not replace a practice session.
 
 ## Run locally
 
@@ -218,7 +217,7 @@ These are practice patterns, not complete song arrangements or backing tracks.
   opening hit, per the requested simplification. Diamond noteheads use Snare,
   without a separate cross-stick articulation. Hi-hat rests on the diamond notes.
 
-Parenthesized snare notes in the excerpts are ghost notes. Version 1 stores timing
+Parenthesized snare notes in the excerpts are ghost notes. Lessons store timing
 only, so these notes use the same guide volume and scoring as other snare notes.
 The screenshots' bar numbers and 99-repeat markings do not affect the loop.
 
@@ -237,11 +236,12 @@ collects catalog metadata. Invalid lessons fail checks before deployment.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "title": "Swing ride and pedal chick",
   "bpm": 80,
   "time_signature": [4, 4],
   "bars": 1,
+  "notation": {"feel": "swing"},
   "tracks": [
     {"instrument": "ride", "notes": [0, 96, 160, 192, 288, 352]},
     {"instrument": "hi_hat_pedal", "notes": [96, 288]}
@@ -290,7 +290,10 @@ MIDI mappings, automatic multi-input connection, permission/port failure retry,
 hotplug, saved controls, sample loading/cancellation, mixer controls, and responsive
 layout. Both `/` and `/rhythm-trainer/` mounts are checked. Normal flows fail on
 browser/network errors; intentionally failed requests have separate recovery checks.
-Native audio clocks and timers remain active. Sound quality and physical latency
+Checks also visit every bar of every current lesson and exercise all twelve
+instruments, mixed subdivisions, silent bars, and sixteen-bar paging. The
+versioned artifact is tested with cached prior CSS/modules. Native audio clocks
+and timers remain active. Sound quality and physical latency
 still require manual checks.
 
 ## Deployment and remaining acceptance
@@ -316,6 +319,13 @@ checks do not verify the live version. Deployment and live-site verification rem
 For a local deployment artifact, run `npm run build` (lesson validation plus
 packaging). It recreates `_site/` using only runtime assets; no JavaScript compiler
 or frontend framework is involved. The workflow retains its artifact for one day.
+The generated index uses a relative base URL into `runtime/<content-hash>/`.
+CSS, modules, catalog, lessons, MIDI config, recordings, and notation assets share
+that release path. New HTML therefore cannot reuse old unversioned CSS/modules.
+The hash changes when runtime content changes; local development keeps the normal
+file paths and disables caching. No runtime assets are duplicated in the package.
+A previously cached HTML document still requires normal browser revalidation;
+asset versioning cannot force a browser to fetch a new document while offline.
 
 Physical acceptance remains: hear module and browser audio together, practice
 simultaneous hits and several loops, check unplug/reconnect, and tune latency

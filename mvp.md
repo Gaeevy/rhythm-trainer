@@ -2,8 +2,9 @@
 
 Status: milestones 1–6 completed locally. Basic MPS-850 note mappings are observed;
 full real-kit practice/latency acceptance (milestone 7) remains pending.
-The MVP and eight lessons were deployed through Pages on 2026-10-25.
-The normal/edge ride mapping correction is being prepared for release.
+The MVP and nine lessons were deployed through Pages on 2026-10-25.
+Notation is a local release candidate on `codex/notation-preview`; final review,
+commit, deployment, and live/real-kit acceptance remain pending.
 
 ## Goal and architecture
 
@@ -258,7 +259,12 @@ The incremental notation feature is tracked in [notation-plan.md](notation-plan.
 The Notation view now follows the existing audio clock with a moving marker,
 automatic bar changes, and an upcoming-bar preview (milestone 4). Lanes and
 saved practice controls remain available. Milestone 5 projects the same assessment
-onto individual noteheads, with text/precise error and transient extra-hit marks. Version 2 notation metadata is described in
+onto individual noteheads, with text/precise error and transient extra-hit marks.
+Milestone 6 covers all nine lessons, thirty-seconds/sixteenth triplets, all twelve
+instruments, and hi-hat symbols without changing performance events. Local release
+checks include content-versioned runtime assets to prevent stale CSS/modules.
+Final changes are intentionally uncommitted and undeployed for user review.
+Version 2 notation metadata is described in
 [notation-format.md](notation-format.md); version 1 and performance ticks remain
 supported unchanged. Its verification and user acceptance are recorded in that plan.
 Follow its milestones and user review points for notation work; retain this

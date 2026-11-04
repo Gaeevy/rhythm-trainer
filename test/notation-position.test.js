@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { scorePosition, markerX, scoreAnchors } from "../src/notation/position.js";
 
-const position = (writtenTick, performanceTick, x, { triplet = false, rest = false, voice = "hands" } = {}) => ({
-    note: { writtenTick, triplet, rest, refs: rest ? [] : [{ performanceTick }] }, x, voice,
+const position = (writtenTick, performanceTick, x, { triplet = false, rest = false, voice = "hands", swung } = {}) => ({
+    note: { writtenTick, triplet, rest, swung, refs: rest ? [] : [{ performanceTick }] }, x, voice,
 });
 
 test("position uses exact beat boundaries, count-in, four-bar wrap, and delayed frames", () => {
@@ -52,4 +52,10 @@ test("rests use swing mapping and actual noteheads win over shifted feet/rest gl
     assert.equal(markerX(64, anchors), 160);
     assert.throws(() => scoreAnchors([position(0, 0, 150), position(48, 48, 100)],
         { barStart: 0, endX: 400, feel: "straight" }), /aligned/);
+});
+
+test("literal finer-subdivision rests at tick 48 stay literal inside Swing", () => {
+    const anchors = scoreAnchors([position(0, 0, 80), position(48, 48, 150, { rest: true, swung: false }),
+        position(72, 72, 180, { swung: false })], { barStart: 0, endX: 400, feel: "swing" });
+    assert.equal(markerX(48, anchors), 150);
 });

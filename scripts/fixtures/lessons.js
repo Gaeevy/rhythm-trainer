@@ -214,3 +214,18 @@ export const FIXTURE_LESSONS = {
         ]
     }
 };
+
+// Stress notation paging and simultaneous same-position hi-hat heads, without
+// adding development exercises to the production lesson catalog.
+FIXTURE_LESSONS["notation-sixteen-bars"] = {
+    version: 2, title: "Notation coverage: sixteen bars", bpm: 80,
+    time_signature: [4, 4], bars: 16, notation: { feel: "straight" },
+    tracks: FIXTURE_LESSONS["mps-850-check"].tracks.map(track => ({
+        instrument: track.instrument, notes: [0, 6144 - 12],
+    })),
+};
+FIXTURE_LESSONS["notation-silent"] = {
+    version: 2, title: "Notation coverage: silent bar", bpm: 80,
+    time_signature: [4, 4], bars: 2, notation: { feel: "straight" },
+    tracks: [{ instrument: "snare", notes: [384] }],
+};

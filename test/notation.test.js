@@ -103,3 +103,54 @@ test("quarter rests combine into aligned half/bar rests without moving later bea
     assert.deepEqual(voice.tuplets, [[1, 2, 3]]);
     assert.equal(voice.notes[voice.tuplets[0][0]].writtenTick, 192);
 });
+
+test("thirty-seconds and sixteenth triplets retain exact ticks and partition each bar", () => {
+    for (const notes of [[0, 12, 24, 36, 48, 60, 72, 84, 372], [0, 16, 32, 48, 64, 80], [0, 48, 80]]) {
+        const model = lessonNotation(example(notes));
+        assert.deepEqual(references(model).map(ref => ref.performanceTick), notes);
+        assert.equal(model.bars[0].voices[0].notes.reduce((sum, note) => sum + note.durationTicks, 0), 384);
+    }
+    const thirtySeconds = lessonNotation(example([0, 12, 372])).bars[0].voices[0];
+    assert.equal(thirtySeconds.notes[0].duration, "32");
+    const triplets = lessonNotation(example([0, 16, 32, 48, 64, 80])).bars[0].voices[0];
+    assert.deepEqual(triplets.tuplets, [[0, 1, 2], [3, 4, 5]]);
+    assert.equal(triplets.notes[0].duration, "16");
+});
+
+test("explicit sixteenth triplets retain rests, allow separate half-beat groups and reject overlaps", () => {
+    const hints = [{ instrument: "snare", tick: 48, unit: 16 }];
+    const voice = lessonNotation(example([0, 48, 80], { feel: "straight", triplets: hints })).bars[0].voices[0];
+    assert.deepEqual(voice.tuplets, [[1, 2, 3]]);
+    assert.equal(voice.notes[2].rest, true);
+    assert.deepEqual(voice.notes.slice(1, 4).map(note => note.durationTicks), [16, 16, 16]);
+    for (const triplets of [
+        [...hints, { instrument: "snare", tick: 80, unit: 16 }],
+        [...hints, { instrument: "snare", tick: 0, unit: 8 }],
+        [{ instrument: "snare", tick: 0, unit: 32 }],
+    ]) assert.throws(() => validateLesson(example([0, 48, 80], { feel: "straight", triplets })), /notation/);
+    assert.throws(() => validateLesson(example([0, 24], { feel: "straight", triplets: [{ instrument: "snare", tick: 0, unit: 16 }] })), /sixteenth-note triplets/);
+});
+
+test("all twelve instruments and sixteen bars preserve independent references including hi-hat collisions", async () => {
+    const { DRUM_KEY } = await import("../src/notation/drum-key.js");
+    const lesson = example(); lesson.bars = 16;
+    lesson.tracks = Object.keys(DRUM_KEY).map(instrument => ({ instrument, notes: [0, 6144 - 12] }));
+    const model = lessonNotation(lesson);
+    assert.equal(model.bars.length, 16);
+    assert.equal(references(model).length, 24);
+    assert.equal(new Set(references(model).map(ref => ref.id)).size, 24);
+    for (const bar of model.bars) for (const voice of bar.voices) {
+        assert.equal(voice.notes.reduce((sum, note) => sum + note.durationTicks, 0), 384);
+    }
+    const originals = JSON.parse(await readFile(new URL("./fixtures/notation-originals.json", import.meta.url)));
+    assert.equal(Object.keys(originals).length, 9, "Every production lesson has a pre-migration comparison");
+});
+
+
+test("Swing retains literal finer subdivisions without swinging or rounding them twice", () => {
+    const lesson = example([0, 64, 96, 108, 120, 144, 168], { feel: "swing" });
+    const refs = references(lessonNotation(lesson));
+    assert.deepEqual(refs.map(ref => ref.writtenTick), [0, 48, 96, 108, 120, 144, 168]);
+    assert.deepEqual(refs.map(ref => ref.performanceTick), lesson.tracks[0].notes);
+    assert.throws(() => lessonNotation(example([0, 24, 64], { feel: "swing" })), /unsupported rhythm/);
+});

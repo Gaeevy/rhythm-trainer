@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -54,20 +55,39 @@ def build_site(root: Path) -> Path:
             raise ValueError(f"Missing site asset: {name}")
         if path.is_symlink() or any(item.is_symlink() for item in path.rglob("*")):
             raise ValueError(f"Site assets must not contain symbolic links: {name}")
+    html = (root / "index.html").read_text(encoding="utf-8")
+    if "<head>" not in html or "<base " in html:
+        raise ValueError("index.html must have a head and no existing base URL")
     output = root / "_site"
     if output.is_symlink():
         raise ValueError("_site must not be a symbolic link")
     if output.exists():
         shutil.rmtree(output)
     output.mkdir()
+    runtime = output / "runtime" / "staging"
+    runtime.mkdir(parents=True)
     for name in names:
+        if name == "index.html":
+            continue
         path = root / name
         if path.is_dir():
-            shutil.copytree(path, output / name, ignore=shutil.ignore_patterns(".*", "__pycache__", "*.pyc"))
+            shutil.copytree(path, runtime / name, ignore=shutil.ignore_patterns(".*", "__pycache__", "*.pyc"))
         else:
-            shutil.copyfile(path, output / name)
-    (output / "generated").mkdir()
-    (output / CATALOG_PATH).write_text(source, encoding="utf-8")
+            shutil.copyfile(path, runtime / name)
+    (runtime / "generated").mkdir()
+    (runtime / CATALOG_PATH).write_text(source, encoding="utf-8")
+    # Version the complete runtime together: relative imports, recordings, config,
+    # lessons and CSS cannot mix with assets cached from an older deployment.
+    digest = hashlib.sha256(html.encode("utf-8"))
+    for path in sorted(item for item in runtime.rglob("*") if item.is_file()):
+        name = path.relative_to(runtime).as_posix().encode("utf-8")
+        body = path.read_bytes()
+        digest.update(len(name).to_bytes(8, "big") + name)
+        digest.update(len(body).to_bytes(8, "big") + body)
+    version = digest.hexdigest()[:16]
+    runtime.rename(runtime.with_name(version))
+    html = html.replace("<head>", f'<head>\n  <base href="./runtime/{version}/">', 1)
+    (output / "index.html").write_text(html, encoding="utf-8")
     (output / ".nojekyll").touch()
     return output
 

@@ -5,16 +5,32 @@ import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { FIXTURE_LESSONS } from "./fixtures/lessons.js";
+import { lessonNotation } from "../src/notation/model.js";
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 // Serve only the selected mount. A root-relative asset fails in the subpath run.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../_site");
+const artifactHtml = await readFile(resolve(root, "index.html"), "utf8");
+const releasePath = artifactHtml.match(/<base href="\.\/(runtime\/[a-f0-9]{16}\/)"/)[1];
+const runtimeRoot = resolve(root, releasePath);
 const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".wav": "audio/wav" };
 async function serve(mount) {
     const server = createServer(async (request, response) => {
         try {
             const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
             if (!pathname.startsWith(mount)) throw new Error("Outside test mount");
+            // Seed an older unversioned release in the real HTTP cache. Routing
+            // mocks disable that cache, so cacheFlow uses these native responses.
+            const legacy = {
+                [`${mount}cache-check.html`]: ["text/html", '<link rel="stylesheet" href="./style.css"><script type="module" src="./src/app.js"></script>'],
+                [`${mount}style.css`]: ["text/css", ':root { background: white; }'],
+                [`${mount}src/app.js`]: ["text/javascript", 'globalThis.legacyRelease = true;'],
+            }[pathname];
+            if (legacy) {
+                response.writeHead(200, { "Content-Type": legacy[0], "Cache-Control": "public, max-age=3600" });
+                response.end(legacy[1]);
+                return;
+            }
             const path = resolve(root, pathname.slice(mount.length) || "index.html");
             if (!path.startsWith(root + sep)) throw new Error("Outside site artifact");
             const body = await readFile(path);
@@ -152,7 +168,7 @@ async function practiceFlow(browser, url) {
         await ready(page);
         assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length + Object.keys(FIXTURE_LESSONS).length);
         for (const { id } of BUNDLED_LESSONS) {
-            const lesson = JSON.parse(await readFile(resolve(root, "lessons", `${id}.json`), "utf8"));
+            const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
             await page.locator("#lesson").selectOption(id);
             await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, lesson.title);
             assert.deepEqual(await page.locator(".track").evaluateAll(lanes => lanes.map(lane => lane.dataset.instrument)),
@@ -577,6 +593,11 @@ async function notationFlow(browser, url) {
         await page.locator("#lesson").selectOption("swing-ride");
         await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 1");
         assert.equal(await page.locator("#notation-instruments button").count(), 4, "Empty tracks retain their controls");
+        // Unsupported ticks are a test-only fixture; all production lessons now render.
+        await page.route("**/lessons/come-undone.json", route => route.fulfill({ json: {
+            version: 1, title: "Unsupported test rhythm", bpm: 80, bars: 1, time_signature: [4, 4],
+            tracks: [{ instrument: "snare", notes: [0, 383] }],
+        } }));
         await page.locator("#lesson").selectOption("come-undone");
         await page.locator("#notation-error").waitFor();
         assert.equal(await page.locator("#timeline").isVisible(), true);
@@ -871,6 +892,88 @@ async function notationFeedbackFlow(browser, url) {
     } finally { await context.close(); }
 }
 
+async function notationCoverageFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context);
+    await mockFixtureLessons(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#view-notation").click();
+        for (const id of [...BUNDLED_LESSONS.map(lesson => lesson.id), ...Object.keys(FIXTURE_LESSONS)]) {
+            const lesson = FIXTURE_LESSONS[id] ?? JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
+            await page.locator("#lesson").selectOption(id);
+            await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, lesson.title);
+            await page.locator("#notation-score svg").waitFor();
+            await page.waitForFunction(() => [...document.querySelectorAll(".notation-score svg")].every(svg => {
+                const host = svg.parentElement, style = getComputedStyle(host);
+                return Number(svg.getAttribute("width")) === Math.max(460, Math.floor(host.clientWidth
+                    - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+            }));
+            const model = lessonNotation(lesson);
+            for (let bar = 0; bar < lesson.bars; bar++) {
+                assert.equal(await page.locator("#notation-page").textContent(), `Bar ${bar + 1} of ${lesson.bars}`, id);
+                const expected = lesson.tracks.flatMap(track => track.notes.filter(tick => Math.floor(tick / 384) === bar)
+                    .map(tick => `${track.instrument}:${tick}`)).sort();
+                const actual = await page.locator("#notation-score [data-note-id]").evaluateAll(nodes => nodes.map(node => node.dataset.noteId).sort());
+                assert.equal(await page.locator("#notation-score .vf-tuplet").count(),
+                    model.bars[bar].voices.reduce((sum, voice) => sum + voice.tuplets.length, 0), `${id}: explicit triplet brackets are present`);
+                assert.deepEqual(actual, expected, `${id}, bar ${bar + 1}: every expected notehead is present exactly once`);
+                assert.equal(await page.locator("#notation-error").isVisible(), false);
+                if (new URL(url).pathname === "/" && !id.startsWith("notation-silent")) {
+                    await page.locator("#notation-panel").screenshot({ path: `/tmp/rhythm-score-${id}-${bar + 1}.png` });
+                }
+                if (bar < lesson.bars - 1) await page.locator("#notation-next").click();
+            }
+            await page.setViewportSize({ width: 390, height: 844 });
+            await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+            assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, id);
+            await page.setViewportSize({ width: 1440, height: 1000 });
+        }
+        await page.locator("#lesson").selectOption("notation-sixteen-bars");
+        await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 16");
+        await page.locator(".notation-legend summary").click();
+        assert.equal(await page.locator("#notation-key li").count(), 12);
+        const hiHatGlyphs = await page.locator("#notation-score svg").textContent();
+        assert.ok(hiHatGlyphs.includes("\uE5E5") && hiHatGlyphs.includes("\uE5E7"), "Open circle and closed + both render");
+        const collision = await page.locator('#notation-score [data-note-id^="hi_hat_"]').evaluateAll(nodes => nodes.map(node => {
+            const box = node.getBoundingClientRect(); return { id: node.dataset.noteId, x: box.x, y: box.y };
+        }));
+        assert.notEqual(collision.find(node => node.id === "hi_hat_closed:0").x,
+            collision.find(node => node.id === "hi_hat_open:0").x, "Same-position heads are displaced rather than hidden");
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-score-full-kit.png", fullPage: true });
+        assert.deepEqual(errors, []);
+        console.log(`PASS whole catalog, full kit, dense subdivisions, silent/sixteen-bar scores: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
+async function cacheFlow(browser, url) {
+    const context = await browser.newContext();
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        await page.goto(new URL("cache-check.html", url).href);
+        await page.waitForFunction(() => globalThis.legacyRelease === true);
+        assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), "rgb(255, 255, 255)");
+        const requests = [];
+        page.on("request", request => requests.push(request.url()));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.evaluate(() => Boolean(globalThis.legacyRelease)), false, "The cached old module is not used");
+        assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), "rgb(23, 34, 28)");
+        const assets = requests.filter(url => /\.(css|js|json|wav)$/.test(url));
+        assert.ok(assets.length > 10);
+        assert.ok(assets.every(url => url.includes(`/${releasePath}`)), "The whole runtime uses one release path");
+        assert.ok(assets.every(asset => new URL(asset).origin === new URL(url).origin), "No external assets");
+        console.log(`PASS cached prior CSS/module cannot mix with versioned release: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 let browser;
 try {
     // launch() creates a disposable profile. Never use connectOverCDP or launchPersistentContext.
@@ -878,6 +981,11 @@ try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
         const server = await serve(mount);
         try {
+            if (process.argv.includes("--notation-coverage")) {
+                await notationCoverageFlow(browser, server.url);
+                await cacheFlow(browser, server.url);
+                continue;
+            }
             await catalogFlow(browser, server.url);
             await practiceFlow(browser, server.url);
             await trackFlow(browser, server.url);
@@ -886,6 +994,8 @@ try {
             await notationFlow(browser, server.url);
             await scoreFollowingFlow(browser, server.url);
             await notationFeedbackFlow(browser, server.url);
+            await notationCoverageFlow(browser, server.url);
+            await cacheFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");
