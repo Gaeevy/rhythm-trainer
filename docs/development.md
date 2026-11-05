@@ -77,7 +77,9 @@ excluded. There is no JavaScript compilation step.
 
 The generated catalog records stable filename IDs, relative JSON paths and
 folder group names. IDs must be unique across folders; moving a file keeps
-saved preferences. Two native dropdowns select a folder, then one of its lessons.
+saved preferences. A small [LessonPicker](../src/lesson-picker.js) uses a native popover with
+folder flyouts, keyboard navigation and touch controls. Browsing does not
+change playback; choosing a lesson uses the existing loading/reset path.
 
 The generated index points to `runtime/<content-hash>/` through a relative base
 URL. CSS, modules, lessons/catalog, config, recordings and notation assets share

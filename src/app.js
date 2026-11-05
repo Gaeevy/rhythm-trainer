@@ -1,3 +1,4 @@
+import { LessonPicker } from "./lesson-picker.js";
 import { VOLUME_MAX, volumeFromPosition, positionFromVolume } from "./volume.js";
 import { practiceBpm, bpmFromPosition, positionFromBpm, MIN_BPM, MAX_BPM } from "./tempo.js";
 import { parseLesson } from "./lesson.js";
@@ -18,7 +19,6 @@ import { INSTRUMENTS } from "./instruments.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
-const folderSelect = element("lesson-folder");
 const startButton = element("start-stop");
 const bpmInput = element("bpm");
 let currentBpm = 80;
@@ -71,6 +71,7 @@ let browserStorage;
 try { browserStorage = window.localStorage; } catch { /* Storage can be disabled; input still works. */ }
 const restoredPractice = loadPracticeSettings(browserStorage);
 const preferences = restoredPractice.settings;
+const lessonPicker = new LessonPicker(lessonSelect, element("lesson-menu"), BUNDLED_LESSONS, id => loadLesson(id));
 const midi = new MidiInput({
     requestAccess: window.isSecureContext && typeof navigator.requestMIDIAccess === "function"
         ? options => navigator.requestMIDIAccess(options) : undefined,
@@ -100,26 +101,8 @@ function updateKeyHints() {
     });
 }
 
-function renderLessonOptions(group = BUNDLED_LESSONS.find(
-    entry => entry.id === (activeLessonId ?? preferences.lastBundledLessonId),
-).group) {
-    folderSelect.replaceChildren(...[...new Set(BUNDLED_LESSONS.map(entry => entry.group))].map(name => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name || "Other";
-        return option;
-    }));
-    folderSelect.value = group;
-    folderSelect.disabled = false;
-    const entries = BUNDLED_LESSONS.filter(entry => entry.group === group);
-    lessonSelect.replaceChildren(...entries.map(({ id, title }) => {
-        const option = document.createElement("option");
-        option.value = id;
-        option.textContent = title;
-        return option;
-    }));
-    const selected = activeLessonId ?? preferences.lastBundledLessonId;
-    lessonSelect.value = entries.some(entry => entry.id === selected) ? selected : entries[0].id;
+function updateLessonPicker() {
+    lessonPicker.select(activeLessonId ?? preferences.lastBundledLessonId);
 }
 
 function setTempo(value) {
@@ -266,7 +249,7 @@ async function changeLesson(read, id, { initial = false } = {}) {
         lessonSelect.dataset.loadedId = id;
         const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
         setTempo(requestedTempo);
-        renderLessonOptions();
+        updateLessonPicker();
         updateTempoReset();
         if (!initial) persistPractice();
         showStatus(currentBpm === requestedTempo ? "Ready"
@@ -277,7 +260,7 @@ async function changeLesson(read, id, { initial = false } = {}) {
         const message = `${error.message}${lesson ? " Previous lesson kept; press Start to resume." : " Choose a lesson again to retry."}`;
         element("lesson-error").textContent = message;
         element("lesson-error").hidden = false;
-        renderLessonOptions();
+        updateLessonPicker();
         showStatus(message, true);
     } finally {
         if (request === lessonRequest) {
@@ -288,8 +271,7 @@ async function changeLesson(read, id, { initial = false } = {}) {
     }
 }
 
-function loadLesson(initial = false) {
-    const id = lessonSelect.value;
+function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     return changeLesson(async () => {
         const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
         if (!entry) throw new Error("Unknown bundled lesson");
@@ -438,11 +420,6 @@ for (const view of ["lanes", "notation"]) {
 }
 element("notation-retry").addEventListener("click", () => { void notationView.show("notation"); });
 element("midi-connect").addEventListener("click", () => midi.connect());
-folderSelect.addEventListener("change", () => {
-    renderLessonOptions(folderSelect.value);
-    void loadLesson();
-});
-lessonSelect.addEventListener("change", () => loadLesson());
 element("lesson-tempo").addEventListener("click", () => {
     if (!lesson) return;
     stop("Lesson tempo restored · Press Start to restart");
@@ -475,7 +452,7 @@ element("practice-settings-status").textContent = restoredPractice.warning
 element("practice-settings-status").dataset.warning = String(Boolean(restoredPractice.warning));
 updateVolumes(false);
 updateKeyHints();
-renderLessonOptions();
-loadLesson(true);
+updateLessonPicker();
+loadLesson(preferences.lastBundledLessonId, { initial: true });
 
 midi.connect();

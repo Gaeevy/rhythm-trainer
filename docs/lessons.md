@@ -8,11 +8,10 @@ Save one JSON file in a lesson folder, then refresh the local app:
 - `lessons/Swing/`: sheet swing exercises 7–20.
 - `lessons/Swing [YouTube]/`: existing swing lessons from the earlier videos.
 
-Folders appear in the first dropdown; the second dropdown lists only lessons
-in the selected folder, in filename order. Choosing a folder loads its first
-lesson and stops playback. A new folder automatically appears; nested folders
-use their full relative path as one folder label. Root-level JSON files are
-still supported under Other.
+Folders appear in the Lesson menu; hovering over or tapping one reveals its
+lesson flyout, in filename order. Browsing folders does not change practice.
+A new folder automatically appears; nested folders use their full relative path
+as one folder label. Root-level JSON files are still supported under Other.
 The filename without `.json` is the lesson ID; `title` is the option text.
 Use lowercase hyphenated filenames, unique across all folders. Moving a file
 between groups preserves its ID, saved selection and tempo. Renaming the file

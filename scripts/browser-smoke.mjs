@@ -97,14 +97,14 @@ async function catalogFlow(browser, url) {
         page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`); });
         await page.goto(url);
         await ready(page);
-        assert.deepEqual(await page.locator("#lesson-folder option").evaluateAll(options => options.map(option => option.textContent)),
+        assert.deepEqual(await page.locator("#lesson-menu > [data-folder]").evaluateAll(options => options.map(option => option.textContent)),
             ["Songs", "Swing", "Swing [YouTube]"]);
         for (const { id, title, group } of BUNDLED_LESSONS) {
             await selectLesson(page, id);
             await waitForLesson(page, id);
-            assert.equal(await page.locator(`#lesson option[value="${id}"]`).textContent(), title);
-            assert.equal(await page.locator("#lesson-folder").inputValue(), group);
-            assert.deepEqual(await page.locator("#lesson option").evaluateAll(options => options.map(option => option.value)),
+            assert.equal(await page.locator(`[data-lesson-id="${id}"]`).textContent(), title);
+            assert.equal(await page.locator("#lesson").getAttribute("data-group"), group);
+            assert.deepEqual(await page.locator(`#lesson-menu [role="menu"][data-group="${group}"] [data-lesson-id]`).evaluateAll(options => options.map(option => option.dataset.lessonId)),
                 BUNDLED_LESSONS.filter(entry => entry.group === group).map(entry => entry.id));
         }
         assert.deepEqual(errors, []);
@@ -122,8 +122,8 @@ async function catalogFlow(browser, url) {
         await page.reload();
         await waitForLesson(page, "swing-exercise-07");
         assert.equal(await page.locator("#bpm-level").textContent(), "93");
-        assert.equal(await page.locator("#lesson-folder").inputValue(), "Swing");
-        assert.equal(await page.locator("#lesson option").count(), 14);
+        assert.equal(await page.locator("#lesson").getAttribute("data-group"), "Swing");
+        assert.equal(await page.locator('#lesson-menu [data-group="Swing"] [data-lesson-id]').count(), 14);
         await selectLesson(page, "swing-exercise-08");
         await waitForLesson(page, "swing-exercise-08");
         await selectView(page, "notation");
@@ -136,13 +136,79 @@ async function catalogFlow(browser, url) {
 
 async function selectLesson(page, id) {
     const group = BUNDLED_LESSONS.find(entry => entry.id === id)?.group ?? "Test fixtures";
-    if (await page.locator("#lesson-folder").inputValue() !== group) {
-        await page.locator("#lesson-folder").selectOption(group);
-        const firstId = BUNDLED_LESSONS.find(entry => entry.group === group)?.id ?? Object.keys(FIXTURE_LESSONS)[0];
-        // Folder selection already starts its first lesson, including error cases.
-        if (id === firstId) return;
-    }
-    await page.locator("#lesson").selectOption(id);
+    await page.locator("#lesson").click();
+    await page.getByRole("menuitem", { name: group || "Other", exact: true }).click();
+    await page.locator(`[data-lesson-id="${id}"]`).click();
+}
+
+async function lessonMenuFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, hasTouch: true });
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#lesson").click();
+        assert.equal(await page.getByRole("menuitemradio").count(), 0, "Start with folders only");
+        await page.getByRole("menuitem", { name: "Swing", exact: true }).hover();
+        assert.equal(await page.getByRole("menuitemradio").count(), 14);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-nested-desktop.png" });
+        await page.getByRole("menuitem", { name: "Songs", exact: true }).hover();
+        assert.equal(await page.getByRole("menuitemradio").count(), 4);
+        await page.keyboard.press("Escape");
+        await selectLesson(page, "swing-exercise-20");
+        await waitForLesson(page, "swing-exercise-20");
+        await page.reload();
+        await waitForLesson(page, "swing-exercise-20");
+        assert.equal(await page.locator('#lesson-menu [data-lesson-id="swing-exercise-20"]').getAttribute("aria-checked"), "true");
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#practice-panel > summary").click();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        const origin = await page.evaluate(() => window.smoke.assessment.origin);
+        await page.locator("#lesson").focus();
+        await page.keyboard.press("ArrowDown");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.folder), "Songs");
+        await page.keyboard.press("ArrowRight");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "californication");
+        await page.keyboard.press("End");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "fascination-street");
+        await page.keyboard.press("ArrowLeft");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("ArrowRight");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "swing-exercise-07");
+        await page.keyboard.press("End");
+        await page.keyboard.press("Escape");
+        assert.equal(await page.locator("#lesson").evaluate(button => button === document.activeElement), true);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin, "Browsing does not restart playback");
+        assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "true");
+        await page.locator("#lesson").press("Enter");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("ArrowRight");
+        await page.keyboard.press("Enter");
+        await waitForLesson(page, "swing-exercise-07");
+        await stopped(page);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.locator("#lesson").tap();
+        await page.getByRole("menuitem", { name: "Swing", exact: true }).tap();
+        const fit = await page.locator('#lesson-menu, .lesson-submenu:not([hidden])').evaluateAll(menus => menus.every(menu => {
+            const rect = menu.getBoundingClientRect();
+            return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight;
+        }));
+        assert.equal(fit, true, "Folder and flyout fit a narrow screen");
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-nested-narrow.png" });
+        await page.getByRole("menuitemradio", { name: "Swing exercise 20", exact: true }).tap();
+        await waitForLesson(page, "swing-exercise-20");
+        await page.locator("#lesson").tap();
+        await page.locator(".wordmark").tap();
+        assert.equal(await page.locator("#lesson-menu").evaluate(menu => menu.matches(":popover-open")), false);
+        assert.deepEqual(errors, []);
+        console.log(`PASS nested lesson menu, hover, keyboard, touch, focus, persistence and playback continuity: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
 }
 
 async function waitForLesson(page, id) {
@@ -237,7 +303,7 @@ async function practiceFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         await selectView(page, "lanes");
-        assert.equal(await page.locator("#lesson-folder option").count(), 4);
+        assert.equal(await page.locator("#lesson-menu > [data-folder]").count(), 4);
         for (const { id } of BUNDLED_LESSONS) {
             const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", BUNDLED_LESSONS.find(lesson => lesson.id === id).path), "utf8"));
             await selectLesson(page, id);
@@ -1293,12 +1359,18 @@ try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
         const server = await serve(mount);
         try {
+            if (process.argv.includes("--lesson-menu-only")) {
+                await catalogFlow(browser, server.url);
+                await lessonMenuFlow(browser, server.url);
+                continue;
+            }
             if (process.argv.includes("--notation-coverage")) {
                 await notationCoverageFlow(browser, server.url);
                 await cacheFlow(browser, server.url);
                 continue;
             }
             await catalogFlow(browser, server.url);
+            await lessonMenuFlow(browser, server.url);
             await practiceFlow(browser, server.url);
             await trackFlow(browser, server.url);
             await failureRecovery(browser, server.url);

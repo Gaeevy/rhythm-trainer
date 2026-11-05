@@ -5,10 +5,10 @@ localhost. Open the app through HTTP, not by opening `index.html` directly.
 
 ## Controls
 
-Choose a folder (Songs, Swing or Swing [YouTube]), then a lesson, set BPM and
-press **Start loop** or **Space**. The lesson dropdown lists only the selected
-folder. Changing folder loads its first lesson and stops playback; reloading
-restores the last lesson and its folder. The toolbar also
+Open **Lesson**, hover over or tap a folder (Songs, Swing or Swing [YouTube]),
+then choose a lesson from its side menu. Folder browsing leaves playback alone;
+choosing a lesson stops and resets practice. Reloading restores the last lesson.
+Set BPM and press **Start loop** or **Space**. The toolbar also
 has metronome and guide volume sliders with speaker icons for mute.
 Metronome spans 0–300% gain; guide drums span 0–100%. Both use logarithmic
 travel for finer control at low levels, with exact silence at the left endpoint.
@@ -17,6 +17,11 @@ The metronome's 300% endpoint is three times its normal 100% signal gain; its
 click sound and timing are unchanged. There is no master volume or shared boost.
 Old master preferences are discarded; separate levels and mute states are kept.
 Volume/mute and view changes keep playback running.
+
+The lesson menu supports arrow keys, Home/End, typing the first letter, and
+Enter/Space to choose. Right opens a folder; Left returns to folders. Escape
+closes the menu and returns focus to Lesson. Click outside to dismiss it. Long
+lesson lists scroll within the flyout; touch and narrow screens are supported.
 
 BPM uses whole numbers from 20 to 300. Its logarithmic slider gives more precision
 around slower practice tempos and advances faster at high tempos. Arrow keys

@@ -51,3 +51,17 @@ All 23 lessons render without losing note identities; timing, MIDI/keyboard
 feedback, tuplets, simultaneous drum chords and scrolling checks pass. Exercise
 7 was inspected with independent ride/snare rhythms. Current guides are updated.
 Status: approved for release.
+
+## Nested lesson menu
+
+Before merge, replace the two dropdowns with one Lesson button and folder
+flyouts, as requested. Use the native popover for top-layer positioning,
+click-away closing and scrollable lesson lists. Support hover/touch, keyboard
+navigation, selected-item state and focus return. Folder browsing does not
+load a lesson or stop playback. Keep the same catalog and saved lesson IDs.
+
+Verification: 134 JavaScript tests, 7 Python tests and 28 browser scenarios pass
+at root and /rhythm-trainer/. Checks cover all 23 lessons, hover/keyboard/touch,
+focus return, selected-item persistence, narrow bounds, click-away closing and
+browsing during playback. Desktop and narrow screenshots inspected; current
+guides and local links updated. Status: ready for release.
