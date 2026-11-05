@@ -115,17 +115,15 @@ test("unavailable guide recordings never create substitute sounds; metronome rem
     assert.equal(h.sources.at(-1).kind, "sample");
 });
 
-test("master gain controls both mixer buses, supports boost/mute and preserves bus levels", () => {
+test("independent buses reach the output directly and metronome supports triple gain", () => {
     const h = harness();
-    assert.deepEqual(h.audio.guide.connections, [h.audio.master]);
-    assert.deepEqual(h.audio.metronome.connections, [h.audio.master]);
-    assert.deepEqual(h.audio.master.connections, [h.context.destination]);
-    assert.equal(h.audio.master.gain.value, 1.5);
+    assert.deepEqual(h.audio.guide.connections, [h.context.destination]);
+    assert.deepEqual(h.audio.metronome.connections, [h.context.destination]);
+    assert.equal(h.audio.master, undefined);
+    h.audio.setVolume("metronome", 3, false);
+    h.audio.setVolume("metronome", 3, true);
+    h.audio.setVolume("metronome", 3, false);
+    assert.deepEqual(h.audio.metronome.gain.events,
+        [["target", 3, 0, 0.008], ["target", 0, 0, 0.008], ["target", 3, 0, 0.008]]);
     assert.equal(h.audio.guide.gain.value, 0.55);
-    assert.equal(h.audio.metronome.gain.value, 0.35);
-    h.audio.setVolume("master", 2, false);
-    h.audio.setVolume("master", 2, true);
-    assert.deepEqual(h.audio.master.gain.events, [["target", 2, 0, 0.008], ["target", 0, 0, 0.008]]);
-    assert.equal(h.audio.guide.gain.value, 0.55);
-    assert.equal(h.audio.metronome.gain.value, 0.35);
 });

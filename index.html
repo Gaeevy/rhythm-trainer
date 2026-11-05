@@ -26,15 +26,11 @@
         </div>
         <div class="volume-control">
           <label class="volume-label" for="metronome-volume">Metronome <output id="metronome-level">35%</output></label>
-          <div class="volume-row"><button id="metronome-mute" type="button" class="mute-button" aria-label="Mute metronome" title="Mute metronome" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="metronome-volume" type="range" min="0" max="100" value="35"></div>
+          <div class="volume-row"><button id="metronome-mute" type="button" class="mute-button" aria-label="Mute metronome" title="Mute metronome" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="metronome-volume" type="range" min="0" max="3000" step="1" value="0" aria-valuemin="0" aria-valuemax="300" aria-valuenow="35" aria-valuetext="35%"></div>
         </div>
         <div class="volume-control">
           <label class="volume-label" for="guide-volume">Guide drums <output id="guide-level">55%</output></label>
-          <div class="volume-row"><button id="guide-mute" type="button" class="mute-button" aria-label="Mute guide drums" title="Mute guide drums" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="guide-volume" type="range" min="0" max="100" value="55"></div>
-        </div>
-        <div class="volume-control">
-          <label class="volume-label" for="master-volume">Master <output id="master-level">150%</output></label>
-          <div class="volume-row"><button id="master-mute" type="button" class="mute-button" aria-label="Mute master volume" title="Mute master volume" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="master-volume" type="range" min="0" max="200" value="150"></div>
+          <div class="volume-row"><button id="guide-mute" type="button" class="mute-button" aria-label="Mute guide drums" title="Mute guide drums" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="guide-volume" type="range" min="0" max="3000" step="1" value="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55" aria-valuetext="55%"></div>
         </div>
         <button id="start-stop" class="start-button" title="Start or stop (Space)" disabled>Start loop <span aria-hidden="true">▶</span></button>
       </div>
