@@ -64,6 +64,8 @@ export function renderScoreBar(host, example, width = scoreWidth(host, example))
     for (const beam of beams) beam.setContext(context).draw();
     for (const tuplet of tuplets) tuplet.setContext(context).draw();
     const svg = host.querySelector("svg");
+    // Mark the model's chosen layout for styling; do not select layouts here.
+    svg.dataset.layout = example.voices.some(part => part.id === "combined") ? "combined" : "separate";
     const barline = document.createElementNS("http://www.w3.org/2000/svg", "line");
     barline.classList.add("notation-barline");
     for (const [key, value] of Object.entries({ x1: width - 1, x2: width - 1,

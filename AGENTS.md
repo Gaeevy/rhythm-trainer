@@ -45,6 +45,11 @@
 - Guide drums use local recordings only; load/decode before scheduling and leave
   Start stopped with a retryable error on failure. Preserve the metronome sound,
   hi-hat choking, cancellation and asset licenses/source records.
+- Before changing notation layout, read [the layout policy](docs/development.md#notation-layout).
+  Keep layout selection in `lessonNotation()` in `src/notation/model.js`; the
+  renderer only engraves its result. Preserve quarter-ride protection and the
+  documented grid fallbacks. Do not add per-song exceptions or extra layout
+  settings without an agreed requirement.
 - Use `src/instruments.js` for shared labels and `src/music-time.js` for timing
   constants. Keep MIDI, audio and staff-position configuration separate.
 

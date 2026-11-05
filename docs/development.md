@@ -58,15 +58,57 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 The Web Audio clock schedules playback. Original event timestamps are converted
 to that time base for matching; animation never determines hit timing. Both
-views share the assessment. Notation groups cymbals separately from drums/pedal,
-with opposite stems and independent rhythms; conflicting triplet grids isolate
-the hinted instrument. Notation caches engraving and keeps six rows of
+views share the assessment. Notation follows the [layout policy below](#notation-layout).
+It caches engraving and keeps six rows of
 independent loop copies. Layout fits one to three bars per row from width and
 rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
 An opaque 1.8px end-of-bar line makes each boundary clear.
 Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
+
+## Notation layout
+
+**One policy, one entry point:** `lessonNotation()` in
+[model.js](../src/notation/model.js) selects the layout for the entire lesson.
+A notation *voice* groups notes/rests with shared stems and beams; it is not an
+audio channel or a lesson track. [renderer.js](../src/notation/renderer.js)
+engraves the selected model and does not choose a layout.
+
+`convertLesson()` has three internal strategies, not public lesson settings:
+
+| Internal options | Result | Used when |
+| --- | --- | --- |
+| Default `{}` | Cymbals up; drums/pedal down | Always tried first |
+| `{separateTuplets: true}` | Hinted instruments get independent voices | Default conversion has incompatible grids; return this result directly |
+| `{combine: true}` | One downward-stem voice with shared beams | Default succeeds and every played cymbal note is an eighth note or shorter |
+
+Keep the combined candidate only if it converts successfully and its total rest
+count is no greater than the separate model. Otherwise retain the separate
+model. A played quarter-note cymbal anywhere protects the whole lesson from
+combining. Silent rests do not count as played cymbal notes. The flags are
+alternative strategies; never enable both together.
+
+The combined voice uses downward stems and lighter stems/beams, leaving
+noteheads and bar lines dark. The renderer marks the already selected layout
+on the SVG; CSS styles it. Separate voices retain their existing presentation.
+This adds no new selection rule or lesson option.
+
+This deliberately keeps Fascination Street compact (zero rests instead of 35)
+and swing exercise 7's ride quarter separate from its offbeat snare. The same
+quarter-ride protection applies to Straight lessons. Folder, title and feel do
+not select layouts; feel only determines written/performed rhythm conversion.
+There are no per-song exceptions, layout options in JSON, or saved voice-grouping
+preferences. Keep future changes here rather than adding decisions to the
+renderer, UI or individual lesson files.
+
+Every strategy preserves original performance ticks and each note identity.
+Only `NotationError` permits a fallback; other errors propagate. If no valid
+notation can be produced, the existing Lanes fallback remains available.
+Regression cases live in [notation.test.js](../test/notation.test.js): dense
+songs/rest counts, Swing and Straight quarter-ride protection, incompatible
+grids, tuplets and identity preservation. Browser coverage checks rendering,
+feedback and score-following across the catalog at both site mounts.
 
 ## Packaging and release
 

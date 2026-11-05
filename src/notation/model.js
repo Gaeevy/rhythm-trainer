@@ -30,14 +30,22 @@ function compactRests(notes, beams, tuplets) {
     return { notes: compact, beams: remap(beams), tuplets: remap(tuplets) };
 }
 
-/** Convert performance ticks into written rhythms; never rewrite playable notes. */
-function convertLesson(lesson, separateTuplets = false) {
+/**
+ * Build a notation model without changing lesson ticks or note identities.
+ * Internal strategies, selected only by lessonNotation (not lesson JSON options):
+ * - Default: cymbals up, drums/pedal down.
+ * - combine: one downward-stem voice, considered only for dense cymbal rhythms.
+ * - separateTuplets: isolate hinted instruments if the default grids conflict.
+ * The two flags are alternatives; do not combine them. Keep layout decisions
+ * in lessonNotation, not in this converter or the SVG renderer.
+ */
+function convertLesson(lesson, { combine = false, separateTuplets = false } = {}) {
     validateLesson(lesson);
     const feel = lesson.version === 2 ? lesson.notation.feel : "straight";
     const hints = lesson.notation?.triplets ?? [];
-    // A specifically notated instrument needs its own voice, so its rests remain visible.
+    // Last-resort grid separation: retain hinted triplets and their required rests.
     const separate = new Set(separateTuplets ? hints.map(hint => hint.instrument) : []);
-    const voiceFor = instrument => separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
+    const voiceFor = instrument => combine ? "combined" : separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
     const parts = new Map();
     for (const track of lesson.tracks) {
         const id = voiceFor(track.instrument);
@@ -51,7 +59,7 @@ function convertLesson(lesson, separateTuplets = false) {
     for (const [id, notes] of parts) if (!notes.length) parts.delete(id);
     const bars = Array.from({ length: lesson.bars }, (_, index) => ({ index, voices: [] }));
     for (const [id, events] of parts) {
-        const stem = id === "drums" || (separate.has(id) && DRUM_KEY[id].voice === "drums") ? -1 : 1;
+        const stem = id === "cymbals" || DRUM_KEY[id]?.voice === "cymbals" ? 1 : -1;
         for (const bar of bars) {
             const notes = [], beams = [], tuplets = [];
             for (let beat = 0; beat < BEATS_PER_BAR; beat++) {
@@ -114,11 +122,32 @@ function convertLesson(lesson, separateTuplets = false) {
     return { title: lesson.title, feel, bars };
 }
 
-/** Keep cymbals above drums; isolate hinted instruments only for incompatible grids. */
+/**
+ * The single layout policy for the whole lesson. See docs/development.md#notation-layout.
+ * Start separate; on a grid conflict, isolate hinted instruments and stop there.
+ * Otherwise protect quarter-note cymbal rhythms. Only dense eighth-or-shorter
+ * cymbals may share a voice, and only if that model adds no rests.
+ * This avoids 35 redundant rests in Fascination Street while keeping the ride
+ * quarter independent of offbeat snare in the swing exercises. No song-name,
+ * folder or feel-based layout exceptions; feel still controls written timing.
+ */
 export function lessonNotation(lesson) {
-    try { return convertLesson(lesson); }
+    let separate;
+    try { separate = convertLesson(lesson); }
     catch (error) {
         if (!(error instanceof NotationError)) throw error;
-        return convertLesson(lesson, true);
+        return convertLesson(lesson, { separateTuplets: true });
+    }
+    const cymbals = separate.bars.flatMap(bar => bar.voices.filter(voice => voice.id === "cymbals")
+        .flatMap(voice => voice.notes.filter(note => !note.rest)));
+    if (!cymbals.length || cymbals.some(note => note.durationTicks > TICKS_PER_EIGHTH)) return separate;
+    try {
+        const combined = convertLesson(lesson, { combine: true });
+        const restCount = model => model.bars.reduce((count, bar) => count
+            + bar.voices.reduce((sum, voice) => sum + voice.notes.filter(note => note.rest).length, 0), 0);
+        return restCount(combined) <= restCount(separate) ? combined : separate;
+    } catch (error) {
+        if (!(error instanceof NotationError)) throw error;
+        return separate;
     }
 }
