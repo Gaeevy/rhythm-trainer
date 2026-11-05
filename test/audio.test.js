@@ -10,7 +10,7 @@ function harness() {
     const parameter = () => ({ value: 0, events: [],
         setValueAtTime(value, time) { this.events.push(["set", value, time]); },
         linearRampToValueAtTime(value, time) { this.events.push(["linear", value, time]); },
-        exponentialRampToValueAtTime(value, time) { this.events.push(["exponential", value, time]); }, cancelScheduledValues() {}, setTargetAtTime() {},
+        exponentialRampToValueAtTime(value, time) { this.events.push(["exponential", value, time]); }, cancelScheduledValues() {}, setTargetAtTime(value, time, constant) { this.events.push(["target", value, time, constant]); },
     });
     const node = () => ({ connections: [], connect(target) { this.connections.push(target); }, disconnect() {}, gain: parameter() });
     const source = kind => {
@@ -113,4 +113,19 @@ test("unavailable guide recordings never create substitute sounds; metronome rem
     assert.equal(await h.audio.loadSamples(h.fetcher), true);
     h.audio.schedule("kick", 4);
     assert.equal(h.sources.at(-1).kind, "sample");
+});
+
+test("master gain controls both mixer buses, supports boost/mute and preserves bus levels", () => {
+    const h = harness();
+    assert.deepEqual(h.audio.guide.connections, [h.audio.master]);
+    assert.deepEqual(h.audio.metronome.connections, [h.audio.master]);
+    assert.deepEqual(h.audio.master.connections, [h.context.destination]);
+    assert.equal(h.audio.master.gain.value, 1.5);
+    assert.equal(h.audio.guide.gain.value, 0.55);
+    assert.equal(h.audio.metronome.gain.value, 0.35);
+    h.audio.setVolume("master", 2, false);
+    h.audio.setVolume("master", 2, true);
+    assert.deepEqual(h.audio.master.gain.events, [["target", 2, 0, 0.008], ["target", 0, 0, 0.008]]);
+    assert.equal(h.audio.guide.gain.value, 0.55);
+    assert.equal(h.audio.metronome.gain.value, 0.35);
 });

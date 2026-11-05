@@ -6,11 +6,21 @@ localhost. Open the app through HTTP, not by opening `index.html` directly.
 ## Controls
 
 Choose a lesson, set BPM and press **Start loop** or **Space**. The toolbar also
-has guide/metronome volume sliders and speaker icons for mute. Volume/mute and
-view changes keep playback running. BPM supports 20–300, including fractions;
-**Use lesson tempo** clears the saved override.
+has metronome, guide and master volume sliders with speaker icons for mute.
+Master controls both sounds together: 0–200%, default 150% for a louder mix.
+The desktop toolbar gives BPM about twice its earlier slider width, with audio
+sliders shortened to about two-thirds.
+Guide/metronome sliders retain their separate balance. Volume/mute and view
+changes keep playback running.
 
-Practice settings contains count-in, on-time tolerance and latency offset.
+BPM uses whole numbers from 20 to 300. Its logarithmic slider gives more precision
+around slower practice tempos and advances faster at high tempos. Arrow keys
+adjust by 1 BPM, Page Up/Down by 10, and Home/End select the limits. The small
+reset icon beside BPM restores the lesson tempo and clears its saved override.
+Fractional lesson tempos and old saved overrides are rounded for practice.
+
+Practice settings contains Lanes/Notation selection, count-in, on-time tolerance
+and latency offset. Notation is the default; a valid saved view is preserved.
 Keyboard setup changes keys; MIDI setup shows connection/activity and retry.
 Changing lesson, BPM, count-in, timing settings or keys stops playback. Start
 begins a new session; Stop freezes totals. A failed lesson load keeps the prior
@@ -58,22 +68,29 @@ and press Start to retry. Stopping during loading cannot start a delayed loop.
 
 ## Views and feedback
 
+The lesson dropdown identifies the selected pattern; the practice surface does
+not repeat its title/details. Change the view in **Practice settings**.
+
 **Lanes** shows the lesson's instruments in track order with an eight-beat window.
-**Notation** repeats the score down the page: two bars per desktop row, one per
-narrow row. Bars stay in place within each row; the next loop follows below.
-The display retains six rows and recycles older rows without growing indefinitely.
+**Notation** repeats the score down one continuous sheet, with connected staff
+lines and thin standard bar lines. It fits up to three bars per row when width
+and note density allow; dense patterns use two, and narrow screens use one.
+Small bar numbers replace separate card labels. Bars stay in place as playback
+advances. The display retains six rows (up to 18 copies) and recycles older rows
+without growing indefinitely.
 Arrows browse while stopped. Count-in hides the marker; Stop preserves the score;
 Start returns to loop 1/bar 1. Narrow scores scroll horizontally to retain note size.
 
 Compatible drums share stems; snare/bass heads align and redundant rests disappear.
-Incompatible grids keep independent voices. The foldable **Drum key** explains
+Incompatible grids keep independent voices. The foldable **Drum key** in Practice settings explains
 staff positions: open hi-hat has a circle, closed has + at bar start/after opening,
 and pedal uses X below the staff. Other closed hits keep plain X heads.
 Unsupported notation or renderer errors leave Lanes usable with an explanation.
 
 Noteheads show on time (green), early (blue), late (amber) or missed (red).
-Text/tooltips show the instrument and matched error to 0.1 ms; stored error keeps
-full precision. Extras appear briefly as purple + marks, not printed notes.
+Notehead tooltips and screen-reader feedback show the instrument and matched
+error to 0.1 ms; stored error keeps full precision. Routine prompts below the
+score are hidden, while actionable playback errors remain visible. Extras appear briefly as purple + marks, not printed notes.
 Each repeated bar has its own feedback; earlier rows retain results while new
 loops start fresh. Totals accumulate across loops.
 

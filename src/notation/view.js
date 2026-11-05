@@ -1,6 +1,6 @@
 import { BEATS_PER_BAR } from "../music-time.js";
 import { extraPosition, notationFeedbackText, feedbackColor } from "./feedback.js";
-import { sheetWindow, sheetPosition } from "./sheet.js";
+import { sheetWindow, sheetPosition, sheetColumns } from "./sheet.js";
 import { scorePosition, markerX } from "./position.js";
 import { lessonNotation } from "./model.js";
 import { renderDrumKey } from "./renderer.js";
@@ -56,6 +56,8 @@ export class NotationView {
         this.columns = 2;
         element("notation-previous").onclick = () => this.changePage(-1);
         element("notation-next").onclick = () => this.changePage(1);
+        const legend = element("notation-key").parentElement;
+        legend.addEventListener("toggle", () => { if (legend.open) void this.showDrumKey(); });
         this.observer = new ResizeObserver(() => {
             const width = element("notation-scroll").clientWidth;
             if (width === this.viewportWidth) return;
@@ -88,6 +90,8 @@ export class NotationView {
         element("notation-sheet").replaceChildren();
         this.page = 0;
         this.updateInstruments(disabled);
+        element("notation-key").replaceChildren();
+        if (element("notation-key").parentElement.open) void this.showDrumKey();
     }
 
     updateInstruments(disabled) {
@@ -123,6 +127,21 @@ export class NotationView {
             this.renderSafely();
         } catch (error) {
             if (request === this.request) this.fallback(error);
+        }
+    }
+
+    async showDrumKey() {
+        const lesson = this.lesson;
+        if (!lesson) return;
+        try {
+            await loadRenderer();
+            if (lesson === this.lesson) renderDrumKey(element("notation-key"), lesson.tracks.map(track => track.instrument));
+        } catch {
+            if (lesson === this.lesson) {
+                const message = document.createElement("li");
+                message.textContent = "Drum key unavailable. Close and reopen it to retry.";
+                element("notation-key").replaceChildren(message);
+            }
         }
     }
 
@@ -168,13 +187,15 @@ export class NotationView {
     renderSafely(rebuild = false) {
         try {
             if (this.running) this.absoluteBar = Math.max(0, Math.floor(this.beat / BEATS_PER_BAR));
-            const columns = element("notation-scroll").clientWidth >= 1000 ? 2 : 1;
+            const sheet = element("notation-sheet");
+            const style = getComputedStyle(sheet);
+            const available = sheet.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+            const columns = sheetColumns(available, this.model.bars);
             if (rebuild || columns !== this.columns) {
                 this.cards.clear();
                 element("notation-sheet").replaceChildren();
             }
             this.columns = columns;
-            const sheet = element("notation-sheet");
             sheet.style.setProperty("--score-columns", columns);
             const window = sheetWindow(this.absoluteBar, columns);
             // Preserve the viewport when old rows leave the bounded window.

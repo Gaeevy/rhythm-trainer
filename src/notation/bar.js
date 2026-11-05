@@ -13,14 +13,14 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
     node.dataset.iteration = String(iteration);
     const label = document.createElement("p");
     label.className = "notation-bar-label";
-    label.textContent = `Loop ${iteration + 1} · Bar ${barIndex + 1}`;
+    label.textContent = String(absoluteBar + 1);
     const host = document.createElement("div");
     host.className = "notation-score";
     host.tabIndex = 0;
-    host.setAttribute("aria-label", `${label.textContent}; scroll horizontally if needed`);
+    host.setAttribute("aria-label", `Loop ${iteration + 1}, bar ${barIndex + 1}; scroll horizontally if needed`);
     node.append(label, host);
     sheet.append(node);
-    const width = scoreWidth(host);
+    const width = scoreWidth(host, model.bars[barIndex]);
     const rowStart = absoluteBar % columns === 0;
     const signature = absoluteBar === 0 ? "initial" : rowStart ? "row" : "continuation";
     const key = `${barIndex}:${width}:${signature}`;
@@ -42,7 +42,7 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
     const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
     marker.classList.add("notation-playhead");
     marker.setAttribute("y1", "32");
-    marker.setAttribute("y2", "188");
+    marker.setAttribute("y2", String(template.height - 20));
     marker.setAttribute("aria-hidden", "true");
     marker.style.display = "none";
     svg.append(marker);
@@ -55,7 +55,7 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
         return { ref: head.ref, node, title: node.querySelector("title"), appearance: null };
     });
     return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
-        anchors: template.anchors, extraSignature: "", feedbackRevision: -1,
+        anchors: template.anchors, height: template.height, extraSignature: "", feedbackRevision: -1,
         paddingLeft: parseFloat(getComputedStyle(host).paddingLeft) };
 }
 
@@ -86,7 +86,7 @@ export function updateScoreExtras(bar, extras) {
             const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
             text.classList.add("notation-extra-hit");
             text.setAttribute("x", String(markerX(extra.tick, bar.anchors)));
-            text.setAttribute("y", String(178 + index * 14));
+            text.setAttribute("y", String(bar.height - 32 + index * 14));
             text.setAttribute("fill", NOTATION_COLORS.extra);
             text.dataset.instrument = extra.result.instrument;
             text.dataset.tick = String(extra.tick);

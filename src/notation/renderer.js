@@ -1,6 +1,7 @@
 import { INSTRUMENTS } from "../instruments.js";
 import { TICKS_PER_BAR, BEATS_PER_BAR } from "../music-time.js";
 import { DRUM_KEY } from "./drum-key.js";
+import { minimumBarWidth } from "./sheet.js";
 import { scoreAnchors } from "./position.js";
 
 function addHiHatMark(note, index, entry) {
@@ -9,22 +10,23 @@ function addHiHatMark(note, index, entry) {
     note.addModifier(new Articulation(Glyphs[entry.articulation]).setPosition(Modifier.Position.ABOVE), index);
 }
 
-export function scoreWidth(host) {
-    const style = getComputedStyle(host);
-    return Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+export function scoreWidth(host, bar) {
+    return Math.max(minimumBarWidth(bar), host.getBoundingClientRect().width);
 }
 
 // SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
-export function renderScoreBar(host, example, width = scoreWidth(host)) {
+export function renderScoreBar(host, example, width = scoreWidth(host, example)) {
     const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
     host.replaceChildren();
     const renderer = new Renderer(host, Renderer.Backends.SVG);
-    renderer.resize(width, 220);
+    const height = example.voices.some(part => part.stem < 0 && part.tuplets.length) ? 220 : 190;
+    renderer.resize(width, height);
     const context = renderer.getContext();
     context.setFillStyle("#242820").setStrokeStyle("#242820");
-    const stave = new Stave(12, 50, width - 24);
+    const stave = new Stave(0, 50, width);
     if (example.showClef !== false) stave.addClef("percussion");
     if (example.showMeter !== false) stave.addTimeSignature(`${BEATS_PER_BAR}/4`);
+    stave.setBegBarType(example.showClef === false ? Barline.type.NONE : Barline.type.SINGLE);
     stave.setEndBarType(Barline.type.SINGLE);
     stave.setContext(context).draw();
     // Mark closed at the start of each bar and after an open hit. Repeating +
@@ -82,7 +84,7 @@ export function renderScoreBar(host, example, width = scoreWidth(host)) {
             return { ref, node, title, appearance: null };
         });
     }));
-    return { svg, width, anchors, noteheads };
+    return { svg, width, height, anchors, noteheads };
 }
 
 export function renderDrumKey(host, instruments) {

@@ -1,3 +1,4 @@
+import { practiceBpm, bpmFromPosition, positionFromBpm, MIN_BPM, MAX_BPM } from "./tempo.js";
 import { parseLesson } from "./lesson.js";
 import { DrumAudio } from "./audio.js";
 import { Playback } from "./playback.js";
@@ -18,6 +19,7 @@ const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
 const startButton = element("start-stop");
 const bpmInput = element("bpm");
+let currentBpm = 80;
 const countInInput = element("count-in");
 const toleranceInput = element("tolerance");
 const latencyInput = element("latency-offset");
@@ -107,12 +109,21 @@ function renderLessonOptions() {
     lessonSelect.value = activeLessonId ?? preferences.lastBundledLessonId;
 }
 
+function setTempo(value) {
+    currentBpm = practiceBpm(value);
+    bpmInput.value = positionFromBpm(currentBpm);
+    bpmInput.setAttribute("aria-valuenow", String(currentBpm));
+    bpmInput.setAttribute("aria-valuetext", `${currentBpm} BPM`);
+    element("bpm-level").textContent = currentBpm;
+    updateTempoReset();
+}
+
 function updateTempoReset() {
-    element("bpm-level").textContent = bpmInput.value;
     const button = element("lesson-tempo");
-    const lessonTempo = lesson ? Math.min(300, Math.max(20, lesson.bpm)) : null;
-    button.hidden = !lesson || Number(bpmInput.value) === lessonTempo;
-    if (lesson) button.textContent = `Use lesson tempo (${lessonTempo} BPM)`;
+    const lessonTempo = lesson ? practiceBpm(lesson.bpm) : null;
+    button.disabled = !lesson || currentBpm === lessonTempo;
+    button.setAttribute("aria-label", lesson ? `Restore lesson tempo (${lessonTempo} BPM)` : "Restore lesson tempo");
+    button.title = button.getAttribute("aria-label");
 }
 
 function updateSummary() {
@@ -149,7 +160,7 @@ function showStatus(message, error = false) {
 
 function updateMuteButton(bus, muted) {
     const button = element(`${bus}-mute`);
-    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : "metronome"}`;
+    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : bus === "master" ? "master volume" : "metronome"}`;
     button.setAttribute("aria-pressed", String(muted));
     button.setAttribute("aria-label", label);
     button.title = label;
@@ -170,7 +181,7 @@ function toggleTrack(instrument) {
 }
 
 function updateVolumes(save = true) {
-    for (const bus of ["guide", "metronome"]) {
+    for (const bus of ["guide", "metronome", "master"]) {
         const volume = Number(element(`${bus}-volume`).value);
         const muted = element(`${bus}-mute`).getAttribute("aria-pressed") === "true";
         element(`${bus}-level`).textContent = `${volume}%`;
@@ -236,15 +247,14 @@ async function changeLesson(read, id, { initial = false } = {}) {
         element("tracks").replaceChildren(...tracks.map(track => track.element));
         notationView.setLesson(lesson, preferences.disabledInstruments);
         void notationView.show(preferences.view);
-        element("lesson-title").textContent = lesson.title;
-        element("lesson-detail").textContent = `${lesson.time_signature.join("/")} · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
+        lessonSelect.dataset.loadedId = id;
         const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
-        bpmInput.value = requestedTempo;
+        setTempo(requestedTempo);
         renderLessonOptions();
         updateTempoReset();
         if (!initial) persistPractice();
-        showStatus(Number(bpmInput.value) === requestedTempo ? "Ready"
-            : `Tempo set to ${bpmInput.value} BPM (range 20–300)`);
+        showStatus(currentBpm === requestedTempo ? "Ready"
+            : `Tempo set to ${currentBpm} BPM (integer range ${MIN_BPM}–${MAX_BPM})`);
         draw();
     } catch (error) {
         if (request !== lessonRequest) return;
@@ -253,10 +263,6 @@ async function changeLesson(read, id, { initial = false } = {}) {
         element("lesson-error").hidden = false;
         renderLessonOptions();
         showStatus(message, true);
-        if (!lesson) {
-            element("lesson-title").textContent = "No lesson loaded";
-            element("lesson-detail").textContent = "Choose a lesson again to retry.";
-        }
     } finally {
         if (request === lessonRequest) {
             loading = false;
@@ -318,10 +324,10 @@ startButton.addEventListener("click", async () => {
             : "Could not load drum recordings. Check the connection, then press Start to retry.";
         if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
         updateVolumes(false);
-        playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
+        playback.start(lesson, { bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
         assessment = new Assessment(lesson, {
             origin: playback.origin,
-            bpm: Number(bpmInput.value),
+            bpm: currentBpm,
             toleranceMs: Number(toleranceInput.value),
             latencyOffsetMs: Number(latencyInput.value),
             disabledInstruments: preferences.disabledInstruments,
@@ -339,7 +345,7 @@ startButton.addEventListener("click", async () => {
     }
 });
 
-for (const bus of ["guide", "metronome"]) {
+for (const bus of ["guide", "metronome", "master"]) {
     element(`${bus}-volume`).addEventListener("input", updateVolumes);
     element(`${bus}-mute`).addEventListener("click", event => {
         const button = event.currentTarget;
@@ -350,11 +356,21 @@ for (const bus of ["guide", "metronome"]) {
 }
 bpmInput.addEventListener("input", () => {
     stop("Tempo changed · Press Start to restart");
-    updateTempoReset();
-    if (activeLessonId && bpmInput.validity.valid) {
-        preferences.tempos[activeLessonId] = Number(bpmInput.value);
+    setTempo(bpmFromPosition(Number(bpmInput.value)));
+    if (activeLessonId) {
+        preferences.tempos[activeLessonId] = currentBpm;
         persistPractice();
     }
+});
+bpmInput.addEventListener("keydown", event => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const values = { ArrowLeft: currentBpm - 1, ArrowDown: currentBpm - 1,
+        ArrowRight: currentBpm + 1, ArrowUp: currentBpm + 1,
+        PageDown: currentBpm - 10, PageUp: currentBpm + 10, Home: MIN_BPM, End: MAX_BPM };
+    if (!Object.hasOwn(values, event.code)) return;
+    event.preventDefault();
+    bpmInput.value = positionFromBpm(values[event.code]);
+    bpmInput.dispatchEvent(new Event("input"));
 });
 countInInput.addEventListener("change", () => {
     stop("Count-in changed · Press Start to restart");
@@ -397,8 +413,7 @@ element("lesson-tempo").addEventListener("click", () => {
     if (!lesson) return;
     stop("Lesson tempo restored · Press Start to restart");
     delete preferences.tempos[activeLessonId];
-    bpmInput.value = lesson.bpm;
-    updateTempoReset();
+    setTempo(lesson.bpm);
     persistPractice();
 });
 element("reset-keys").addEventListener("click", () => {
@@ -417,7 +432,7 @@ renderMidi(midi);
 countInInput.checked = preferences.countIn;
 toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
-for (const bus of ["guide", "metronome"]) {
+for (const bus of ["guide", "metronome", "master"]) {
     element(`${bus}-volume`).value = preferences[`${bus}Volume`];
     updateMuteButton(bus, preferences[`${bus}Muted`]);
 }

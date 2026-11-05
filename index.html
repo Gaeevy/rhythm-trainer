@@ -22,7 +22,7 @@
         </label>
         <div class="tempo-control">
           <label class="volume-label" for="bpm">BPM <output id="bpm-level">80</output></label>
-          <div class="volume-row"><input id="bpm" type="range" min="20" max="300" step="any" value="80"></div>
+          <div class="volume-row"><input id="bpm" type="range" min="0" max="1000" step="1" value="512" aria-valuemin="20" aria-valuemax="300" aria-valuenow="80" aria-valuetext="80 BPM"><button id="lesson-tempo" type="button" class="mute-button tempo-reset" aria-label="Restore lesson tempo" title="Restore lesson tempo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg></button></div>
         </div>
         <div class="volume-control">
           <label class="volume-label" for="metronome-volume">Metronome <output id="metronome-level">35%</output></label>
@@ -32,18 +32,13 @@
           <label class="volume-label" for="guide-volume">Guide drums <output id="guide-level">55%</output></label>
           <div class="volume-row"><button id="guide-mute" type="button" class="mute-button" aria-label="Mute guide drums" title="Mute guide drums" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="guide-volume" type="range" min="0" max="100" value="55"></div>
         </div>
+        <div class="volume-control">
+          <label class="volume-label" for="master-volume">Master <output id="master-level">150%</output></label>
+          <div class="volume-row"><button id="master-mute" type="button" class="mute-button" aria-label="Mute master volume" title="Mute master volume" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="master-volume" type="range" min="0" max="200" value="150"></div>
+        </div>
         <button id="start-stop" class="start-button" title="Start or stop (Space)" disabled>Start loop <span aria-hidden="true">▶</span></button>
       </div>
       <p id="lesson-error" class="lesson-error" role="alert" hidden></p>
-      <div class="lesson-info">
-        <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p><button id="lesson-tempo" type="button" class="text-button" hidden>Use lesson tempo</button></div>
-        <span class="mode-badge">DRUM PRACTICE</span>
-      </div>
-      <div class="view-controls" role="group" aria-label="Practice view">
-        <span>VIEW</span>
-        <button id="view-lanes" type="button" aria-pressed="true">Lanes</button>
-        <button id="view-notation" type="button" aria-pressed="false">Notation</button>
-      </div>
       <div id="notation-error" class="notation-error" role="status" hidden>
         <span id="notation-error-text"></span>
         <button id="notation-retry" type="button">Retry notation</button>
@@ -61,18 +56,14 @@
             <div id="notation-sheet" class="notation-sheet"></div>
           </div>
         </div>
-        <p class="notation-caption">The score continues down the page as the lesson repeats.</p>
-        <p id="notation-feedback" class="notation-feedback" role="status" aria-live="polite">Play to see timing feedback.</p>
-        <details class="notation-legend"><summary>Drum key</summary><ul id="notation-key"></ul></details>
+        <p id="notation-feedback" class="visually-hidden" role="status" aria-live="polite">Play to see timing feedback.</p>
       </section>
       <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: start / stop. D: kick. F: snare. J: hi-hat. K: ride.">
         <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
         <div id="tracks"></div>
       </div>
-      <div class="transport-info">
-        <p id="status" role="status">Loading lesson…</p>
-        <p id="position">Bar 1 / 1 · Beat 1 · Loop 1</p>
-      </div>
+      <p id="status" class="practice-status" role="status">Loading lesson…</p>
+      <p id="position" class="visually-hidden">Bar 1 / 1 · Beat 1 · Loop 1</p>
       <div class="session-summary" aria-label="Session totals">
         <div><span>On time</span><output id="score-on_time">0</output></div>
         <div><span>Early</span><output id="score-early">0</output></div>
@@ -85,6 +76,12 @@
       <details id="practice-panel" class="settings-panel">
         <summary>PRACTICE SETTINGS</summary>
         <div class="practice-content">
+          <div class="view-controls" role="group" aria-label="Practice view">
+            <span>VIEW</span>
+            <button id="view-lanes" type="button" aria-pressed="false">Lanes</button>
+            <button id="view-notation" type="button" aria-pressed="true">Notation</button>
+          </div>
+          <details class="notation-legend"><summary>Drum key</summary><ul id="notation-key"></ul></details>
           <label class="count-in"><input id="count-in" type="checkbox" checked> One-bar count-in</label>
           <div class="timing-controls">
             <label>On-time tolerance (±ms)<input id="tolerance" type="number" min="0" max="150" step="any" value="30" required></label>
@@ -119,7 +116,6 @@
     import("./src/app.js").catch(error => {
       console.error("Could not load drum trainer", error);
       document.getElementById("lesson").replaceChildren(new Option("Could not load lessons", ""));
-      document.getElementById("lesson-title").textContent = "App could not load";
       document.getElementById("status").textContent = "Check the server connection, then reload the page.";
       const message = document.getElementById("lesson-error");
       message.hidden = false;
