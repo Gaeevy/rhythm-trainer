@@ -124,12 +124,18 @@ intended written groups explicit, including necessary rests.
 
 ## Notation limits
 
-Notation separates cymbals (upward stems) from drums and hi-hat pedal (downward
-stems). Their rhythms and beams stay independent, so an offbeat snare does not
-shorten a ride quarter note. Simultaneous snare/kick notes can still share a
-stem. If instruments within a group conflict with a triplet grid, the hinted
-instrument keeps its own voice. Beams group by beat/tuplet; aligned quarter rests combine into half/bar
-rests. Every head retains its instrument, original note index and performance
+Quarter-note cymbal rhythms stay separate from drums/pedal. Dense eighth-note
+or finer grooves may share downward stems if that adds no rests. This keeps swing ride
+patterns independent and dense song grooves compact. The rule applies to the
+whole lesson; there are no layout fields to add to JSON. The complete decision
+and fallback order is documented in
+[Development: Notation layout](development.md#notation-layout).
+
+Beams group by beat/tuplet and may mix eighths, sixteenths and thirty-seconds.
+Aligned binary values expand up to the next hit within that beat, removing
+artificial subdivision rests. Leading rests and explicit triplet rests remain;
+no hit ticks change. Aligned quarter rests combine into half/bar rests.
+Every head retains its instrument, original note index and performance
 tick; nearby heads can be displaced to avoid collisions. No hits are merged.
 Written durations describe rhythm, not recording sustain.
 

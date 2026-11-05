@@ -78,9 +78,14 @@ and press Start to retry. Stopping during loading cannot start a delayed loop.
 
 ## Views and feedback
 
-Cymbals use upward stems; drums and hi-hat pedal use downward stems. This keeps
-ride and snare rhythms separate, with no beam joining them. Necessary rests
-remain visible. Simultaneous drum hits can still share a stem.
+Quarter-note ride patterns keep upward cymbal stems and downward drum/pedal
+stems, so ride and snare rhythms stay separate. Dense eighth/sixteenth-note
+grooves can share stems and beams to avoid redundant rests. This is automatic;
+notes, playback and scoring stay the same. Shared notation uses downward stems
+and lighter stems/beams below the staff; noteheads and bar lines stay dark.
+Separate swing voices keep their independent rhythms. Beams are 3 px thick.
+Eighths and sixteenths can share a beat-local beam, avoiding artificial rests
+from uniform subdivisions. Necessary leading and triplet rests remain visible.
 
 The lesson dropdown identifies the selected pattern; the practice surface does
 not repeat its title/details. Change the view in **Practice settings**.

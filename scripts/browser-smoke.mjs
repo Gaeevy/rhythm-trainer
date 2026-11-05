@@ -339,7 +339,9 @@ async function practiceFlow(browser, url) {
             const hit = await timedKey(page, code, beat, errorMs);
             assert.equal(hit.status, expected);
             assert.equal(hit.source, "keyboard");
-            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.01,
+            // stamp() and the app sample the live output clock separately.
+            // Allow sub-millisecond anchor jitter; exact conversion math is unit-tested.
+            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.25,
                 `Native clock precision: expected ${errorMs} ms, got ${hit.errorMs} ms (${code}, beat ${beat})`);
         }
         assert.equal((await timedKey(page, "KeyK", 0)).status, "extra");
@@ -1101,6 +1103,26 @@ async function notationCoverageFlow(browser, url) {
                         return Math.abs(snare.x - kick.x) < 0.01;
                     });
                     assert.equal(aligned, true, "Simultaneous snare and bass heads align vertically");
+                }
+                const thicknesses = await page.locator("#notation-score .vf-beam path").evaluateAll(paths => paths
+                    .map(path => path.getAttribute("d")).filter(d => d.endsWith("Z"))
+                    .map(d => d.match(/-?\d*\.?\d+(?:e[+-]?\d+)?/gi).map(Number))
+                    .map(points => Math.abs(points[1] - points[3])));
+                assert.ok(thicknesses.every(width => Math.abs(width - 3) < 0.001), `${id}: 3px beams`);
+                const combined = model.bars[bar].voices.some(voice => voice.id === "combined");
+                assert.equal(await page.locator("#notation-score svg").getAttribute("data-layout"), combined ? "combined" : "separate");
+                if (combined) {
+                    const ink = await page.locator("#notation-score").evaluate(host => {
+                        const stem = host.querySelector(".vf-stem path");
+                        const beam = host.querySelector(".vf-beam path");
+                        const head = host.querySelector("[data-note-id] text, [data-note-id] path");
+                        return { stem: stem && getComputedStyle(stem).stroke, beam: beam && getComputedStyle(beam).fill,
+                            head: head && getComputedStyle(head).fill, bar: getComputedStyle(host.querySelector(".notation-barline")).stroke };
+                    });
+                    if (ink.stem) assert.equal(ink.stem, "rgb(119, 123, 115)", `${id}: lighter combined stems`);
+                    if (ink.beam) assert.equal(ink.beam, "rgb(119, 123, 115)", `${id}: lighter combined beams`);
+                    if (ink.head) assert.equal(ink.head, "rgb(36, 40, 32)", `${id}: dark noteheads`);
+                    assert.equal(ink.bar, "rgb(36, 40, 32)", `${id}: dark bar lines`);
                 }
                 assert.deepEqual(actual, expected, `${id}, bar ${bar + 1}: every expected notehead is present exactly once`);
                 assert.equal(await page.locator("#notation-error").isVisible(), false);
