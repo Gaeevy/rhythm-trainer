@@ -31,9 +31,23 @@ First reviewed state committed as `922c05a`. Approved follow-up:
   Check all snare positions against the photo, including 13 vs 14 (and of 2 vs 3).
 - Make ordinary end-of-bar lines opaque at 1.8px while retaining joined staves.
 
-Status: approved for commit. 134 JavaScript tests, 7 Python tests and 26 browser
+Status: implemented and approved. 134 JavaScript tests, 7 Python tests and 26 browser
 scenarios pass at both mounts. All 23 lessons render; filtered menus, saved
 folder/lesson, error recovery, end-of-bar line style and desktop/narrow layouts
 are checked. New snare positions were compared with the photo, and rendered
 exercise screenshots were inspected. Current guides and documentation links
 are updated. Deployment remains a separate step.
+
+## Separate cymbal and drum rhythms
+
+The horizontal-beam experiment was removed after review: changing the angle did
+not resolve cross-instrument grouping. Use two voices instead: cymbals upward,
+drums/pedal downward. Keep simultaneous drum chords and isolate hinted triplets
+only when their grids conflict. This preserves the ride quarter when snare
+falls on its swung offbeat. Necessary rests remain visible.
+
+Verification: 134 JavaScript tests and 26 browser scenarios pass at both mounts.
+All 23 lessons render without losing note identities; timing, MIDI/keyboard
+feedback, tuplets, simultaneous drum chords and scrolling checks pass. Exercise
+7 was inspected with independent ride/snare rhythms. Current guides are updated.
+Status: approved for release.

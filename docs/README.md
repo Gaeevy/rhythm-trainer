@@ -10,7 +10,7 @@ These guides describe the current app. Use the history summaries only for contex
 | [MVP history](history/2026-10-24-mvp.md) | See the original scope and major delivery decisions |
 | [Notation history](history/2026-11-04-notation-plan.md) | See the notation milestones and later simplifications |
 
-Active work: [lesson groups and swing exercises](plans/lesson-groups.md).
+Completed plan: [lesson groups and swing exercises](plans/lesson-groups.md).
 Completed plan: [practice toolbar](plans/practice-toolbar.md).
 
 [AGENTS.md](../AGENTS.md) contains working instructions for coding agents.

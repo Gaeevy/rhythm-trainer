@@ -125,9 +125,11 @@ intended written groups explicit, including necessary rests.
 
 ## Notation limits
 
-Conversion prefers one voice with shared stems. If other instruments conflict
-with a triplet grid, it retains independent voices, keeping the hinted instrument
-separate. Beams group by beat/tuplet; aligned quarter rests combine into half/bar
+Notation separates cymbals (upward stems) from drums and hi-hat pedal (downward
+stems). Their rhythms and beams stay independent, so an offbeat snare does not
+shorten a ride quarter note. Simultaneous snare/kick notes can still share a
+stem. If instruments within a group conflict with a triplet grid, the hinted
+instrument keeps its own voice. Beams group by beat/tuplet; aligned quarter rests combine into half/bar
 rests. Every head retains its instrument, original note index and performance
 tick; nearby heads can be displaced to avoid collisions. No hits are merged.
 Written durations describe rhythm, not recording sustain.

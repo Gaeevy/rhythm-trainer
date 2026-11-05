@@ -156,19 +156,30 @@ test("Swing retains literal finer subdivisions without swinging or rounding them
     assert.throws(() => lessonNotation(example([0, 24, 64], { feel: "swing" })), /unsupported rhythm/);
 });
 
-test("Come Undone uses shared stems and only the rhythmically necessary triplet rest", async () => {
-    const lesson = JSON.parse(await readFile(new URL(`../lessons/${BUNDLED_LESSONS.find(lesson => lesson.id === "come-undone").path}`, import.meta.url)));
-    const model = lessonNotation(lesson);
-    assert.equal(model.bars[0].voices.length, 1);
-    const notes = model.bars[0].voices[0].notes;
-    assert.deepEqual(notes.filter(note => note.rest).map(note => note.writtenTick), [160]);
-    assert.deepEqual(notes[0].refs.map(ref => ref.instrument).sort(), ["kick", "ride"]);
-    assert.deepEqual(notes.find(note => note.writtenTick === 96).refs.map(ref => ref.instrument).sort(), ["ride", "snare"]);
+test("cymbals and drums retain their own rhythms, stems and beams", async () => {
+    for (const id of ["come-undone", "swing-exercise-07", "swing-exercise-13"]) {
+        const entry = BUNDLED_LESSONS.find(lesson => lesson.id === id);
+        const lesson = JSON.parse(await readFile(new URL(`../lessons/${entry.path}`, import.meta.url)));
+        const bar = lessonNotation(lesson).bars[0];
+        assert.equal(bar.voices.length, 2);
+        const cymbals = bar.voices.find(voice => voice.id === "cymbals");
+        const drums = bar.voices.find(voice => voice.id === "drums");
+        assert.equal(cymbals.stem, 1);
+        assert.equal(drums.stem, -1);
+        assert.ok(cymbals.notes.flatMap(note => note.refs).every(ref => ref.instrument === "ride"));
+        assert.ok(drums.notes.flatMap(note => note.refs).every(ref => ref.instrument !== "ride"));
+        if (id === "swing-exercise-07") {
+            const rideBeat3 = cymbals.notes.find(note => note.writtenTick === 192);
+            assert.equal(rideBeat3.duration, "4", "Offbeat snare must not turn the ride quarter into an eighth");
+            assert.deepEqual(drums.notes.find(note => note.writtenTick === 240).refs.map(ref => ref.performanceTick), [256]);
+        }
+        if (id === "come-undone") assert.deepEqual(cymbals.notes.filter(note => note.rest).map(note => note.writtenTick), [160]);
+    }
 });
 
-test("incompatible simultaneous grids retain independent voices without changing events", () => {
+test("incompatible drum grids isolate a hinted instrument without changing events", () => {
     const lesson = example([0, 32, 64], { feel: "straight", triplets: [{ instrument: "snare", tick: 0 }] });
-    lesson.tracks.push({ instrument: "ride", notes: [0, 48] });
+    lesson.tracks.push({ instrument: "kick", notes: [0, 48] });
     const model = lessonNotation(lesson);
     assert.equal(model.bars[0].voices.length, 2);
     assert.equal(references(model).length, 5);

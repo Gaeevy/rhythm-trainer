@@ -73,6 +73,10 @@ and press Start to retry. Stopping during loading cannot start a delayed loop.
 
 ## Views and feedback
 
+Cymbals use upward stems; drums and hi-hat pedal use downward stems. This keeps
+ride and snare rhythms separate, with no beam joining them. Necessary rests
+remain visible. Simultaneous drum hits can still share a stem.
+
 The lesson dropdown identifies the selected pattern; the practice surface does
 not repeat its title/details. Change the view in **Practice settings**.
 

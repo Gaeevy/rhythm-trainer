@@ -58,7 +58,9 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 The Web Audio clock schedules playback. Original event timestamps are converted
 to that time base for matching; animation never determines hit timing. Both
-views share the assessment. Notation caches engraving and keeps six rows of
+views share the assessment. Notation groups cymbals separately from drums/pedal,
+with opposite stems and independent rhythms; conflicting triplet grids isolate
+the hinted instrument. Notation caches engraving and keeps six rows of
 independent loop copies. Layout fits one to three bars per row from width and
 rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
 An opaque 1.8px end-of-bar line makes each boundary clear.

@@ -31,13 +31,13 @@ function compactRests(notes, beams, tuplets) {
 }
 
 /** Convert performance ticks into written rhythms; never rewrite playable notes. */
-function convertLesson(lesson, combine) {
+function convertLesson(lesson, separateTuplets = false) {
     validateLesson(lesson);
     const feel = lesson.version === 2 ? lesson.notation.feel : "straight";
     const hints = lesson.notation?.triplets ?? [];
     // A specifically notated instrument needs its own voice, so its rests remain visible.
-    const separate = new Set(hints.map(hint => hint.instrument));
-    const voiceFor = instrument => combine ? "drums" : separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
+    const separate = new Set(separateTuplets ? hints.map(hint => hint.instrument) : []);
+    const voiceFor = instrument => separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
     const parts = new Map();
     for (const track of lesson.tracks) {
         const id = voiceFor(track.instrument);
@@ -51,7 +51,7 @@ function convertLesson(lesson, combine) {
     for (const [id, notes] of parts) if (!notes.length) parts.delete(id);
     const bars = Array.from({ length: lesson.bars }, (_, index) => ({ index, voices: [] }));
     for (const [id, events] of parts) {
-        const stem = id === "feet" || (separate.has(id) && id !== "ride") ? -1 : 1;
+        const stem = id === "drums" || (separate.has(id) && DRUM_KEY[id].voice === "drums") ? -1 : 1;
         for (const bar of bars) {
             const notes = [], beams = [], tuplets = [];
             for (let beat = 0; beat < BEATS_PER_BAR; beat++) {
@@ -97,7 +97,7 @@ function convertLesson(lesson, combine) {
                         const rest = refs.length === 0;
                         group.push(notes.length);
                         notes.push({ writtenTick: sectionStart + offset, durationTicks: step, duration: duration + (rest ? "r" : ""),
-                            rest, refs, keys: rest ? [id === "feet" ? "d/4" : separate.has(id) ? "d/5" : "b/4"] : refs.map(ref => ref.key), triplet, swung });
+                            rest, refs, keys: rest ? [stem > 0 ? "d/5" : "b/4"] : refs.map(ref => ref.key), triplet, swung });
                     }
                     if (step < span && group.filter(index => !notes[index].rest).length >= 2) beams.push(group);
                     if (triplet) tuplets.push(group);
@@ -114,11 +114,11 @@ function convertLesson(lesson, combine) {
     return { title: lesson.title, feel, bars };
 }
 
-/** Prefer one readable drum voice; retain independent voices for incompatible grids. */
+/** Keep cymbals above drums; isolate hinted instruments only for incompatible grids. */
 export function lessonNotation(lesson) {
-    try { return convertLesson(lesson, true); }
+    try { return convertLesson(lesson); }
     catch (error) {
         if (!(error instanceof NotationError)) throw error;
-        return convertLesson(lesson, false);
+        return convertLesson(lesson, true);
     }
 }

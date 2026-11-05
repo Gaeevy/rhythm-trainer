@@ -942,10 +942,10 @@ async function notationFeedbackFlow(browser, url) {
                 colors: [ride, snare, pedal].map(head => getComputedStyle(head.querySelector("text")).fill),
                 stem: getComputedStyle(ride.closest(".vf-stavenote").querySelector(".vf-stem path")).stroke };
         });
-        assert.equal(shared.sameStem, true);
+        assert.equal(shared.sameStem, false, "Ride and snare use independent stems");
         assert.deepEqual(shared.states, ["early", "late", "on_time"]);
         assert.equal(new Set(shared.colors).size, 3);
-        assert.equal(shared.stem, stemBefore, "Keep shared stems/beam unchanged");
+        assert.equal(shared.stem, stemBefore, "Feedback does not recolor the cymbal stem");
         for (const [note, beat] of [[51, 1], [59, 2]]) {
             assert.equal(await page.evaluate(({ note, beat }) => {
                 window.midiTest.sendData("kit", [0x99, note, 77], window.smoke.stamp(beat));

@@ -27,8 +27,8 @@ export function scoreAnchors(positions, { barStart, endX, feel }) {
         const offset = written % TICKS_PER_BEAT;
         const restTick = (note.swung ?? (feel === "swing" && !note.triplet)) && offset === TICKS_PER_EIGHTH ? written + SWING_EIGHTH_TICK - TICKS_PER_EIGHTH : written;
         const ticks = note.refs.length ? note.refs.map(ref => ref.performanceTick - barStart) : [restTick];
-        // Actual notes take precedence over inferred rests; upper voice over displaced feet.
-        const priority = (note.rest ? 10 : 0) + (voice === "hands" ? 0 : voice === "feet" ? 2 : 1);
+        // Actual notes take precedence over inferred rests; cymbals over lower drums.
+        const priority = (note.rest ? 10 : 0) + (voice === "cymbals" ? 0 : 1);
         for (const tick of ticks) {
             if (!selected.has(tick) || selected.get(tick).priority > priority) selected.set(tick, { tick, x, priority });
         }
