@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 import { dirname, extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { positionFromBpm } from "../src/tempo.js";
+import { defaultPracticeSettings, PRACTICE_SETTINGS_KEY } from "../src/practice-settings.js";
 import { FIXTURE_LESSONS } from "./fixtures/lessons.js";
 import { lessonNotation } from "../src/notation/model.js";
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
@@ -97,11 +99,40 @@ async function catalogFlow(browser, url) {
         assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length);
         for (const { id, title } of BUNDLED_LESSONS) {
             await page.locator("#lesson").selectOption(id);
-            await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, title);
+            await waitForLesson(page, id);
         }
         assert.deepEqual(errors, []);
         console.log(`PASS repository lesson catalog: ${new URL(url).pathname}`);
     } finally { await context.close(); }
+}
+
+async function waitForLesson(page, id) {
+    await page.waitForFunction(id => document.querySelector("#lesson").dataset.loadedId === id, id);
+}
+
+async function setBpm(page, bpm) {
+    await page.locator("#bpm").fill(String(positionFromBpm(bpm)));
+    assert.equal(await page.locator("#bpm-level").textContent(), String(bpm));
+}
+
+async function selectView(page, view) {
+    const button = page.locator(`#view-${view}`);
+    if (await button.getAttribute("aria-pressed") === "true") return;
+    const panel = page.locator("#practice-panel");
+    const wasOpen = await panel.getAttribute("open") !== null;
+    if (!wasOpen) await page.locator("#practice-panel > summary").click();
+    await button.click();
+    if (!wasOpen) await page.locator("#practice-panel > summary").click();
+}
+
+async function oneScoreColumn(page) {
+    await page.waitForFunction(() => document.querySelector("#notation-sheet").style.getPropertyValue("--score-columns") === "1");
+}
+
+async function seedLanes(context) {
+    await context.addInitScript(({ key, settings }) => {
+        if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify(settings));
+    }, { key: PRACTICE_SETTINGS_KEY, settings: { ...defaultPracticeSettings(), view: "lanes" } });
 }
 
 async function ready(page) {
@@ -166,21 +197,22 @@ async function practiceFlow(browser, url) {
         page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()}: ${response.url()}`); });
         await page.goto(url);
         await ready(page);
+        await selectView(page, "lanes");
         assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length + Object.keys(FIXTURE_LESSONS).length);
         for (const { id } of BUNDLED_LESSONS) {
             const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
             await page.locator("#lesson").selectOption(id);
-            await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, lesson.title);
+            await waitForLesson(page, id);
             assert.deepEqual(await page.locator(".track").evaluateAll(lanes => lanes.map(lane => lane.dataset.instrument)),
                 lesson.tracks.map(track => track.instrument));
         }
         await page.locator("#lesson").selectOption("swing-ride");
-        await page.waitForFunction(() => document.querySelectorAll(".track").length === 4 && document.querySelector("#lesson-title").textContent === "Swing ride and hi-hat");
-        await page.locator("#bpm").fill("240");
-        await page.locator("#practice-panel summary").click();
+        await waitForLesson(page, "swing-ride");
+        await setBpm(page, 240);
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#tolerance").fill("10");
         await page.locator("#latency-offset").fill("");
-        await page.locator("#practice-panel summary").click();
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#start-stop").click();
         assert.equal(await page.locator("#practice-panel").getAttribute("open"), "");
         await stopped(page);
@@ -243,26 +275,26 @@ async function practiceFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.setInterval === window.smoke.nativeSetInterval
             && window.clearInterval === window.smoke.nativeClearInterval), true);
         if (await page.locator("#practice-panel").getAttribute("open") === null) {
-            await page.locator("#practice-panel summary").click();
+            await page.locator("#practice-panel > summary").click();
         }
         await page.locator("#count-in").uncheck();
         await page.locator("#start-stop").click();
         await playing(page);
         assert.equal(await page.evaluate(() => window.smoke.assessment.hits.length), 0);
-        await page.locator("#bpm").fill("180");
+        await setBpm(page, 180);
         await stopped(page);
         await page.locator("#keyboard-panel summary").click();
         await page.getByRole("combobox", { name: "Ride key", exact: true }).selectOption("KeyR");
         assert.match(await page.locator("#keyboard-hint").textContent(), /R: ride/);
         await page.reload();
         await ready(page);
-        assert.equal(await page.locator("#bpm").inputValue(), "180");
+        assert.equal(await page.locator("#bpm").getAttribute("aria-valuenow"), "180");
         assert.equal(await page.locator("#bpm-level").textContent(), "180");
         assert.equal(await page.locator("#practice-panel").getAttribute("open"), null);
         await page.locator("#bpm").focus();
         await page.keyboard.press("ArrowRight");
-        assert.ok(Number(await page.locator("#bpm").inputValue()) > 180);
-        assert.equal(await page.locator("#bpm-level").textContent(), await page.locator("#bpm").inputValue());
+        assert.ok(Number(await page.locator("#bpm").getAttribute("aria-valuenow")) === 181);
+        assert.equal(await page.locator("#bpm-level").textContent(), await page.locator("#bpm").getAttribute("aria-valuenow"));
         assert.equal(await page.locator("#count-in").isChecked(), false);
         assert.equal(await page.locator("#guide-volume").inputValue(), "20");
         assert.match(await page.locator("#keyboard-hint").textContent(), /R: ride/);
@@ -288,12 +320,13 @@ async function trackFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
+        await selectView(page, "lanes");
         // This scenario requires four specific tracks, regardless of catalog order.
         await page.locator("#lesson").selectOption("swing-01");
-        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent === "Swing 01: kick quarters and snare");
-        await page.locator("#bpm").fill("300");
+        await waitForLesson(page, "swing-01");
+        await setBpm(page, 300);
         if (await page.locator("#practice-panel").getAttribute("open") === null) {
-            await page.locator("#practice-panel summary").click();
+            await page.locator("#practice-panel > summary").click();
         }
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
@@ -345,7 +378,7 @@ async function trackFlow(browser, url) {
             const controls = [...document.querySelector(".lesson-controls").children];
             const bottom = controls[0].getBoundingClientRect().bottom;
             return controls.every(control => Math.abs(control.getBoundingClientRect().bottom - bottom) < 2)
-                && document.querySelectorAll('.lesson-controls input[type="range"]').length === 3;
+                && document.querySelectorAll('.lesson-controls input[type="range"]').length === 4;
         }), true);
         assert.deepEqual(errors, []);
         console.log(`PASS track controls and Space transport: ${new URL(url).pathname}`);
@@ -366,12 +399,12 @@ async function failureRecovery(browser, url) {
         await page.unroute("**/generated/lesson-catalog.js");
         await page.getByRole("button", { name: "Reload page", exact: true }).click();
         await ready(page);
-        const previousTitle = await page.locator("#lesson-title").textContent();
+        const previousId = await page.locator("#lesson").getAttribute("data-loaded-id");
         await page.route("**/lessons/basic-straight.json", route => route.fulfill({ contentType: "application/json", body: "{bad}" }));
         await page.locator("#lesson").selectOption("basic-straight");
         await page.locator("#lesson-error").waitFor();
         assert.match(await page.locator("#lesson-error").textContent(), /invalid JSON/);
-        assert.equal(await page.locator("#lesson-title").textContent(), previousTitle);
+        assert.equal(await page.locator("#lesson").getAttribute("data-loaded-id"), previousId);
         assert.equal(await page.locator("#start-stop").isEnabled(), true);
         await page.unroute("**/lessons/basic-straight.json");
         await page.locator("#lesson").selectOption("basic-straight");
@@ -406,13 +439,14 @@ async function failureRecovery(browser, url) {
         await page.reload();
         await ready(page);
         await page.route("**/assets/drums/kick.wav", route => route.fulfill({ status: 404, body: "Missing sample" }));
-        await page.locator("#practice-panel summary").click();
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
         await page.locator("#start-stop").click();
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Could not start playback"));
         await stopped(page);
         assert.match(await page.locator("#guide-sound-status").textContent(), /press Start to retry/);
+        assert.equal(await page.locator("#status").isVisible(), true, "Actionable errors remain visible even without the routine status strip");
         assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 0);
         assert.equal(await page.evaluate(() => window.smoke.scheduled.length), 0, "Missing recordings must not schedule substitute sounds");
         assert.equal(await page.evaluate(() => Boolean(window.smoke.assessment)), false);
@@ -443,8 +477,8 @@ async function midiFlow(browser, url) {
         assert.equal(await page.getByRole("button", { name: "Learn pad", exact: true }).count(), 0);
         await page.locator("#lesson").selectOption("mps-850-check");
         await page.waitForFunction(() => document.querySelectorAll(".track").length === 12);
-        await page.locator("#bpm").fill("300");
-        await page.locator("#practice-panel summary").click();
+        await setBpm(page, 300);
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
         await page.locator("#start-stop").click();
@@ -505,7 +539,7 @@ async function midiFlow(browser, url) {
                 await page.locator("#midi-connect").click();
                 await page.waitForFunction(() => document.querySelector("#midi-summary").textContent.includes("connected"));
             }
-            await page.locator("#practice-panel summary").click();
+            await page.locator("#practice-panel > summary").click();
             await page.locator("#count-in").uncheck();
             await page.locator("#start-stop").click();
             await playing(page);
@@ -517,6 +551,7 @@ async function midiFlow(browser, url) {
 async function notationFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     await mockMidi(context, { ports: ["kit"] });
+    await seedLanes(context);
     try {
         const page = await context.newPage();
         const errors = [], rendererRequests = [];
@@ -528,8 +563,8 @@ async function notationFlow(browser, url) {
         assert.equal(await page.locator("#timeline").isVisible(), true);
         assert.equal(rendererRequests.length, 0, "Lanes does not load the notation library");
         await page.locator("#lesson").selectOption("swing-03");
-        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Swing 03"));
-        await page.locator("#view-notation").click();
+        await waitForLesson(page, "swing-03");
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
         assert.equal(await page.locator("#timeline").isVisible(), false);
         assert.equal(await page.locator("#notation-page").textContent(), "Bar 1 of 2");
@@ -537,22 +572,22 @@ async function notationFlow(browser, url) {
         assert.equal(await page.locator("#notation-page").textContent(), "Bar 2 of 2");
         assert.equal(await page.locator("#notation-score .vf-tuplet").count(), 1);
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        await oneScoreColumn(page);
         assert.equal(await page.locator("#notation-page").textContent(), "Bar 2 of 2");
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-app-narrow.png", fullPage: true });
         await page.setViewportSize({ width: 1440, height: 1000 });
-        await page.locator("#practice-panel summary").click();
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").uncheck();
-        await page.locator("#bpm").fill("300");
+        await setBpm(page, 300);
         await observePlayback(page);
         await page.locator("#notation-score").focus();
         await page.keyboard.press("Space");
         await playing(page);
         await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
         const origin = await page.evaluate(() => window.smoke.assessment.origin);
-        await page.locator("#view-lanes").click();
-        await page.locator("#view-notation").click();
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
         assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "true");
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
@@ -624,25 +659,26 @@ async function notationFlow(browser, url) {
 
     const recovery = await browser.newContext();
     await mockMidi(recovery);
+    await seedLanes(recovery);
     try {
         const page = await recovery.newPage();
         await page.goto(url);
         await ready(page);
         await page.route("**/assets/vendor/vexflow/vexflow-bravura.js", route => route.fulfill({ status: 404, body: "Test renderer unavailable" }));
-        await page.locator("#view-notation").click();
+        await selectView(page, "notation");
         await page.locator("#notation-error").waitFor();
         assert.equal(await page.locator("#timeline").isVisible(), true);
         assert.equal(await page.locator("#start-stop").isEnabled(), true);
         await page.unroute("**/assets/vendor/vexflow/vexflow-bravura.js");
         await page.locator("#notation-retry").click();
         await page.locator("#notation-score svg").waitFor();
-        await page.locator("#view-lanes").click();
+        await selectView(page, "lanes");
         await page.evaluate(() => {
             const draw = window.VexFlow.Stave.prototype.draw;
             window.restoreNotationDraw = () => { window.VexFlow.Stave.prototype.draw = draw; };
             window.VexFlow.Stave.prototype.draw = () => { throw new Error("Test engraving failure"); };
         });
-        await page.locator("#view-notation").click();
+        await selectView(page, "notation");
         await page.locator("#notation-error").waitFor();
         assert.equal(await page.locator("#timeline").isVisible(), true);
         await page.evaluate(() => window.restoreNotationDraw());
@@ -662,8 +698,8 @@ async function scoreFollowingFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         await page.locator("#lesson").selectOption("fascination-street");
-        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Fascination"));
-        await page.locator("#view-notation").click();
+        await waitForLesson(page, "fascination-street");
+        await selectView(page, "notation");
         await page.locator("#notation-next-score svg").waitFor();
         // Check the real engraver, not a hand-authored x-axis: hit centers must
         // be reached at performance ticks even when written swing positions differ.
@@ -716,8 +752,8 @@ async function scoreFollowingFlow(browser, url) {
             return checks;
         });
         assert.equal(geometryChecks.length, 7);
-        await page.locator("#bpm").fill("300");
-        await page.locator("#practice-panel summary").click();
+        await setBpm(page, 300);
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").check();
         await observePlayback(page);
         await page.evaluate(async () => {
@@ -795,20 +831,20 @@ async function scoreFollowingFlow(browser, url) {
         });
         await page.waitForFunction(() => Number(document.querySelector("#notation-score").closest(".notation-bar").dataset.absoluteBar) < 100);
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
-        await page.locator("#view-lanes").click();
-        await page.locator("#view-notation").click();
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
         await page.waitForFunction(() => document.querySelector("#notation-score .notation-playhead")?.style.display !== "none");
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 6
-            && Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        await oneScoreColumn(page);
+        assert.equal(await page.locator(".notation-bar").count(), 6);
         await page.waitForFunction(() => document.querySelector("#notation-score").scrollLeft > 0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-narrow.png", fullPage: true });
         await page.setViewportSize({ width: 1440, height: 1100 });
         await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 12);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-desktop.png", fullPage: true });
-        await page.locator("#bpm").fill("180");
+        await setBpm(page, 180);
         await stopped(page);
         assert.equal(await page.locator("#notation-score .notation-playhead").isVisible(), false);
         await page.locator("#count-in").uncheck();
@@ -840,13 +876,13 @@ async function notationFeedbackFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         await page.locator("#lesson").selectOption("swing-01");
-        await page.waitForFunction(() => document.querySelector("#lesson-title").textContent.startsWith("Swing 01"));
-        await page.locator("#view-notation").click();
+        await waitForLesson(page, "swing-01");
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
-        await page.locator("#practice-panel summary").click();
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").uncheck();
         await page.locator("#tolerance").fill("10");
-        await page.locator("#bpm").fill("60");
+        await setBpm(page, 60);
         await observePlayback(page);
         await page.locator("#start-stop").click();
         await playing(page);
@@ -901,8 +937,8 @@ async function notationFeedbackFlow(browser, url) {
         await stopped(page);
         const summary = await page.locator(".session-summary").textContent();
         const state = await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing");
-        await page.locator("#view-lanes").click();
-        await page.locator("#view-notation").click();
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
         assert.equal(await page.locator(".session-summary").textContent(), summary);
         assert.equal(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing"), state);
@@ -916,7 +952,7 @@ async function notationFeedbackFlow(browser, url) {
         assert.equal(await page.locator('#notation-score [data-note-id="snare:0"]').getAttribute("data-timing"), "disabled");
         assert.equal(await page.locator("#score-on_time").textContent(), "0");
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        await oneScoreColumn(page);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         assert.deepEqual(errors, []);
         console.log(`PASS independent notehead feedback, precise text, MIDI zones, miss correction, extras, loop reset: ${new URL(url).pathname}`);
@@ -933,16 +969,16 @@ async function notationCoverageFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
-        await page.locator("#view-notation").click();
+        await selectView(page, "notation");
         for (const id of [...BUNDLED_LESSONS.map(lesson => lesson.id), ...Object.keys(FIXTURE_LESSONS)]) {
             const lesson = FIXTURE_LESSONS[id] ?? JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
             await page.locator("#lesson").selectOption(id);
-            await page.waitForFunction(title => document.querySelector("#lesson-title").textContent === title, lesson.title);
+            await waitForLesson(page, id);
             await page.locator("#notation-score svg").waitFor();
             await page.waitForFunction(() => [...document.querySelectorAll(".notation-score svg")].every(svg => {
-                const host = svg.parentElement, style = getComputedStyle(host);
-                return Number(svg.getAttribute("width")) === Math.max(460, Math.floor(host.clientWidth
-                    - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+                const host = svg.parentElement;
+                return Number(svg.getAttribute("width")) >= 300
+                    && Math.abs(Number(svg.getAttribute("width")) - host.getBoundingClientRect().width) < 0.01;
             }));
             const model = lessonNotation(lesson);
             for (let bar = 0; bar < lesson.bars; bar++) {
@@ -968,7 +1004,7 @@ async function notationCoverageFlow(browser, url) {
                 if (bar < lesson.bars - 1) await page.locator("#notation-next").click();
             }
             await page.setViewportSize({ width: 390, height: 844 });
-            await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+            await oneScoreColumn(page);
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, id);
             await page.setViewportSize({ width: 1440, height: 1000 });
         }
@@ -976,6 +1012,7 @@ async function notationCoverageFlow(browser, url) {
             "The app uses the bundled notation fonts");
         await page.locator("#lesson").selectOption("notation-sixteen-bars");
         await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 16");
+        if (await page.locator("#practice-panel").getAttribute("open") === null) await page.locator("#practice-panel > summary").click();
         await page.locator(".notation-legend summary").click();
         assert.equal(await page.locator("#notation-key li").count(), 12);
         const hiHatGlyphs = await page.locator("#notation-score svg").textContent();
@@ -991,6 +1028,153 @@ async function notationCoverageFlow(browser, url) {
     } finally { await context.close(); }
 }
 
+async function toolbarFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context, { ports: ["kit"] });
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator("#view-notation").getAttribute("aria-pressed"), "true");
+        assert.equal(await page.locator(".view-controls").isVisible(), false, "View selection belongs to folded settings");
+        assert.equal(await page.locator("#lesson-title, #lesson-detail, .mode-badge").count(), 0);
+        assert.equal(await page.locator("#master-volume").inputValue(), "150");
+        assert.equal(await page.locator("#master-level").textContent(), "150%");
+        await page.locator("#lesson").selectOption("swing-ride");
+        await waitForLesson(page, "swing-ride");
+        assert.equal(await page.locator("#lesson-tempo").textContent(), "");
+        assert.equal(await page.locator("#lesson-tempo").isDisabled(), true);
+        await page.locator("#bpm").focus();
+        for (const [key, expected] of [["ArrowRight", 81], ["ArrowLeft", 80], ["Home", 20], ["ArrowLeft", 20],
+            ["End", 300], ["ArrowRight", 300], ["PageDown", 290]]) {
+            await page.keyboard.press(key);
+            assert.equal(await page.locator("#bpm-level").textContent(), String(expected));
+        }
+        const range = await page.locator("#bpm").boundingBox();
+        const values = [];
+        for (const fraction of [0.4, 0.5, 0.8, 0.9]) {
+            await page.mouse.click(range.x + range.width * fraction, range.y + range.height / 2);
+            values.push(Number(await page.locator("#bpm-level").textContent()));
+        }
+        assert.ok(values.every(Number.isInteger));
+        assert.ok(values[3] - values[2] > values[1] - values[0], "High tempos advance faster for equal pointer travel");
+        await page.locator("#lesson-tempo").click();
+        assert.equal(await page.locator("#bpm-level").textContent(), "80");
+        assert.equal(await page.locator("#lesson-tempo").isDisabled(), true);
+        assert.equal(await page.evaluate(key => Object.hasOwn(JSON.parse(localStorage.getItem(key)).tempos, "swing-ride"), PRACTICE_SETTINGS_KEY), false);
+        assert.equal(await page.evaluate(() => {
+            const controls = [...document.querySelector(".lesson-controls").children];
+            return controls.every(node => Math.abs(node.getBoundingClientRect().bottom - controls[0].getBoundingClientRect().bottom) < 2);
+        }), true, "Lesson, four sliders and transport share one desktop row");
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-toolbar-desktop.png", fullPage: true });
+        // Upgrade a real old fractional override without losing the user's mixer/keys.
+        const old = { ...defaultPracticeSettings(), view: "notation", countIn: false, lastBundledLessonId: "swing-ride",
+            guideVolume: 18, metronomeVolume: 100, tempos: { "swing-ride": 90.5220994475138 } };
+        delete old.masterVolume;
+        delete old.masterMuted;
+        await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: PRACTICE_SETTINGS_KEY, value: old });
+        await page.reload();
+        await ready(page);
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator("#bpm-level").textContent(), "91");
+        assert.equal(await page.locator("#guide-volume").inputValue(), "18");
+        assert.equal(await page.locator("#metronome-volume").inputValue(), "100");
+        assert.equal(await page.locator("#master-volume").inputValue(), "150");
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        const origin = await page.evaluate(() => window.smoke.assessment.origin);
+        await page.locator("#master-volume").fill("190");
+        await page.waitForFunction(() => Math.abs(window.smoke.audio.master.gain.value - 1.9) < 0.01);
+        await page.locator("#master-mute").click();
+        await page.waitForFunction(() => window.smoke.audio.master.gain.value < 0.01);
+        await page.locator("#master-mute").click();
+        await page.waitForFunction(() => Math.abs(window.smoke.audio.master.gain.value - 1.9) < 0.01);
+        assert.equal(await page.locator("#guide-volume").inputValue(), "18");
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "true");
+        await page.locator("#lesson-tempo").click();
+        await stopped(page);
+        assert.equal(await page.locator("#bpm-level").textContent(), "80");
+        await page.reload();
+        await ready(page);
+        assert.equal(await page.locator("#master-volume").inputValue(), "190");
+        assert.equal(await page.locator("#bpm-level").textContent(), "80");
+        await page.setViewportSize({ width: 390, height: 844 });
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-toolbar-narrow.png", fullPage: true });
+        assert.deepEqual(errors, []);
+        console.log(`PASS compact toolbar, Notation default, integer/log tempo, reset, master, migration/persistence: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
+async function sheetLayoutFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context);
+    await seedLanes(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#lesson").selectOption("swing-ride");
+        await waitForLesson(page, "swing-ride");
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#practice-panel .notation-legend summary").click();
+        await page.waitForFunction(() => document.querySelectorAll("#notation-key li").length === 4);
+        assert.equal(await page.locator("#timeline").isVisible(), true, "Drum key loads in settings even when Lanes was saved");
+        await selectView(page, "notation");
+        await page.locator("#practice-panel > summary").click();
+        await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 18);
+        assert.equal(await page.locator(".notation-caption, .transport-info").count(), 0);
+        const joined = await page.locator("#notation-sheet").evaluate(sheet => {
+            const bars = [...sheet.children].slice(0, 3);
+            return bars.every((bar, index) => {
+                const svg = bar.querySelector("svg"), box = svg.getBoundingClientRect();
+                const width = Number(svg.getAttribute("width"));
+                const lines = [...svg.querySelectorAll("path, rect, line")].map(node => node.getBBox())
+                    .filter(line => line.height <= 2 && Math.abs(line.width - width) < 2);
+                return lines.length >= 5 && lines.every(line => Math.abs(line.x) < 2)
+                    && (index === 0 || Math.abs(box.left - bars[index - 1].querySelector("svg").getBoundingClientRect().right) < 0.1)
+                    && Math.abs(box.top - bars[0].querySelector("svg").getBoundingClientRect().top) < 0.1;
+            });
+        });
+        assert.equal(joined, true, "The staff spans three adjacent SVGs with no gutter or vertical misalignment");
+        const ratio = await page.evaluate(() => document.querySelector("#bpm").getBoundingClientRect().width
+            / document.querySelector("#metronome-volume").getBoundingClientRect().width);
+        assert.ok(ratio > 2.7 && ratio < 3.5, "BPM is roughly three times the shortened audio sliders");
+        assert.equal(await page.locator("#notation-feedback").evaluate(node => node.getBoundingClientRect().height <= 1), true);
+        assert.equal(await page.locator("#status").evaluate(node => node.getBoundingClientRect().height <= 1), true);
+        await setBpm(page, 300);
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#practice-panel > summary").click();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.evaluate(() => { window.futureBar = document.querySelector('[data-absolute-bar="12"] svg'); });
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 10);
+        assert.equal(await page.locator(".notation-bar").count(), 18);
+        assert.equal(await page.evaluate(() => document.querySelector('[data-absolute-bar="12"] svg') === window.futureBar), true);
+        assert.ok(await page.locator("#notation-scroll").evaluate(node => node.scrollTop) > 0);
+        await page.locator("#start-stop").click();
+        await page.setViewportSize({ width: 1000, height: 900 });
+        await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 12);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await oneScoreColumn(page);
+        assert.equal(await page.locator(".notation-bar").count(), 6);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        assert.deepEqual(errors, []);
+        console.log(`PASS seamless three-bar staff, responsive density, slider ratio, folded drum key and bounded scrolling: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 async function renderUpdatesFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     await mockMidi(context);
@@ -999,9 +1183,9 @@ async function renderUpdatesFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         await page.locator("#lesson").selectOption("swing-01");
-        await page.locator("#view-notation").click();
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
-        await page.locator("#bpm").fill("60");
+        await setBpm(page, 60);
         await observePlayback(page);
         await page.locator("#start-stop").click();
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
@@ -1038,7 +1222,7 @@ async function cacheFlow(browser, url) {
         page.on("request", request => requests.push(request.url()));
         await page.goto(url);
         await ready(page);
-        await page.locator("#view-notation").click();
+        await selectView(page, "notation");
         await page.locator("#notation-score svg").waitFor();
         assert.equal(await page.evaluate(() => Boolean(globalThis.legacyRelease)), false, "The cached old module is not used");
         assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).backgroundColor), "rgb(23, 34, 28)");
@@ -1073,6 +1257,8 @@ try {
             await notationCoverageFlow(browser, server.url);
             await cacheFlow(browser, server.url);
             await renderUpdatesFlow(browser, server.url);
+            await toolbarFlow(browser, server.url);
+            await sheetLayoutFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");

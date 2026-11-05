@@ -10,6 +10,8 @@ These guides describe the current app. Use the history summaries only for contex
 | [MVP history](history/2026-10-24-mvp.md) | See the original scope and major delivery decisions |
 | [Notation history](history/2026-11-04-notation-plan.md) | See the notation milestones and later simplifications |
 
+Active work: [practice toolbar](plans/practice-toolbar.md).
+
 [AGENTS.md](../AGENTS.md) contains working instructions for coding agents.
 Update the relevant current guide when behavior changes; keep history compact.
 Git retains the detailed development record. Do not append routine per-turn logs.

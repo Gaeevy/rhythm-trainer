@@ -46,7 +46,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 | Area | Source |
 | --- | --- |
-| App controls and session coordination | [app.js](../src/app.js) |
+| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
@@ -59,7 +59,9 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 The Web Audio clock schedules playback. Original event timestamps are converted
 to that time base for matching; animation never determines hit timing. Both
 views share the assessment. Notation caches engraving and keeps six rows of
-independent loop copies; only changed results refresh noteheads/summaries.
+independent loop copies. Layout fits one to three bars per row from width and
+rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
+Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
 

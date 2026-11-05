@@ -1,3 +1,4 @@
+import { MIN_BPM, MAX_BPM } from "./tempo.js";
 import { DEFAULT_KEY_BINDINGS, KEY_CODES } from "./input.js";
 import { INSTRUMENTS } from "./instruments.js";
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
@@ -6,7 +7,8 @@ export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
 
 export function defaultPracticeSettings() {
     return {
-        version: 1, view: "lanes", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
+        version: 1, view: "notation", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
+        masterVolume: 150, masterMuted: false,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
         keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
@@ -19,6 +21,7 @@ function inRange(value, min, max) {
 
 export function validPracticeSettings(settings) {
     if (!settings || settings.version !== 1 || !["lanes", "notation"].includes(settings.view) || typeof settings.countIn !== "boolean"
+        || !inRange(settings.masterVolume, 0, 200) || typeof settings.masterMuted !== "boolean"
         || typeof settings.guideMuted !== "boolean" || typeof settings.metronomeMuted !== "boolean"
         || !inRange(settings.toleranceMs, 0, 150) || !inRange(settings.latencyOffsetMs, -500, 500)
         || !inRange(settings.guideVolume, 0, 100) || !inRange(settings.metronomeVolume, 0, 100)
@@ -32,7 +35,7 @@ export function validPracticeSettings(settings) {
         || entries.some(([code, instrument]) => !KEY_CODES.includes(code) || !Object.hasOwn(INSTRUMENTS, instrument))
         || new Set(entries.map(([, instrument]) => instrument)).size !== entries.length) return false;
     if (!settings.tempos || typeof settings.tempos !== "object" || Array.isArray(settings.tempos)) return false;
-    return Object.values(settings.tempos).every(bpm => inRange(bpm, 20, 300));
+    return Object.values(settings.tempos).every(bpm => Number.isInteger(bpm) && inRange(bpm, MIN_BPM, MAX_BPM));
 }
 
 export function loadPracticeSettings(storage) {
@@ -43,7 +46,14 @@ export function loadPracticeSettings(storage) {
         const settings = JSON.parse(text);
         // Keep existing controls and MIDI profiles when reserving Space for transport.
         if (settings?.version === 1) {
-            if (!["lanes", "notation"].includes(settings.view)) settings.view = "lanes";
+            if (!["lanes", "notation"].includes(settings.view)) settings.view = "notation";
+            if (settings.masterVolume === undefined) settings.masterVolume = 150;
+            if (settings.masterMuted === undefined) settings.masterMuted = false;
+            if (settings.tempos && typeof settings.tempos === "object" && !Array.isArray(settings.tempos)) {
+                for (const [id, bpm] of Object.entries(settings.tempos)) {
+                    if (inRange(bpm, MIN_BPM, MAX_BPM)) settings.tempos[id] = Math.round(bpm);
+                }
+            }
             if (settings.disabledInstruments === undefined) settings.disabledInstruments = [];
             if (settings.keyBindings && Object.hasOwn(settings.keyBindings, "Space")) {
                 const replacement = ["KeyD", ...KEY_CODES].find(code => !Object.hasOwn(settings.keyBindings, code));

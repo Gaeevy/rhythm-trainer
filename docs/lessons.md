@@ -34,7 +34,7 @@ Use version 2 for new lessons:
 ```
 
 All shown top-level fields are required. Title must be nonempty; BPM is a finite
-positive number (practice controls limit playback to 20–300). Meter is `[4, 4]`;
+positive number (practice controls round to whole BPM and limit playback to 20–300). Meter is `[4, 4]`;
 a lesson spans 1–16 bars. Each track has only `instrument` and `notes`, with a
 unique instrument ID. Notes are sorted, unique integer ticks from zero through
 `bars * 384 - 1`. At least one note is required across the lesson; other tracks
