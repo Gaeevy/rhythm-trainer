@@ -5,12 +5,14 @@
 Save one JSON file in a lesson folder, then refresh the local app:
 
 - `lessons/Songs/`: song excerpts.
-- `lessons/Swing/`: new swing exercises (starting with sheet exercises 7 and 8).
+- `lessons/Swing/`: sheet swing exercises 7–20.
 - `lessons/Swing [YouTube]/`: existing swing lessons from the earlier videos.
 
-Folders become groups in the lesson dropdown, in folder/filename order. A new
-folder automatically adds a group; nested folders use their full relative path
-as one group label. Root-level JSON files are still supported without a group.
+Folders appear in the first dropdown; the second dropdown lists only lessons
+in the selected folder, in filename order. Choosing a folder loads its first
+lesson and stops playback. A new folder automatically appears; nested folders
+use their full relative path as one folder label. Root-level JSON files are
+still supported under Other.
 The filename without `.json` is the lesson ID; `title` is the option text.
 Use lowercase hyphenated filenames, unique across all folders. Moving a file
 between groups preserves its ID, saved selection and tempo. Renaming the file
@@ -22,9 +24,9 @@ and Pages artifact are ignored by Git; never edit or commit them. Existing
 [lesson JSON files](../lessons/) are the source of truth for the current catalog.
 Song lessons are excerpt-based practice patterns, not full arrangements or backing
 tracks. Ghost notes and accent marks currently have the same guide volume and scoring
-as other hits. The new sheet exercises use fixed 2:1 swing, ride and hi-hat
+as other hits. Sheet exercises 7–20 use fixed 2:1 swing, ride and hi-hat
 pedal on 2/4, with no added bass drum. Exercise 7 has snare on 1 and the swung
-and of 3; exercise 8 has snare on 2 and its swung and. Both start at 80 BPM.
+and of 3; exercise 8 has snare on 2 and its swung and. All start at 80 BPM.
 
 ## JSON schema
 

@@ -1,6 +1,6 @@
 # Lesson groups and swing exercises
 
-Scope agreed 2026-11-05. Status: implemented and checked; leave uncommitted for review.
+Scope agreed 2026-11-05. Status: implemented, checked and approved.
 
 - Discover JSON recursively; use folders for native dropdown groups. Keep filename
   IDs stable, reject duplicates, and load each catalog entry's relative path.
@@ -17,5 +17,23 @@ asset URLs, saved selection/tempo, and existing keyboard/MIDI/score behavior.
 Rendered exercises 7 and 8 were inspected against the photo. Current guides and
 local documentation links are updated. Local server runs on port 8000.
 
-Next: user review of these two exercises before adding the remaining patterns.
-Physical kit/listening checks remain manual; no commit or deployment performed.
+The first two exercises were approved; the follow-up below completes the sheet.
+Physical kit/listening checks remain manual.
+
+## Follow-up after first review
+
+First reviewed state committed as `922c05a`. Approved follow-up:
+
+- Replace the single grouped menu with folder and filtered lesson dropdowns;
+  infer the saved folder from the last lesson ID. Folder changes load the first
+  lesson, stop playback and retain each lesson's saved tempo.
+- Add sheet exercises 9–20 with the same ride/pedal, 80 BPM and fixed 2:1 swing.
+  Check all snare positions against the photo, including 13 vs 14 (and of 2 vs 3).
+- Make ordinary end-of-bar lines opaque at 1.8px while retaining joined staves.
+
+Status: approved for commit. 134 JavaScript tests, 7 Python tests and 26 browser
+scenarios pass at both mounts. All 23 lessons render; filtered menus, saved
+folder/lesson, error recovery, end-of-bar line style and desktop/narrow layouts
+are checked. New snare positions were compared with the photo, and rendered
+exercise screenshots were inspected. Current guides and documentation links
+are updated. Deployment remains a separate step.

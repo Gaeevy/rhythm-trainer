@@ -61,6 +61,7 @@ to that time base for matching; animation never determines hit timing. Both
 views share the assessment. Notation caches engraving and keeps six rows of
 independent loop copies. Layout fits one to three bars per row from width and
 rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
+An opaque 1.8px end-of-bar line makes each boundary clear.
 Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
@@ -74,7 +75,7 @@ excluded. There is no JavaScript compilation step.
 
 The generated catalog records stable filename IDs, relative JSON paths and
 folder group names. IDs must be unique across folders; moving a file keeps
-saved preferences. The dropdown uses native option groups.
+saved preferences. Two native dropdowns select a folder, then one of its lessons.
 
 The generated index points to `runtime/<content-hash>/` through a relative base
 URL. CSS, modules, lessons/catalog, config, recordings and notation assets share

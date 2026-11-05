@@ -64,6 +64,11 @@ export function renderScoreBar(host, example, width = scoreWidth(host, example))
     for (const beam of beams) beam.setContext(context).draw();
     for (const tuplet of tuplets) tuplet.setContext(context).draw();
     const svg = host.querySelector("svg");
+    const barline = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    barline.classList.add("notation-barline");
+    for (const [key, value] of Object.entries({ x1: width - 1, x2: width - 1,
+        y1: stave.getYForLine(0), y2: stave.getYForLine(4) })) barline.setAttribute(key, value);
+    svg.append(barline);
     svg.setAttribute("role", "img");
     svg.setAttribute("aria-label", `${example.title}. ${example.feel}. ${example.description}`);
     const positions = engravedParts.flatMap(({ part, notes }) => notes.map((engraved, index) => ({

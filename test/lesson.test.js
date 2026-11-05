@@ -110,8 +110,16 @@ test("removed generic hi-hat IDs are rejected", () => {
     assert.throws(() => validateLesson(lesson), /must be one of/);
 });
 
-test("sheet swing exercises 7 and 8 retain the photographed coordination", async () => {
-    for (const [id, snare] of [["swing-exercise-07", [0, 256]], ["swing-exercise-08", [96, 160]]]) {
+test("sheet swing exercises 7–20 retain the photographed coordination", async () => {
+    for (const [id, snare] of [
+        ["swing-exercise-07", [0, 256]], ["swing-exercise-08", [96, 160]],
+        ["swing-exercise-09", [96, 256]], ["swing-exercise-10", [192, 256]],
+        ["swing-exercise-11", [192, 352]], ["swing-exercise-12", [288, 352]],
+        ["swing-exercise-13", [64, 160]], ["swing-exercise-14", [64, 192]],
+        ["swing-exercise-15", [64, 256]], ["swing-exercise-16", [64, 352]],
+        ["swing-exercise-17", [160, 256]], ["swing-exercise-18", [160, 288]],
+        ["swing-exercise-19", [160, 352]], ["swing-exercise-20", [256, 352]],
+    ]) {
         const entry = BUNDLED_LESSONS.find(lesson => lesson.id === id);
         assert.equal(entry.group, "Swing");
         const lesson = parseLesson(await readFile(new URL(`../lessons/${entry.path}`, import.meta.url), "utf8"));

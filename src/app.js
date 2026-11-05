@@ -18,6 +18,7 @@ import { INSTRUMENTS } from "./instruments.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
+const folderSelect = element("lesson-folder");
 const startButton = element("start-stop");
 const bpmInput = element("bpm");
 let currentBpm = 80;
@@ -99,26 +100,26 @@ function updateKeyHints() {
     });
 }
 
-function renderLessonOptions() {
-    lessonSelect.replaceChildren();
-    const groups = new Map();
-    for (const { id, title, group } of BUNDLED_LESSONS) {
-        let parent = lessonSelect;
-        if (group) {
-            if (!groups.has(group)) {
-                const optgroup = document.createElement("optgroup");
-                optgroup.label = group;
-                groups.set(group, optgroup);
-                lessonSelect.append(optgroup);
-            }
-            parent = groups.get(group);
-        }
+function renderLessonOptions(group = BUNDLED_LESSONS.find(
+    entry => entry.id === (activeLessonId ?? preferences.lastBundledLessonId),
+).group) {
+    folderSelect.replaceChildren(...[...new Set(BUNDLED_LESSONS.map(entry => entry.group))].map(name => {
+        const option = document.createElement("option");
+        option.value = name;
+        option.textContent = name || "Other";
+        return option;
+    }));
+    folderSelect.value = group;
+    folderSelect.disabled = false;
+    const entries = BUNDLED_LESSONS.filter(entry => entry.group === group);
+    lessonSelect.replaceChildren(...entries.map(({ id, title }) => {
         const option = document.createElement("option");
         option.value = id;
         option.textContent = title;
-        parent.append(option);
-    }
-    lessonSelect.value = activeLessonId ?? preferences.lastBundledLessonId;
+        return option;
+    }));
+    const selected = activeLessonId ?? preferences.lastBundledLessonId;
+    lessonSelect.value = entries.some(entry => entry.id === selected) ? selected : entries[0].id;
 }
 
 function setTempo(value) {
@@ -437,6 +438,10 @@ for (const view of ["lanes", "notation"]) {
 }
 element("notation-retry").addEventListener("click", () => { void notationView.show("notation"); });
 element("midi-connect").addEventListener("click", () => midi.connect());
+folderSelect.addEventListener("change", () => {
+    renderLessonOptions(folderSelect.value);
+    void loadLesson();
+});
 lessonSelect.addEventListener("change", () => loadLesson());
 element("lesson-tempo").addEventListener("click", () => {
     if (!lesson) return;

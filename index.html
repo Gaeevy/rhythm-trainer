@@ -15,11 +15,14 @@
     </header>
     <section class="practice" aria-label="Drum lesson playback">
       <div class="lesson-controls">
-        <label class="lesson-picker">LESSON
-          <select id="lesson" disabled>
-            <option>Loading lessons…</option>
-          </select>
-        </label>
+        <div class="lesson-selection">
+          <label class="lesson-picker">FOLDER
+            <select id="lesson-folder" disabled><option>Loading folders…</option></select>
+          </label>
+          <label class="lesson-picker">LESSON
+            <select id="lesson" disabled><option>Loading lessons…</option></select>
+          </label>
+        </div>
         <div class="tempo-control">
           <label class="volume-label" for="bpm">BPM <output id="bpm-level">80</output></label>
           <div class="volume-row"><input id="bpm" type="range" min="0" max="1000" step="1" value="512" aria-valuemin="20" aria-valuemax="300" aria-valuenow="80" aria-valuetext="80 BPM"><button id="lesson-tempo" type="button" class="mute-button tempo-reset" aria-label="Restore lesson tempo" title="Restore lesson tempo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg></button></div>

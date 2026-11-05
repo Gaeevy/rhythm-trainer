@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "title": "Swing exercise 18",
+  "bpm": 80,
+  "time_signature": [
+    4,
+    4
+  ],
+  "bars": 1,
+  "notation": {
+    "feel": "swing"
+  },
+  "tracks": [
+    {
+      "instrument": "ride",
+      "notes": [
+        0,
+        96,
+        160,
+        192,
+        288,
+        352
+      ]
+    },
+    {
+      "instrument": "hi_hat_pedal",
+      "notes": [
+        96,
+        288
+      ]
+    },
+    {
+      "instrument": "snare",
+      "notes": [
+        160,
+        288
+      ]
+    }
+  ]
+}
