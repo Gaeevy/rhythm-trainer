@@ -25,13 +25,13 @@ function compactRests(notes, beams, tuplets) {
 }
 
 /** Convert performance ticks into written rhythms; never rewrite playable notes. */
-export function lessonNotation(lesson) {
+function convertLesson(lesson, combine) {
     validateLesson(lesson);
     const feel = lesson.version === 2 ? lesson.notation.feel : "straight";
     const hints = lesson.notation?.triplets ?? [];
     // A specifically notated instrument needs its own voice, so its rests remain visible.
     const separate = new Set(hints.map(hint => hint.instrument));
-    const voiceFor = instrument => separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
+    const voiceFor = instrument => combine ? "drums" : separate.has(instrument) ? instrument : DRUM_KEY[instrument].voice;
     const parts = new Map();
     for (const track of lesson.tracks) {
         const id = voiceFor(track.instrument);
@@ -105,4 +105,13 @@ export function lessonNotation(lesson) {
         throw new NotationError("Notation must reference every lesson note exactly once");
     }
     return { title: lesson.title, feel, bars };
+}
+
+/** Prefer one readable drum voice; retain independent voices for incompatible grids. */
+export function lessonNotation(lesson) {
+    try { return convertLesson(lesson, true); }
+    catch (error) {
+        if (!(error instanceof NotationError)) throw error;
+        return convertLesson(lesson, false);
+    }
 }

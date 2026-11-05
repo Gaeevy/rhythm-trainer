@@ -1,4 +1,5 @@
 import { noteAppearance, extraPosition, notationFeedbackText, NOTATION_COLORS, feedbackColor } from "./feedback.js";
+import { sheetWindow, sheetPosition } from "./sheet.js";
 import { scorePosition, markerX } from "./position.js";
 import { lessonNotation } from "./model.js";
 import { renderPreview, renderDrumKey } from "./preview.js";
@@ -47,18 +48,24 @@ export class NotationView {
         this.extraSequence = 0;
         this.lastPlayedAt = -Infinity;
         this.cache = new Map();
+        this.cards = new Map();
+        this.absoluteBar = 0;
+        this.columns = 2;
         element("notation-previous").onclick = () => this.changePage(-1);
         element("notation-next").onclick = () => this.changePage(1);
         this.observer = new ResizeObserver(() => {
+            const width = element("notation-scroll").clientWidth;
+            if (width === this.viewportWidth) return;
+            this.viewportWidth = width;
             cancelAnimationFrame(this.resizeFrame);
             this.resizeFrame = requestAnimationFrame(() => {
                 if (this.active && this.model) {
                     this.cache.clear();
-                    this.renderSafely();
+                    this.renderSafely(true);
                 }
             });
         });
-        this.observer.observe(element("notation-score"));
+        this.observer.observe(element("notation-scroll"));
     }
 
     setLesson(lesson, disabled) {
@@ -73,6 +80,9 @@ export class NotationView {
         this.lastPlayedAt = -Infinity;
         this.cache.clear();
         this.geometry = null;
+        this.absoluteBar = 0;
+        this.cards.clear();
+        element("notation-sheet").replaceChildren();
         this.page = 0;
         this.updateInstruments(disabled);
     }
@@ -91,7 +101,7 @@ export class NotationView {
             return button;
         }) ?? [];
         element("notation-instruments").replaceChildren(...buttons);
-        if (this.active && this.model) this.renderSafely();
+        if (this.active && this.model) this.renderSafely(true);
     }
 
     async show(view) {
@@ -100,7 +110,7 @@ export class NotationView {
         element("notation-error").hidden = true;
         this.updateVisibility();
         if (!this.active || !this.lesson) return;
-        element("notation-score").textContent = "Loading notation…";
+
         try {
             const model = this.model ?? lessonNotation(this.lesson);
             await loadRenderer();
@@ -122,8 +132,10 @@ export class NotationView {
 
     changePage(delta) {
         if (!this.model || this.running) return;
-        this.page = Math.max(0, Math.min(this.model.bars.length - 1, this.page + delta));
+        this.absoluteBar = Math.max(0, this.absoluteBar + delta);
         this.renderSafely();
+        const card = this.cards.get(this.absoluteBar);
+        element("notation-scroll").scrollTop = card.node.offsetTop - element("notation-sheet").offsetTop;
     }
 
     updatePlayback(beat, running, assessment) {
@@ -135,82 +147,124 @@ export class NotationView {
             this.extras = [];
             this.feedbackIteration = 0;
             this.lastPlayedAt = -Infinity;
+            this.absoluteBar = 0;
+            this.cards.clear();
+            element("notation-sheet").replaceChildren();
+            element("notation-scroll").scrollTop = 0;
         }
         if (running && this.model) this.selectFeedbackIteration(scorePosition(beat, this.model.bars.length).loop - 1);
         if (!this.active || !this.model) return;
-        const state = scorePosition(beat, this.model.bars.length);
-        if (running && state.barIndex !== this.page) {
-            this.page = state.barIndex;
-            element("notation-score").scrollLeft = 0;
+        const absoluteBar = Math.max(0, Math.floor(beat / 4));
+        if (running && absoluteBar !== this.absoluteBar) {
+            this.absoluteBar = absoluteBar;
             this.renderSafely();
-        } else this.updateMarker();
+        } else if (!this.cards.size) this.renderSafely();
+        else this.updateMarker();
     }
 
-    engraving(host, index) {
+    createCard(absoluteBar) {
+        const barIndex = absoluteBar % this.model.bars.length;
+        const iteration = Math.floor(absoluteBar / this.model.bars.length);
+        const node = document.createElement("section");
+        node.className = "notation-bar";
+        node.dataset.absoluteBar = String(absoluteBar);
+        node.dataset.barIndex = String(barIndex);
+        node.dataset.iteration = String(iteration);
+        const label = document.createElement("p");
+        label.className = "notation-bar-label";
+        label.textContent = `Loop ${iteration + 1} · Bar ${barIndex + 1}`;
+        const host = document.createElement("div");
+        host.className = "notation-score";
+        host.tabIndex = 0;
+        host.setAttribute("aria-label", `${label.textContent}; scroll horizontally if needed`);
+        node.append(label, host);
+        element("notation-sheet").append(node);
         const style = getComputedStyle(host);
         const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
-        const key = `${index}:${width}`;
-        let geometry = this.cache.get(key);
-        if (!geometry) {
-            const bar = this.model.bars[index];
-            geometry = renderPreview(host, {
+        const rowStart = absoluteBar % this.columns === 0;
+        const signature = absoluteBar === 0 ? "initial" : rowStart ? "row" : "continuation";
+        const key = `${barIndex}:${width}:${signature}`;
+        let template = this.cache.get(key);
+        if (!template) {
+            template = renderPreview(host, {
                 title: this.model.title, feel: this.model.feel, rhythmFeel: this.model.feel,
-                description: `Bar ${index + 1}`, voices: bar.voices,
+                description: `Bar ${barIndex + 1}`, voices: this.model.bars[barIndex].voices,
+                showClef: rowStart, showMeter: absoluteBar === 0, continuous: true,
             }, this.disabled);
-            const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            marker.classList.add("notation-playhead");
-            marker.setAttribute("y1", "32");
-            marker.setAttribute("y2", "188");
-            marker.setAttribute("aria-hidden", "true");
-            geometry.svg.append(marker);
-            geometry.marker = marker;
-            const extraLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
-            extraLayer.classList.add("notation-extra-hits");
-            extraLayer.setAttribute("aria-hidden", "true");
-            geometry.svg.append(extraLayer);
-            geometry.extraLayer = extraLayer;
-            geometry.extraSignature = "";
-            this.cache.set(key, geometry);
-        } else host.replaceChildren(geometry.svg);
-        geometry.marker.style.display = "none";
-        return geometry;
+            this.cache.set(key, template);
+        }
+        const svg = template.svg.cloneNode(true);
+        // VexFlow's internal IDs are not used by this view. Do not duplicate them
+        // when a repeated bar is cloned; bind each hit through its source note ID.
+        for (const child of svg.querySelectorAll("[id]")) child.removeAttribute("id");
+        svg.removeAttribute("id");
+        host.replaceChildren(svg);
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        marker.classList.add("notation-playhead");
+        marker.setAttribute("y1", "32");
+        marker.setAttribute("y2", "188");
+        marker.setAttribute("aria-hidden", "true");
+        marker.style.display = "none";
+        svg.append(marker);
+        const extraLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        extraLayer.setAttribute("aria-hidden", "true");
+        extraLayer.classList.add("notation-extra-hits");
+        svg.append(extraLayer);
+        const noteheads = template.noteheads.map(head => {
+            const node = svg.querySelector(`[data-note-id="${head.ref.id}"]`);
+            return { ref: head.ref, node, title: node.querySelector("title"), appearance: null };
+        });
+        return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
+            anchors: template.anchors, extraSignature: "", paddingLeft: parseFloat(style.paddingLeft) };
     }
 
-    renderSafely() {
+    renderSafely(rebuild = false) {
         try {
-            if (this.running) {
-                const state = scorePosition(this.beat, this.model.bars.length);
-                this.page = state.barIndex;
-                this.selectFeedbackIteration(state.loop - 1);
+            if (this.running) this.absoluteBar = Math.max(0, Math.floor(this.beat / 4));
+            const columns = element("notation-scroll").clientWidth >= 1000 ? 2 : 1;
+            if (rebuild || columns !== this.columns) {
+                this.cards.clear();
+                element("notation-sheet").replaceChildren();
             }
+            this.columns = columns;
+            const sheet = element("notation-sheet");
+            sheet.style.setProperty("--score-columns", columns);
+            const window = sheetWindow(this.absoluteBar, columns);
+            // Preserve the viewport when old rows leave the bounded window.
+            const retained = this.cards.get(window.start);
+            const before = retained?.node.offsetTop;
+            for (const [index, card] of this.cards) if (index < window.start || index >= window.end) {
+                card.node.remove();
+                this.cards.delete(index);
+            }
+            for (let index = window.start; index < window.end; index++) if (!this.cards.has(index)) {
+                this.cards.set(index, this.createCard(index));
+            }
+            // Backward navigation or a delayed frame can replace the whole window.
+            for (const [index, card] of [...this.cards].sort((a, b) => a[0] - b[0])) {
+                if (sheet.children[index - window.start] !== card.node) sheet.append(card.node);
+            }
+            if (retained && before !== undefined) element("notation-scroll").scrollTop += retained.node.offsetTop - before;
+            this.page = this.absoluteBar % this.model.bars.length;
             element("notation-page").textContent = `Bar ${this.page + 1} of ${this.model.bars.length}`;
-            const feel = this.model.feel === "swing" ? "Swing · 2:1 eighths" : "Straight · literal rhythm";
-            element("notation-feel").textContent = feel;
-            // The upcoming column changes current-bar width. Apply its layout
-            // before measuring/engraving, including one-bar ↔ multi-bar changes.
-            const upcoming = element("notation-upcoming");
-            upcoming.hidden = this.model.bars.length === 1;
-            const host = element("notation-score");
-            const scroll = host.scrollLeft;
-            this.geometry = this.engraving(host, this.page);
-            this.geometry.viewportWidth = host.clientWidth;
-            this.geometry.paddingLeft = parseFloat(getComputedStyle(host).paddingLeft);
-            host.scrollLeft = scroll;
-            if (!upcoming.hidden) {
-                const next = (this.page + 1) % this.model.bars.length;
-                element("notation-upcoming-label").textContent = `${next === 0 ? "Next loop" : "Next"} · Bar ${next + 1}`;
-                this.nextGeometry = this.engraving(element("notation-next-score"), next);
-            } else {
-                this.nextGeometry = null;
-                element("notation-next-score").replaceChildren();
+            element("notation-loop").textContent = `Loop ${Math.floor(this.absoluteBar / this.model.bars.length) + 1}`;
+            element("notation-feel").textContent = this.model.feel === "swing" ? "Swing · 2:1 eighths" : "Straight · literal rhythm";
+            for (const [index, card] of this.cards) {
+                card.node.classList.toggle("is-current", index === this.absoluteBar);
+                card.host.removeAttribute("id");
+                card.marker.style.display = "none";
             }
+            this.geometry = this.cards.get(this.absoluteBar);
+            this.geometry.host.id = "notation-score";
+            const next = this.cards.get(this.absoluteBar + 1);
+            if (next) next.host.id = "notation-next-score";
             this.updateMarker();
         } catch (error) { this.fallback(error); }
     }
 
     updateMarker() {
-        element("notation-previous").disabled = this.running || this.page === 0;
-        element("notation-next").disabled = this.running || this.page === this.model.bars.length - 1;
+        element("notation-previous").disabled = this.running || this.absoluteBar === 0;
+        element("notation-next").disabled = this.running;
         if (!this.geometry) return;
         const state = scorePosition(this.beat, this.model.bars.length);
         const marker = this.geometry.marker;
@@ -222,10 +276,15 @@ export class NotationView {
         marker.setAttribute("x2", String(x));
         this.updateFeedback();
         if (this.running && !state.countIn) {
-            const host = element("notation-score");
+            const viewport = element("notation-scroll"), sheet = element("notation-sheet");
+            const row = this.cards.get(this.absoluteBar - this.absoluteBar % this.columns);
+            const position = sheetPosition(this.absoluteBar, this.model.bars.length, this.columns, state.tick);
+            viewport.scrollTop = Math.max(0, row.node.offsetTop - sheet.offsetTop
+                + position.rowProgress * row.node.offsetHeight - viewport.clientHeight / 2);
+            const host = this.geometry.host;
             const left = x + this.geometry.paddingLeft;
-            if (left < host.scrollLeft + 20 || left > host.scrollLeft + this.geometry.viewportWidth - 20) {
-                host.scrollLeft = Math.max(0, left - this.geometry.viewportWidth / 2);
+            if (left < host.scrollLeft + 20 || left > host.scrollLeft + host.clientWidth - 20) {
+                host.scrollLeft = Math.max(0, left - host.clientWidth / 2);
             }
         }
     }
@@ -290,9 +349,7 @@ export class NotationView {
                 }
             }
         };
-        apply(this.geometry, this.feedbackIteration, this.page);
-        const next = (this.page + 1) % this.model.bars.length;
-        apply(this.nextGeometry, this.feedbackIteration + (next === 0 ? 1 : 0), next);
+        for (const card of this.cards.values()) apply(card, card.iteration, card.barIndex);
         const output = element("notation-feedback");
         const text = this.latestResult ? notationFeedbackText(this.latestResult) : "Play to see timing feedback.";
         if (output.textContent !== text) {

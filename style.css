@@ -155,16 +155,13 @@ output { font-variant-numeric: tabular-nums; }
   .notation-navigation { align-items: flex-start; flex-direction: column; }
 }
 
-.notation-scores { display: grid; grid-template-columns: minmax(0, 1fr); }
-.notation-scores:has(#notation-upcoming:not([hidden])) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-#notation-upcoming[hidden] { display: none; }
-#notation-upcoming { border-left: 1px solid #d9ddcf; }
-.notation-bar-label { margin: 14px 24px 0; color: #59604e; font-size: 11px; font-weight: 600; }
+.notation-scroll { height: clamp(420px, 55vh, 620px); overflow-y: auto; overflow-x: hidden; position: relative; overscroll-behavior: contain; overflow-anchor: none; }
+.notation-sheet { display: grid; grid-template-columns: repeat(var(--score-columns, 2), minmax(0, 1fr)); position: relative; }
+.notation-bar { min-width: 0; border-bottom: 1px solid #e0e2d8; border-left: 3px solid transparent; }
+.notation-bar.is-current { border-left-color: #75967b; background: #edf1e733; }
+.notation-bar-label { margin: 14px 20px 0; color: #68705e; font-size: 11px; font-weight: 600; }
 .notation-playhead { stroke: #33755c; stroke-width: 2; pointer-events: none; }
-@media (max-width: 1100px) {
-  .notation-scores:has(#notation-upcoming:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
-  #notation-upcoming { border-left: 0; border-top: 1px solid #d9ddcf; }
-}
+#notation-loop { color: #68705e; }
 
 .notation-feedback { min-height: 20px; color: var(--muted); font-size: 12px; line-height: 1.6; margin: 10px 0; }
 .notation-extra-hit { font: 600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; pointer-events: none; }

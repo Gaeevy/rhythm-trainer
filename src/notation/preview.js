@@ -18,7 +18,9 @@ export function renderPreview(host, example, disabledInstruments = []) {
     const context = renderer.getContext();
     context.setFillStyle("#242820").setStrokeStyle("#242820");
     const stave = new Stave(12, 50, width - 24);
-    stave.addClef("percussion").addTimeSignature("4/4").setEndBarType(Barline.type.DOUBLE);
+    if (example.showClef !== false) stave.addClef("percussion");
+    if (example.showMeter !== false) stave.addTimeSignature("4/4");
+    stave.setEndBarType(example.continuous ? Barline.type.SINGLE : Barline.type.DOUBLE);
     stave.setContext(context).draw();
     // Mark closed at the start of each bar and after an open hit. Repeating +
     // above every closed sixteenth would hide the rhythm in dense grooves.

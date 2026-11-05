@@ -54,19 +54,14 @@
           <div class="notation-navigation">
             <p id="notation-feel"></p>
             <div><button id="notation-previous" type="button" aria-label="Previous score bar">←</button>
-            <span id="notation-page" aria-live="polite"></span>
+            <span id="notation-page" aria-live="polite"></span><span id="notation-loop"></span>
             <button id="notation-next" type="button" aria-label="Next score bar">→</button></div>
           </div>
-          <div class="notation-scores">
-            <div><p class="notation-bar-label">Current bar</p>
-              <div id="notation-score" class="notation-score" tabindex="0" aria-label="Current score; scroll horizontally if needed"></div>
-            </div>
-            <div id="notation-upcoming" hidden><p id="notation-upcoming-label" class="notation-bar-label"></p>
-              <div id="notation-next-score" class="notation-score" tabindex="0" aria-label="Upcoming score; scroll horizontally if needed"></div>
-            </div>
+          <div id="notation-scroll" class="notation-scroll" tabindex="0" aria-label="Repeating score; scroll to read more bars">
+            <div id="notation-sheet" class="notation-sheet"></div>
           </div>
         </div>
-        <p class="notation-caption">Score follows playback. Use the bar arrows while stopped.</p>
+        <p class="notation-caption">The score continues down the page as the lesson repeats.</p>
         <p id="notation-feedback" class="notation-feedback" role="status" aria-live="polite">Play to see timing feedback.</p>
         <details class="notation-legend"><summary>Drum key</summary><ul id="notation-key"></ul></details>
       </section>

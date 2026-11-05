@@ -18,20 +18,31 @@ Both views use the same lesson, audio clock, input, assessment, and session tota
 Switching views keeps playback running. Space starts/stops when the score has
 focus. Instrument buttons stop/reset practice; disabled noteheads stay gray.
 
-Notation shows one staff per bar, the current bar with a playback marker, and an
-upcoming bar. Arrows work while stopped; playback advances the bars automatically.
-The final bar previews bar 1 of the next loop. Count-in hides the marker on bar 1;
-Stop hides it and preserves the displayed bar/results; Start returns to bar 1.
-Wide screens show current/upcoming bars side by side. Narrow screens stack them
-and scroll horizontally to retain readable symbols. Engraved scores are cached
-between loops; animation moves only the overlay.
+Notation is a vertically scrolling, repeating score. Desktop shows two bars per
+row, in their original order; narrow screens show one. A two-bar lesson stays
+bars 1/2 on each row, with its next loop below. The marker follows the existing
+audio clock and the score moves down gradually. It continues indefinitely with
+six rows in memory; older rows leave above the viewport without moving the
+visible music. Each row labels its loop/bar. Clefs appear at row starts; 4/4
+appears at the beginning. Engraving is cached, with separate notehead bindings
+for each displayed loop. Audio scheduling remains independent of animation.
+
+Arrows browse bars while stopped. Count-in keeps the first row with the marker
+hidden; Stop preserves the position/results; Start returns to loop 1/bar 1.
+Narrow scores scroll horizontally as needed to retain readable symbols.
+Compatible drum rhythms use one voice with shared stems. Simultaneous snare and
+bass heads align vertically; separate snare/kick rests are unnecessary while
+another drum plays. Rests remain where the combined rhythm needs silence (for
+example, Come Undone's middle sixteenth-triplet slot). Independent voices remain
+a fallback for incompatible simultaneous grids. Durations describe reading rhythm,
+not how long a drum recording sustains. Performance ticks are unchanged.
 
 Individual noteheads show on time (green), early (blue), late (amber), or missed
 (red). Shared stems/beams stay legible. The text below the score and notehead
 hover text show the instrument/result and matched error to 0.1 ms. Measured error
 retains full precision. Extra hits appear briefly as purple + markers below the
-staff at their precise time; they do not add written notes. Feedback resets per
-loop while totals accumulate. Delayed hits can correct misses, and both ride
+staff at their precise time; they do not add written notes. Each repeated bar has its own loop feedback; previous rows retain their results
+while the next loop starts fresh and totals accumulate. Delayed hits can correct misses, and both ride
 MIDI notes count as Ride.
 
 All nine current lessons have version 2 metadata, including Come Undone's
@@ -50,16 +61,19 @@ The static three-example development preview remains at
 [localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html);
 it is excluded from the Pages artifact.
 
-For tomorrow's review, start [localhost:8000](http://localhost:8000) and choose
+For tomorrow's readability/scrolling review, start [localhost:8000](http://localhost:8000) and choose
 **Notation**:
 
-1. **Come Undone:** inspect the two sixteenth-triplet groups, including the rest.
+1. **Come Undone:** compare its shared stems and single necessary rest with the
+   supplied Guitar Pro example. No separate snare/kick rests remain.
 2. **Swing 03, bar 2:** compare the written swung eighths with the explicit snare
-   triplet. **Fascination Street:** follow several four-bar loops.
+   triplet. Follow several two-bar loops: the bars stay left/right in each row,
+   with the next loop below. Also try four-bar **Fascination Street**.
 3. Play early/late, miss a note, add a hit, and try simultaneous ride/snare.
    Check the next loop clears colors while totals remain, then compare Lanes.
 4. Check count-in, stop/restart, resizing, disabling instruments, and reloading.
    Confirm marker/audio alignment and reading comfort with the real MPS-850.
+   Check that simultaneous snare/bass heads align and colors remain independent.
 
 Real-kit/audio routing, physical latency, and final release acceptance remain
 pending. Automated simulated MIDI does not replace a practice session.
@@ -291,7 +305,9 @@ hotplug, saved controls, sample loading/cancellation, mixer controls, and respon
 layout. Both `/` and `/rhythm-trainer/` mounts are checked. Normal flows fail on
 browser/network errors; intentionally failed requests have separate recovery checks.
 Checks also visit every bar of every current lesson and exercise all twelve
-instruments, mixed subdivisions, silent bars, and sixteen-bar paging. The
+instruments, mixed subdivisions, silent bars, sixteen-bar lessons, shared stems,
+aligned snare/bass heads, stable two-bar rows, and bounded repetition beyond 100
+loops. Earlier rows preserve independent feedback. The
 versioned artifact is tested with cached prior CSS/modules. Native audio clocks
 and timers remain active. Sound quality and physical latency
 still require manual checks.

@@ -562,6 +562,17 @@ async function notationFlow(browser, url) {
                 return window.smoke.assessment.hits.at(-1).status;
             }, { note }), expected);
         }
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        await page.evaluate(() => {
+            window.twoBarNodes = [0, 1].map(index => {
+                const node = document.querySelector(`[data-absolute-bar="${index}"]`);
+                return { node, x: node.getBoundingClientRect().x };
+            });
+        });
+        await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
+        assert.equal(await page.evaluate(() => window.twoBarNodes.every(({ node, x }, index) =>
+            document.querySelector(`[data-absolute-bar="${index}"]`) === node && node.getBoundingClientRect().x === x)), true,
+        "A two-bar lesson stays left/right in the same row across bar and loop transitions");
         await page.locator("#notation-score").focus();
         const beforeRealKey = await page.evaluate(() => window.smoke.assessment.hits.length);
         await page.keyboard.press("f");
@@ -707,19 +718,23 @@ async function scoreFollowingFlow(browser, url) {
         await page.locator("#practice-panel summary").click();
         await page.locator("#count-in").check();
         await observePlayback(page);
-        await page.evaluate(() => {
-            window.scoreProbe = { frames: [], nodes: new Map(), replacements: 0 };
+        await page.evaluate(async () => {
+            const { NotationView } = await import("./src/notation/view.js");
+            const update = NotationView.prototype.updatePlayback;
+            NotationView.prototype.updatePlayback = function (...args) {
+                window.scoreView = this;
+                return update.apply(this, args);
+            };
+            window.scoreProbe = { frames: [] };
             const probe = window.scoreProbe;
             probe.observer = new MutationObserver(() => {
                 const marker = document.querySelector("#notation-score .notation-playhead");
                 if (!marker || marker.style.display === "none") return;
-                const bar = document.querySelector("#notation-page").textContent;
-                const svg = marker.ownerSVGElement;
-                if (probe.nodes.has(bar) && probe.nodes.get(bar) !== svg) probe.replacements++;
-                probe.nodes.set(bar, svg);
-                probe.frames.push({ bar, tick: Number(marker.dataset.tick), loop: Number(marker.dataset.loop), x: Number(marker.getAttribute("x1")) });
+                probe.frames.push({ absoluteBar: Number(marker.closest(".notation-bar").dataset.absoluteBar),
+                    tick: Number(marker.dataset.tick), x: Number(marker.getAttribute("x1")) });
             });
-            probe.observer.observe(document.querySelector("#notation-score"), { subtree: true, childList: true, attributes: true, attributeFilter: ["x1"] });
+            probe.observer.observe(document.querySelector("#notation-sheet"), { subtree: true,
+                childList: true, attributes: true, attributeFilter: ["x1"] });
         });
         await page.locator("#start-stop").click();
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
@@ -728,19 +743,24 @@ async function scoreFollowingFlow(browser, url) {
         await playing(page);
         await page.waitForFunction(() => window.scoreProbe.frames.length > 2);
         const origin = await page.evaluate(() => window.smoke.assessment.origin);
+        await page.evaluate(() => {
+            window.retainedScore = document.querySelector('[data-absolute-bar="8"] svg');
+            window.retainedScoreX = window.retainedScore.getBoundingClientRect().x;
+        });
         await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 2);
-        const probe = await page.evaluate(() => ({ frames: window.scoreProbe.frames, replacements: window.scoreProbe.replacements, bars: window.scoreProbe.nodes.size }));
-        assert.equal(probe.replacements, 0, "Use cached score SVGs across loops, not per-frame engraving");
-        assert.equal(probe.bars, 4);
-        assert.ok(probe.frames.some(frame => frame.loop >= 2 && frame.bar === "Bar 1 of 4"));
-        for (let index = 1; index < probe.frames.length; index++) {
-            const previous = probe.frames[index - 1], current = probe.frames[index];
-            if (current.loop === previous.loop && current.bar === previous.bar) {
-                assert.ok(current.tick >= previous.tick && current.x >= previous.x, "Marker advances monotonically within a bar");
-            }
+        assert.equal(await page.evaluate(() => document.querySelector('[data-absolute-bar="8"] svg') === window.retainedScore), true,
+            "Repeated bars keep their original position/node instead of swapping left and right");
+        assert.equal(await page.evaluate(() => window.retainedScore.getBoundingClientRect().x),
+            await page.evaluate(() => window.retainedScoreX));
+        assert.equal(await page.locator(".notation-bar").count(), 12);
+        assert.equal(await page.evaluate(() => window.scoreView.cache.size), 5, "Engrave each source bar/signature once per width");
+        const frames = await page.evaluate(() => window.scoreProbe.frames);
+        for (let index = 1; index < frames.length; index++) if (frames[index].absoluteBar === frames[index - 1].absoluteBar) {
+            assert.ok(frames[index].tick >= frames[index - 1].tick && frames[index].x >= frames[index - 1].x);
         }
+        assert.ok(await page.locator("#notation-scroll").evaluate(node => node.scrollTop) > 0);
         await page.evaluate(() => window.scoreProbe.observer.disconnect());
-        // Hold only animation callbacks; keep native audio scheduling/timers active.
+        // Hold only animation; the native audio scheduler continues independently.
         await page.evaluate(() => {
             window.savedScoreRAF = window.requestAnimationFrame;
             window.freezeScore = true;
@@ -755,29 +775,36 @@ async function scoreFollowingFlow(browser, url) {
         await page.waitForFunction(until => window.smoke.audio.context.currentTime >= until, beforePause.until);
         assert.equal(await page.locator("#notation-score .notation-playhead").getAttribute("data-tick"), beforePause.tick);
         assert.ok(await page.evaluate(count => window.smoke.scheduled.length > count, beforePause.scheduled));
+        // Jump the display beyond 100 loops: retain a small DOM and never touch audio/scoring.
+        const far = await page.evaluate(() => {
+            const scheduled = window.smoke.scheduled.length, totals = JSON.stringify(window.smoke.assessment.counts);
+            window.scoreView.updatePlayback(1600.5, true, window.scoreView.assessment);
+            return { count: document.querySelectorAll(".notation-bar").length,
+                absolute: document.querySelector("#notation-score").closest(".notation-bar").dataset.absoluteBar,
+                loop: document.querySelector("#notation-loop").textContent,
+                unchanged: scheduled === window.smoke.scheduled.length && totals === JSON.stringify(window.smoke.assessment.counts) };
+        });
+        assert.deepEqual(far, { count: 12, absolute: "400", loop: "Loop 101", unchanged: true });
         await page.evaluate(() => {
             window.freezeScore = false;
             window.requestAnimationFrame = window.savedScoreRAF;
             window.requestAnimationFrame(window.heldScoreFrame);
             window.heldScoreFrame = null;
         });
-        await page.waitForFunction(oldTick => document.querySelector("#notation-score .notation-playhead").dataset.tick !== oldTick, beforePause.tick);
+        await page.waitForFunction(() => Number(document.querySelector("#notation-score").closest(".notation-bar").dataset.absoluteBar) < 100);
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
-        // Both views keep following the same session; geometry refreshes on resize.
         await page.locator("#view-lanes").click();
         await page.locator("#view-notation").click();
-        await page.waitForFunction(() => {
-            const marker = document.querySelector("#notation-score .notation-playhead");
-            return marker && marker.style.display !== "none";
-        });
+        await page.waitForFunction(() => document.querySelector("#notation-score .notation-playhead")?.style.display !== "none");
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
         await page.setViewportSize({ width: 390, height: 844 });
-        await page.waitForFunction(() => Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
+        await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 6
+            && Number(document.querySelector("#notation-score svg").getAttribute("width")) === 460);
         await page.waitForFunction(() => document.querySelector("#notation-score").scrollLeft > 0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-narrow.png", fullPage: true });
         await page.setViewportSize({ width: 1440, height: 1100 });
-        await page.waitForFunction(() => document.querySelector("#notation-upcoming-label").textContent.startsWith("Next loop"));
+        await page.waitForFunction(() => document.querySelectorAll(".notation-bar").length === 12);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-follow-desktop.png", fullPage: true });
         await page.locator("#bpm").fill("180");
         await stopped(page);
@@ -797,7 +824,7 @@ async function scoreFollowingFlow(browser, url) {
         await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event("visibilitychange")); });
         await stopped(page);
         assert.deepEqual(errors, []);
-        console.log(`PASS audio-clock score marker, next bar, loop cache, animation delay, resize, restart: ${new URL(url).pathname}`);
+        console.log(`PASS continuous sheet, bounded repetition past 100 loops, native clock, resize and restart: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
 
@@ -866,6 +893,8 @@ async function notationFeedbackFlow(browser, url) {
         const newLoop = await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-iteration");
         assert.equal(newLoop, "1");
         assert.ok(["waiting", "missed"].includes(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing")), "Do not reuse the prior loop's early hit");
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="ride:0"]').getAttribute("data-timing"), "early",
+            "Prior rows preserve their own loop feedback");
         await page.locator("#start-stop").click();
         await stopped(page);
         const summary = await page.locator(".session-summary").textContent();
@@ -921,6 +950,14 @@ async function notationCoverageFlow(browser, url) {
                 const actual = await page.locator("#notation-score [data-note-id]").evaluateAll(nodes => nodes.map(node => node.dataset.noteId).sort());
                 assert.equal(await page.locator("#notation-score .vf-tuplet").count(),
                     model.bars[bar].voices.reduce((sum, voice) => sum + voice.tuplets.length, 0), `${id}: explicit triplet brackets are present`);
+                if (id === "swing-01" && bar === 0) {
+                    const aligned = await page.locator("#notation-score").evaluate(host => {
+                        const snare = host.querySelector('[data-note-id="snare:0"]').getBoundingClientRect();
+                        const kick = host.querySelector('[data-note-id="kick:0"]').getBoundingClientRect();
+                        return Math.abs(snare.x - kick.x) < 0.01;
+                    });
+                    assert.equal(aligned, true, "Simultaneous snare and bass heads align vertically");
+                }
                 assert.deepEqual(actual, expected, `${id}, bar ${bar + 1}: every expected notehead is present exactly once`);
                 assert.equal(await page.locator("#notation-error").isVisible(), false);
                 if (new URL(url).pathname === "/" && !id.startsWith("notation-silent")) {

@@ -256,14 +256,19 @@ Implementation checkpoints (full development history is in Git):
 ## Verification and next steps
 
 The incremental notation feature is tracked in [notation-plan.md](notation-plan.md).
-The Notation view now follows the existing audio clock with a moving marker,
-automatic bar changes, and an upcoming-bar preview (milestone 4). Lanes and
+The Notation view follows the existing audio clock with a moving marker.
+The readability follow-up replaces the earlier current/upcoming preview with a
+vertically repeating score sheet and stable bar positions. Lanes and
 saved practice controls remain available. Milestone 5 projects the same assessment
 onto individual noteheads, with text/precise error and transient extra-hit marks.
 Milestone 6 covers all nine lessons, thirty-seconds/sixteenth triplets, all twelve
 instruments, and hi-hat symbols without changing performance events. Local release
 checks include content-versioned runtime assets to prevent stale CSS/modules.
-Final changes are intentionally uncommitted and undeployed for user review.
+The accepted release candidate is committed as `d6f9466`. A new uncommitted
+readability/scrolling follow-up combines compatible drums on shared stems,
+retains only necessary rests, and repeats the score vertically with bounded rows.
+It replaces current/upcoming bar swapping. Its checks and review are tracked in
+`notation-plan.md`; deployment remains pending.
 Version 2 notation metadata is described in
 [notation-format.md](notation-format.md); version 1 and performance ticks remain
 supported unchanged. Its verification and user acceptance are recorded in that plan.

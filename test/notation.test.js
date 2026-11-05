@@ -154,3 +154,22 @@ test("Swing retains literal finer subdivisions without swinging or rounding them
     assert.deepEqual(refs.map(ref => ref.performanceTick), lesson.tracks[0].notes);
     assert.throws(() => lessonNotation(example([0, 24, 64], { feel: "swing" })), /unsupported rhythm/);
 });
+
+test("Come Undone uses shared stems and only the rhythmically necessary triplet rest", async () => {
+    const lesson = JSON.parse(await readFile(new URL("../lessons/come-undone.json", import.meta.url)));
+    const model = lessonNotation(lesson);
+    assert.equal(model.bars[0].voices.length, 1);
+    const notes = model.bars[0].voices[0].notes;
+    assert.deepEqual(notes.filter(note => note.rest).map(note => note.writtenTick), [160]);
+    assert.deepEqual(notes[0].refs.map(ref => ref.instrument).sort(), ["kick", "ride"]);
+    assert.deepEqual(notes.find(note => note.writtenTick === 96).refs.map(ref => ref.instrument).sort(), ["ride", "snare"]);
+});
+
+test("incompatible simultaneous grids retain independent voices without changing events", () => {
+    const lesson = example([0, 32, 64], { feel: "straight", triplets: [{ instrument: "snare", tick: 0 }] });
+    lesson.tracks.push({ instrument: "ride", notes: [0, 48] });
+    const model = lessonNotation(lesson);
+    assert.equal(model.bars[0].voices.length, 2);
+    assert.equal(references(model).length, 5);
+    assert.equal(new Set(references(model).map(ref => ref.id)).size, 5);
+});

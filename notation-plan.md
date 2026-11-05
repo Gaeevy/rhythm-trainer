@@ -1,6 +1,6 @@
 # Drum notation plan
 
-Status: milestones 1–5 accepted; milestone 6 ready for review. Milestone 7
+Status: milestones 1–6 accepted; readability/scrolling follow-up accepted. Milestone 7
 local release checks ready; deployment and real-kit acceptance pending.
 Created: 2026-11-04.
 
@@ -46,8 +46,12 @@ they do not access the user's Chrome profile or physical kit.
   lessons. Variable swing ratios and tempo-dependent swing are later work.
 - Use one five-line percussion staff with a percussion clef and 4/4 meter.
   Combine instruments on the staff; do not create one staff per lane.
-- Show one or two bars at a readable size, depending on density and available
-  width. Lessons of up to 16 bars use pages; never shrink a whole lesson to fit.
+- Show a repeating score sheet: two bars per desktop row and one per narrow row,
+  with continuous vertical following. Keep bar positions fixed within rows.
+  Recycle rows above the viewport so indefinite practice does not grow the DOM.
+- Prefer shared drum stems and necessary combined-rhythm rests. Use independent
+  voices only when simultaneous grids cannot share one voice. Keep note identity
+  and independent assessment even when heads share a stem.
 - Use stable notation positions and a moving playback marker. Include the loop
   position and count-in; keep the existing toolbar and Space transport.
 - Keep a small, foldable drum-key legend for learning staff positions.
@@ -96,7 +100,7 @@ they do not access the user's Chrome profile or physical kit.
 | 3 | Notation view in the app | accepted | View switch, lesson changes, pages, controls |
 | 4 | Playback marker and looping | accepted | Reading along at several tempos |
 | 5 | Timing feedback on notation | accepted | Useful feedback without hiding the score |
-| 6 | Full lesson coverage and regression checks | ready for review | Current catalog and difficult patterns |
+| 6 | Full lesson coverage and regression checks | accepted | Current catalog and difficult patterns |
 | 7 | Release and live acceptance | in progress | Published app and real-kit practice |
 
 ### 1. Static notation proof
@@ -454,3 +458,40 @@ database, and AI/MCP authoring are outside this iteration.
   approval, release the reviewed commit, wait for Actions/Pages, verify live
   assets/practice in isolated Chrome, then record the user's real MPS-850 check.
   Local checks do not fulfill live/hardware acceptance.
+
+- **2026-11-04 — Milestone 6 accepted / readability follow-up authorized:** user
+  approved the local release candidate and requested its commit, then authorized
+  addressing redundant rests, snare/bass alignment, and irritating left/right
+  swaps during two-bar practice. Committed the accepted version as `d6f9466`.
+  Leave the following improvements uncommitted and undeployed for morning review.
+
+- **2026-11-04 — Readability and continuous score:** compatible instruments now
+  share one voice/stem. Come Undone has only the necessary rest at tick 160;
+  snare/kick no longer add separate rests. Simultaneous snare/bass heads align,
+  retaining independent hit identities/colors. Conflicting explicit grids fall
+  back to independent voices without rounding or dropping notes. Replaced
+  current/upcoming swapping with a repeating sheet: two bars per desktop row,
+  one per narrow row, six rows retained. Playback gradually follows down the
+  score; old rows leave above the viewport with scroll compensation. Repetition
+  continues indefinitely, with per-loop feedback on each displayed copy and
+  cached engraving. Row starts carry clefs; 4/4 appears once. Stop preserves the
+  score and Start returns to loop 1/bar 1. Saved controls/MIDI, lesson data, audio
+  scheduling and assessment remain unchanged. **Verification:** clean `npm ci`,
+  all 126 JavaScript tests, six Python tests, and 22 browser scenarios pass at
+  root/subpath. Deterministic tests verify necessary rests, preserved events,
+  conflicting-grid fallback, and bounded row windows. Browser checks verify
+  actual snare/bass head alignment, stable two-bar positions through a native
+  loop, independent feedback on current/prior rows, native audio continuing
+  while animation is held, a display jump past 100 loops with twelve cards and
+  unchanged audio/assessment counts, resize to six mobile cards, stop/restart,
+  view switching, catalog coverage, cache handling, and recovery. Desktop/narrow
+  screenshots and Come Undone's remaining triplet rest were inspected.
+  `git diff --check` passes. **Ready for review.** User should compare Come
+  Undone with the supplied Guitar Pro excerpt, follow Swing 03 across several
+  loops, check simultaneous snare/bass and independent feedback, then resize and
+  stop/restart. Physical timing/reading comfort and deployment remain pending.
+
+- **2026-11-05 — Readability follow-up accepted:** user approved shared stems,
+  necessary rests, and continuous score following, and requested its commit.
+  Next: review simplification/refactoring opportunities, flagging any changes to
+  the feature set separately. Deployment and physical acceptance remain separate.

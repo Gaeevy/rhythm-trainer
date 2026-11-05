@@ -63,7 +63,9 @@ Swing 03 has a snare rest followed by two eighth-note triplets on beat 3 of bar 
 ```
 
 For `unit: 8`, use the containing quarter-note beat. Its slots here are
-576/608/640: rest, snare, snare. One hint identifies the whole group.
+576/608/640: no snare, snare, snare. One hint identifies the whole group.
+If another drum plays at 576, it fills the first slot on the combined staff;
+there is no redundant snare rest beside that note.
 
 Come Undone has sixteenth-note triplets within the second eighth of beats 2/4:
 
@@ -84,9 +86,11 @@ because it states the intended written group and retains its rests.
 
 Missing note references, unsupported fields/units, duplicate or overlapping groups
 on an instrument, and notes outside a group's three slots fail validation.
-A hinted instrument gets its own voice so its triplet rests remain visible beside
-other instruments. Half-beat groups use literal subdivisions within that beat.
-No custom voice/duration fields are needed.
+The converter first combines compatible instruments into one voice. A triplet
+hint applies to the combined group where the other notes fit its grid. If grids
+conflict, it retains independent voices, keeping the hinted instrument separate.
+Half-beat groups use literal subdivisions within that beat. No custom
+voice/duration fields are needed.
 
 ## Staff positions and symbols
 
@@ -109,7 +113,8 @@ same table in `src/notation/drum-key.js`.
 | `tom_4` | Second space (A4) | Normal |
 | `kick` | Bottom space (F4) | Normal, lower voice |
 
-Simultaneous heads share a stem where possible. Heads at the same/adjacent
+Compatible rhythms share one voice and stem, including snare and kick. Their
+heads align vertically when they are far enough apart. Heads at the same/adjacent
 positions are displaced by the engraver; each retains its own instrument,
 performance tick, note index, and assessment result. No hits are merged.
 
@@ -122,10 +127,20 @@ and stable `instrument:tick` identity. The overlay adds the active loop iteratio
 from the existing clock. It does not schedule audio or grade input.
 
 Each voice partitions every bar into four beats. Beams group by beat/tuplet;
-aligned quarter rests combine into half/bar rests. Empty tracks do not create
-redundant voices; silent bars remain visible. Durations describe reading rhythm,
-not sample sustain. The score uses one current bar and one upcoming bar, with
-pages for up to sixteen bars. Narrow screens scroll instead of shrinking notes.
+aligned quarter rests combine into half/bar rests. Compatible drums use a single
+voice, so a rest is printed only when no instrument plays at that position.
+Empty tracks do not create redundant voices; silent bars remain visible.
+Independent voices are a fallback for incompatible grids. Durations describe
+reading rhythm, not sample sustain, and do not change played notes.
+
+The lesson (1–16 bars) repeats down a score sheet, with two bars per desktop row
+and one per narrow row. Bar positions stay fixed within each row as playback
+advances. Each displayed bar has its own loop iteration, noteheads, and results.
+The display retains six rows and recycles old rows above the viewport, preserving
+visible positions; it can continue beyond 100 loops without growing the DOM.
+SVG engraving is cached by source bar, width, and row-start signature. The marker
+and vertical follow position use the existing playback clock. Narrow scores scroll
+horizontally instead of shrinking notes.
 
 All nine bundled lessons use version 2. Tests compare their scheduled events with
 saved originals at three tempos. Version 1 remains valid with its original strict
