@@ -38,6 +38,11 @@ npm run test:browser
   remain active. Checks cover the catalog, subdivisions, full kit, feedback,
   bounded score repetition, resize, cached assets and failure recovery.
 
+Browser timing assertions allow 0.25 ms between the separately sampled native
+output-clock anchors used to create and handle a simulated hit. Deterministic
+clock-conversion unit tests retain exact numeric checks. This sampling allowance
+is test-only; it does not change the app's on-time tolerance or hit timestamps.
+
 No automated check verifies physical latency or audible sound quality. Before
 release, check the kit/module and browser audio together, simultaneous hits,
 several loops, count-in, stop/restart, view switching, latency and reconnect.

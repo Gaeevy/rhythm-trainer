@@ -339,7 +339,9 @@ async function practiceFlow(browser, url) {
             const hit = await timedKey(page, code, beat, errorMs);
             assert.equal(hit.status, expected);
             assert.equal(hit.source, "keyboard");
-            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.01,
+            // stamp() and the app sample the live output clock separately.
+            // Allow sub-millisecond anchor jitter; exact conversion math is unit-tested.
+            assert.ok(Math.abs(hit.errorMs - errorMs) < 0.25,
                 `Native clock precision: expected ${errorMs} ms, got ${hit.errorMs} ms (${code}, beat ${beat})`);
         }
         assert.equal((await timedKey(page, "KeyK", 0)).status, "extra");

@@ -61,3 +61,9 @@ Come Undone retains its one explicit triplet rest. All original hit ticks and
 identities remain. 138 JavaScript tests and 28 browser scenarios pass; focused
 catalog checks at both mounts also verify rendered 3 px beam geometry. Song
 screenshots inspected and current guides/links updated. Approved for release.
+
+Release check follow-up: the existing browser clock assertion intermittently
+failed on native-anchor differences of 0.034–0.067 ms. Use a 0.25 ms sampling
+allowance in that assertion only; exact conversion unit checks and production
+assessment remain unchanged. Local revalidation passed all 138 unit tests and
+28 browser scenarios; PR checks gate the release.
