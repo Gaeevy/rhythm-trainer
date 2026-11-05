@@ -1,3 +1,4 @@
+import { VOLUME_MAX } from "./volume.js";
 import { MIN_BPM, MAX_BPM } from "./tempo.js";
 import { DEFAULT_KEY_BINDINGS, KEY_CODES } from "./input.js";
 import { INSTRUMENTS } from "./instruments.js";
@@ -8,7 +9,6 @@ export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
 export function defaultPracticeSettings() {
     return {
         version: 1, view: "notation", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
-        masterVolume: 150, masterMuted: false,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
         keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
@@ -21,10 +21,9 @@ function inRange(value, min, max) {
 
 export function validPracticeSettings(settings) {
     if (!settings || settings.version !== 1 || !["lanes", "notation"].includes(settings.view) || typeof settings.countIn !== "boolean"
-        || !inRange(settings.masterVolume, 0, 200) || typeof settings.masterMuted !== "boolean"
         || typeof settings.guideMuted !== "boolean" || typeof settings.metronomeMuted !== "boolean"
         || !inRange(settings.toleranceMs, 0, 150) || !inRange(settings.latencyOffsetMs, -500, 500)
-        || !inRange(settings.guideVolume, 0, 100) || !inRange(settings.metronomeVolume, 0, 100)
+        || !inRange(settings.guideVolume, 0, VOLUME_MAX.guide) || !inRange(settings.metronomeVolume, 0, VOLUME_MAX.metronome)
         || !BUNDLED_LESSONS.some(lesson => lesson.id === settings.lastBundledLessonId)) return false;
     if (!Array.isArray(settings.disabledInstruments)
         || settings.disabledInstruments.some(instrument => !Object.hasOwn(INSTRUMENTS, instrument))
@@ -47,8 +46,8 @@ export function loadPracticeSettings(storage) {
         // Keep existing controls and MIDI profiles when reserving Space for transport.
         if (settings?.version === 1) {
             if (!["lanes", "notation"].includes(settings.view)) settings.view = "notation";
-            if (settings.masterVolume === undefined) settings.masterVolume = 150;
-            if (settings.masterMuted === undefined) settings.masterMuted = false;
+            delete settings.masterVolume;
+            delete settings.masterMuted;
             if (settings.tempos && typeof settings.tempos === "object" && !Array.isArray(settings.tempos)) {
                 for (const [id, bpm] of Object.entries(settings.tempos)) {
                     if (inRange(bpm, MIN_BPM, MAX_BPM)) settings.tempos[id] = Math.round(bpm);

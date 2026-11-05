@@ -36,7 +36,7 @@ test("corrupt or incompatible preferences restore defaults with a useful warning
         ["disabledInstruments", null], ["disabledInstruments", ["tom"]], ["disabledInstruments", ["kick", "kick"]],
         ["countIn", "false"], ["guideMuted", 1], ["metronomeMuted", null],
         ["toleranceMs", -1], ["toleranceMs", 151], ["latencyOffsetMs", 501],
-        ["guideVolume", -1], ["metronomeVolume", 101],
+        ["guideVolume", -1], ["metronomeVolume", 301],
         ["tempos", { "swing-ride": 301 }], ["tempos", []], ["keyBindings", {}],
         ["keyBindings", { Space: "snare", KeyF: "snare", KeyJ: "hi_hat", KeyK: "ride" }],
         ["keyBindings", { Space: "kick", Escape: "snare", KeyJ: "hi_hat", KeyK: "ride" }],
@@ -114,23 +114,21 @@ test("notation view persists and older/malformed view fields preserve other pref
 });
 
 
-test("new controls default to Notation and boosted master, preserving valid existing choices", () => {
+test("obsolete master preferences are discarded without losing existing controls", () => {
     assert.equal(defaultPracticeSettings().view, "notation");
-    assert.equal(defaultPracticeSettings().masterVolume, 150);
+    assert.equal(Object.hasOwn(defaultPracticeSettings(), "masterVolume"), false);
     const old = { ...defaultPracticeSettings(), view: "lanes", guideVolume: 18, metronomeVolume: 100,
         tempos: { "swing-ride": 90.5220994475138 }, latencyOffsetMs: 27 };
-    delete old.masterVolume;
-    delete old.masterMuted;
+    old.masterVolume = 190;
+    old.masterMuted = true;
     const restored = loadPracticeSettings({ getItem: () => JSON.stringify(old) });
     assert.equal(restored.warning, "");
     assert.equal(restored.settings.view, "lanes");
     assert.equal(restored.settings.tempos["swing-ride"], 91);
-    assert.equal(restored.settings.masterVolume, 150);
-    assert.equal(restored.settings.masterMuted, false);
+    assert.equal(Object.hasOwn(restored.settings, "masterVolume"), false);
+    assert.equal(Object.hasOwn(restored.settings, "masterMuted"), false);
     assert.equal(restored.settings.guideVolume, 18);
     assert.equal(restored.settings.metronomeVolume, 100);
     assert.equal(restored.settings.latencyOffsetMs, 27);
-    for (const patch of [{ masterVolume: 201 }, { masterVolume: -1 }, { masterMuted: 1 }]) {
-        assert.equal(validPracticeSettings({ ...defaultPracticeSettings(), ...patch }), false);
-    }
+    assert.equal(validPracticeSettings({ ...defaultPracticeSettings(), metronomeVolume: 300 }), true);
 });

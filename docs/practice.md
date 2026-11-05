@@ -6,12 +6,14 @@ localhost. Open the app through HTTP, not by opening `index.html` directly.
 ## Controls
 
 Choose a lesson, set BPM and press **Start loop** or **Space**. The toolbar also
-has metronome, guide and master volume sliders with speaker icons for mute.
-Master controls both sounds together: 0–200%, default 150% for a louder mix.
-The desktop toolbar gives BPM about twice its earlier slider width, with audio
-sliders shortened to about two-thirds.
-Guide/metronome sliders retain their separate balance. Volume/mute and view
-changes keep playback running.
+has metronome and guide volume sliders with speaker icons for mute.
+Metronome spans 0–300% gain; guide drums span 0–100%. Both use logarithmic
+travel for finer control at low levels, with exact silence at the left endpoint.
+Arrow keys adjust by 1%, Page Up/Down by 10%, and Home/End select the limits.
+The metronome's 300% endpoint is three times its normal 100% signal gain; its
+click sound and timing are unchanged. There is no master volume or shared boost.
+Old master preferences are discarded; separate levels and mute states are kept.
+Volume/mute and view changes keep playback running.
 
 BPM uses whole numbers from 20 to 300. Its logarithmic slider gives more precision
 around slower practice tempos and advances faster at high tempos. Arrow keys

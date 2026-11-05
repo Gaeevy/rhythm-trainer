@@ -13,11 +13,8 @@ export class DrumAudio {
         this.metronome = context.createGain();
         this.guide.gain.value = 0.55;
         this.metronome.gain.value = 0.35;
-        this.master = context.createGain();
-        this.master.gain.value = 1.5;
-        this.guide.connect(this.master);
-        this.metronome.connect(this.master);
-        this.master.connect(context.destination);
+        this.guide.connect(context.destination);
+        this.metronome.connect(context.destination);
     }
 
     /** Load once per audio context before scheduling; a failure can retry on Start. */

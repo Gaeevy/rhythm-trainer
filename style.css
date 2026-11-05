@@ -13,7 +13,7 @@ a:hover { color: #fff; }
 .wordmark { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
 .logo { font-size: 30px; color: var(--accent); }
 .practice { border: 1px solid var(--border); border-radius: 12px; background: #1d2921; box-shadow: 0 20px 60px #07150d30; overflow: hidden; }
-.lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(200px, 1.7fr) minmax(230px, 1.7fr) repeat(3, minmax(95px, .7fr)) auto; align-items: end; gap: 16px; background: #243027; border-bottom: 1px solid var(--border); }
+.lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(200px, 1.7fr) minmax(230px, 1.7fr) repeat(2, minmax(95px, .7fr)) auto; align-items: end; gap: 16px; background: #243027; border-bottom: 1px solid var(--border); }
 .lesson-picker { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; }
 .lesson-picker { min-width: 0; }
 select, input[type="number"] { padding: 11px 12px; background: #1b261e; color: #f2f0e7; font-size: 14px; letter-spacing: 0; height: 43px; }
@@ -83,7 +83,7 @@ output { font-variant-numeric: tabular-nums; }
 #midi-status, #midi-monitor { font-size: 11px; color: var(--muted); line-height: 1.7; }
 #midi-status { color: #d2dbbd; }
 @media (max-width: 1150px) {
-  .lesson-controls { grid-template-columns: minmax(160px, 1.7fr) minmax(220px, 1.7fr) repeat(3, minmax(95px, .7fr)) auto; gap: 12px; padding: 14px; }
+  .lesson-controls { grid-template-columns: minmax(160px, 1.7fr) minmax(220px, 1.7fr) repeat(2, minmax(95px, .7fr)) auto; gap: 12px; padding: 14px; }
   .start-button { min-width: 112px; padding: 0 12px; gap: 12px; }
 }
 @media (max-width: 950px) {

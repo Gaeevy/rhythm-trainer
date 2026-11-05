@@ -46,7 +46,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 | Area | Source |
 | --- | --- |
-| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js) |
+| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |

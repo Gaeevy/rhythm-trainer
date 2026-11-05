@@ -1,3 +1,4 @@
+import { VOLUME_MAX, volumeFromPosition, positionFromVolume } from "./volume.js";
 import { practiceBpm, bpmFromPosition, positionFromBpm, MIN_BPM, MAX_BPM } from "./tempo.js";
 import { parseLesson } from "./lesson.js";
 import { DrumAudio } from "./audio.js";
@@ -160,7 +161,7 @@ function showStatus(message, error = false) {
 
 function updateMuteButton(bus, muted) {
     const button = element(`${bus}-mute`);
-    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : bus === "master" ? "master volume" : "metronome"}`;
+    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : "metronome"}`;
     button.setAttribute("aria-pressed", String(muted));
     button.setAttribute("aria-label", label);
     button.title = label;
@@ -181,8 +182,11 @@ function toggleTrack(instrument) {
 }
 
 function updateVolumes(save = true) {
-    for (const bus of ["guide", "metronome", "master"]) {
-        const volume = Number(element(`${bus}-volume`).value);
+    for (const bus of Object.keys(VOLUME_MAX)) {
+        const slider = element(`${bus}-volume`);
+        const volume = volumeFromPosition(Number(slider.value), VOLUME_MAX[bus]);
+        slider.setAttribute("aria-valuenow", String(volume));
+        slider.setAttribute("aria-valuetext", `${volume}%`);
         const muted = element(`${bus}-mute`).getAttribute("aria-pressed") === "true";
         element(`${bus}-level`).textContent = `${volume}%`;
         audio?.setVolume(bus, volume / 100, muted);
@@ -345,8 +349,20 @@ startButton.addEventListener("click", async () => {
     }
 });
 
-for (const bus of ["guide", "metronome", "master"]) {
-    element(`${bus}-volume`).addEventListener("input", updateVolumes);
+for (const bus of Object.keys(VOLUME_MAX)) {
+    const slider = element(`${bus}-volume`);
+    slider.addEventListener("input", updateVolumes);
+    slider.addEventListener("keydown", event => {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        const volume = preferences[`${bus}Volume`];
+        const values = { ArrowLeft: volume - 1, ArrowDown: volume - 1,
+            ArrowRight: volume + 1, ArrowUp: volume + 1,
+            PageDown: volume - 10, PageUp: volume + 10, Home: 0, End: VOLUME_MAX[bus] };
+        if (!Object.hasOwn(values, event.code)) return;
+        event.preventDefault();
+        slider.value = positionFromVolume(values[event.code], VOLUME_MAX[bus]);
+        slider.dispatchEvent(new Event("input"));
+    });
     element(`${bus}-mute`).addEventListener("click", event => {
         const button = event.currentTarget;
         const muted = button.getAttribute("aria-pressed") !== "true";
@@ -432,8 +448,8 @@ renderMidi(midi);
 countInInput.checked = preferences.countIn;
 toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
-for (const bus of ["guide", "metronome", "master"]) {
-    element(`${bus}-volume`).value = preferences[`${bus}Volume`];
+for (const bus of Object.keys(VOLUME_MAX)) {
+    element(`${bus}-volume`).value = positionFromVolume(preferences[`${bus}Volume`], VOLUME_MAX[bus]);
     updateMuteButton(bus, preferences[`${bus}Muted`]);
 }
 element("practice-settings-status").textContent = restoredPractice.warning
