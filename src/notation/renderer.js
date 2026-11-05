@@ -49,7 +49,11 @@ export function renderScoreBar(host, example, width = scoreWidth(host, example))
             }
             return engraved;
         });
-        for (const indices of part.beams) beams.push(new Beam(indices.map(index => notes[index])));
+        for (const indices of part.beams) {
+            const beam = new Beam(indices.map(index => notes[index]));
+            beam.renderOptions.beamWidth = 3;
+            beams.push(beam);
+        }
         for (const indices of part.tuplets ?? []) {
             tuplets.push(new Tuplet(indices.map(index => notes[index]), {
                 numNotes: 3, notesOccupied: 2, bracketed: true, location: part.stem === -1 ? -1 : 1,

@@ -98,14 +98,28 @@ function convertLesson(lesson, { combine = false, separateTuplets = false } = {}
                         else if (local.includes(TICKS_PER_EIGHTH)) { step = TICKS_PER_EIGHTH; duration = "8"; }
                     }
                     const group = [];
-                    for (let offset = 0; offset < span; offset += step) {
+                    const writtenOffsets = local.map(offset => swung && offset === SWING_EIGHTH_TICK ? TICKS_PER_EIGHTH : offset);
+                    for (let offset = 0; offset < span;) {
                         const performanceOffset = swung && offset === TICKS_PER_EIGHTH ? SWING_EIGHTH_TICK : offset;
                         const refs = sectionHits.filter(hit => hit.performanceTick === sectionStart + performanceOffset)
                             .map(hit => ({ ...hit, writtenTick: sectionStart + offset }));
                         const rest = refs.length === 0;
+                        let noteTicks = step, noteDuration = duration;
+                        // Use the longest aligned binary value before the next hit.
+                        // This removes artificial subdivision rests (8th + two 16ths)
+                        // without crossing a beat/half-beat or changing explicit tuplets.
+                        if (!triplet && step < span) {
+                            for (const [ticks, value] of [[TICKS_PER_BEAT, "4"], [TICKS_PER_EIGHTH, "8"], [TICKS_PER_SIXTEENTH, "16"]]) {
+                                if (ticks > step && offset % ticks === 0 && offset + ticks <= span
+                                    && !writtenOffsets.some(next => next > offset && next < offset + ticks)) {
+                                    noteTicks = ticks; noteDuration = value; break;
+                                }
+                            }
+                        }
                         group.push(notes.length);
-                        notes.push({ writtenTick: sectionStart + offset, durationTicks: step, duration: duration + (rest ? "r" : ""),
+                        notes.push({ writtenTick: sectionStart + offset, durationTicks: noteTicks, duration: noteDuration + (rest ? "r" : ""),
                             rest, refs, keys: rest ? [stem > 0 ? "d/5" : "b/4"] : refs.map(ref => ref.key), triplet, swung });
+                        offset += noteTicks;
                     }
                     if (step < span && group.filter(index => !notes[index].rest).length >= 2) beams.push(group);
                     if (triplet) tuplets.push(group);

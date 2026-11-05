@@ -1102,6 +1102,11 @@ async function notationCoverageFlow(browser, url) {
                     });
                     assert.equal(aligned, true, "Simultaneous snare and bass heads align vertically");
                 }
+                const thicknesses = await page.locator("#notation-score .vf-beam path").evaluateAll(paths => paths
+                    .map(path => path.getAttribute("d")).filter(d => d.endsWith("Z"))
+                    .map(d => d.match(/-?\d*\.?\d+(?:e[+-]?\d+)?/gi).map(Number))
+                    .map(points => Math.abs(points[1] - points[3])));
+                assert.ok(thicknesses.every(width => Math.abs(width - 3) < 0.001), `${id}: 3px beams`);
                 const combined = model.bars[bar].voices.some(voice => voice.id === "combined");
                 assert.equal(await page.locator("#notation-score svg").getAttribute("data-layout"), combined ? "combined" : "separate");
                 if (combined) {

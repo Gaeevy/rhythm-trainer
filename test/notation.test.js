@@ -197,7 +197,7 @@ test("dense song grooves combine their notation without added rest clutter", asy
         const model = lessonNotation(lesson);
         assert.ok(model.bars.every(bar => bar.voices.length === 1 && bar.voices[0].stem === -1), id);
         const rests = model.bars.flatMap(bar => bar.voices[0].notes.filter(note => note.rest));
-        assert.equal(rests.length, { "fascination-street": 0, californication: 2, "chop-suey": 7, "come-undone": 1 }[id], id);
+        assert.equal(rests.length, { "fascination-street": 0, californication: 0, "chop-suey": 0, "come-undone": 1 }[id], id);
         assert.deepEqual(references(model).map(ref => ref.id).sort(),
             lesson.tracks.flatMap(track => track.notes.map(tick => `${track.instrument}:${tick}`)).sort());
     }
@@ -210,4 +210,34 @@ test("straight quarter-note ride also stays independent from offbeat snare", () 
     assert.equal(model.bars[0].voices.length, 2);
     const ride = model.bars[0].voices.find(voice => voice.id === "cymbals");
     assert.ok(ride.notes.every(note => note.duration === "4"));
+});
+
+test("mixed binary durations remove subdivision rests within a beat-local beam", () => {
+    for (const [hits, durations] of [
+        [[0, 48, 72], ["8", "16", "16"]],
+        [[0, 24, 48], ["16", "16", "8"]],
+        [[0, 24, 72], ["16", "16", "16r", "16"]],
+        [[24, 48, 72], ["16r", "16", "16", "16"]],
+        [[0, 12, 48, 72], ["32", "32", "16r", "16", "16"]],
+    ]) {
+        const lesson = example(hits);
+        const original = structuredClone(lesson);
+        const voice = lessonNotation(lesson).bars[0].voices[0];
+        const beat = voice.notes.filter(note => note.writtenTick < 96);
+        assert.deepEqual(beat.map(note => note.duration), durations);
+        assert.equal(beat.reduce((sum, note) => sum + note.durationTicks, 0), 96);
+        assert.deepEqual(voice.beams[0], beat.map((_, index) => index));
+        assert.deepEqual(beat.flatMap(note => note.refs.map(ref => ref.performanceTick)), hits);
+        assert.deepEqual(lesson, original);
+    }
+});
+
+test("mixed durations never absorb a triplet rest or cross beat boundaries", () => {
+    const triplet = lessonNotation(example([0, 64], { feel: "straight", triplets: [{ instrument: "snare", tick: 0 }] }));
+    assert.deepEqual(triplet.bars[0].voices[0].notes.slice(0, 3).map(note => note.duration), ["8", "8r", "8"]);
+    const model = lessonNotation(example([72, 96, 144, 168]));
+    for (const note of model.bars[0].voices[0].notes) {
+        if (note.durationTicks <= 96) assert.ok(note.writtenTick % 96 + note.durationTicks <= 96);
+    }
+    assert.deepEqual(references(model).map(ref => ref.performanceTick), [72, 96, 144, 168]);
 });

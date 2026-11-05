@@ -91,7 +91,8 @@ alternative strategies; never enable both together.
 
 The combined voice uses downward stems and lighter stems/beams, leaving
 noteheads and bar lines dark. The renderer marks the already selected layout
-on the SVG; CSS styles it. Separate voices retain their existing presentation.
+on the SVG; CSS styles it. Separate voices keep upward cymbal and downward
+drum stems; the 3 px beam thickness applies to both layouts.
 This adds no new selection rule or lesson option.
 
 This deliberately keeps Fascination Street compact (zero rests instead of 35)
@@ -109,6 +110,20 @@ Regression cases live in [notation.test.js](../test/notation.test.js): dense
 songs/rest counts, Swing and Straight quarter-ride protection, incompatible
 grids, tuplets and identity preservation. Browser coverage checks rendering,
 feedback and score-following across the catalog at both site mounts.
+
+### Durations and beams
+
+After choosing the subdivision grid, `convertLesson()` emits the longest aligned
+binary note/rest value that fits before the next hit, within the current beat
+or half-beat section. For example, onsets at ticks 0/48/72 become an eighth and
+two sixteenths in one beam group, rather than four sixteenth slots with a rest.
+No event is skipped. Leading gaps remain rests; there are no dotted values,
+ties or extensions across a beat. Explicit triplet slots are never compacted.
+This is duration spelling inside the converter, not another layout strategy.
+
+Beam groups still follow beats/tuplets. The renderer uses VexFlow's existing
+`beamWidth` setting at 3 px for both shared and separate voices; no library
+patch or new render option is exposed to lessons/users.
 
 ## Packaging and release
 
