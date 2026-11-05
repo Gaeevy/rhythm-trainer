@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { scorePosition, markerX, scoreAnchors } from "../src/notation/position.js";
 
-const position = (writtenTick, performanceTick, x, { triplet = false, rest = false, voice = "hands", swung } = {}) => ({
+const position = (writtenTick, performanceTick, x, { triplet = false, rest = false, voice = "cymbals", swung } = {}) => ({
     note: { writtenTick, triplet, rest, swung, refs: rest ? [] : [{ performanceTick }] }, x, voice,
 });
 
@@ -44,8 +44,8 @@ test("explicit triplets stay literal inside Swing, including a triplet rest", ()
     assert.equal(markerX(240, anchors), 270);
 });
 
-test("rests use swing mapping and actual noteheads win over shifted feet/rest glyphs", () => {
-    const anchors = scoreAnchors([position(0, 0, 80), position(0, 0, 95, { voice: "feet" }),
+test("rests use swing mapping and actual noteheads win over shifted lower drum/rest glyphs", () => {
+    const anchors = scoreAnchors([position(0, 0, 80), position(0, 0, 95, { voice: "drums" }),
         position(48, 64, 150, { rest: true }), position(48, 64, 160, { voice: "snare" })],
         { barStart: 0, endX: 400, feel: "swing" });
     assert.equal(markerX(0, anchors), 80);

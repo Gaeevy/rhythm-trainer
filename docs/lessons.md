@@ -2,17 +2,30 @@
 
 ## Add a lesson
 
-Save one JSON file as `lessons/my-lesson.json`, then refresh the local app.
-Its filename is the lesson ID and its `title` appears in the dropdown, in filename
-order. No registry, browser importer or editor is needed. Keep filenames stable
-to preserve saved preferences. Run the [checks](development.md#checks), try the
-lesson, then commit/deploy when approved.
+Save one JSON file in a lesson folder, then refresh the local app:
+
+- `lessons/Songs/`: song excerpts.
+- `lessons/Swing/`: sheet swing exercises 7–20.
+- `lessons/Swing [YouTube]/`: existing swing lessons from the earlier videos.
+
+Folders appear in the Lesson menu; hovering over or tapping one reveals its
+lesson flyout, in filename order. Browsing folders does not change practice.
+A new folder automatically appears; nested folders use their full relative path
+as one folder label. Root-level JSON files are still supported under Other.
+The filename without `.json` is the lesson ID; `title` is the option text.
+Use lowercase hyphenated filenames, unique across all folders. Moving a file
+between groups preserves its ID, saved selection and tempo. Renaming the file
+changes its ID. No registry, importer or editor is needed. Run the
+[checks](development.md#checks), try the lesson, then commit/deploy when approved.
 
 The server discovers additions/deletions without restart. The generated catalog
 and Pages artifact are ignored by Git; never edit or commit them. Existing
 [lesson JSON files](../lessons/) are the source of truth for the current catalog.
 Song lessons are excerpt-based practice patterns, not full arrangements or backing
-tracks. Ghost notes currently have the same guide volume and scoring as other hits.
+tracks. Ghost notes and accent marks currently have the same guide volume and scoring
+as other hits. Sheet exercises 7–20 use fixed 2:1 swing, ride and hi-hat
+pedal on 2/4, with no added bass drum. Exercise 7 has snare on 1 and the swung
+and of 3; exercise 8 has snare on 2 and its swung and. All start at 80 BPM.
 
 ## JSON schema
 
@@ -111,9 +124,11 @@ intended written groups explicit, including necessary rests.
 
 ## Notation limits
 
-Conversion prefers one voice with shared stems. If other instruments conflict
-with a triplet grid, it retains independent voices, keeping the hinted instrument
-separate. Beams group by beat/tuplet; aligned quarter rests combine into half/bar
+Notation separates cymbals (upward stems) from drums and hi-hat pedal (downward
+stems). Their rhythms and beams stay independent, so an offbeat snare does not
+shorten a ride quarter note. Simultaneous snare/kick notes can still share a
+stem. If instruments within a group conflict with a triplet grid, the hinted
+instrument keeps its own voice. Beams group by beat/tuplet; aligned quarter rests combine into half/bar
 rests. Every head retains its instrument, original note index and performance
 tick; nearby heads can be displaced to avoid collisions. No hits are merged.
 Written durations describe rhythm, not recording sustain.

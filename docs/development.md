@@ -1,7 +1,7 @@
 # Development
 
 The app is static HTML/CSS and small JavaScript ES modules. Python's standard
-library serves files, discovers lesson JSON and packages the site; no Python
+library serves files, discovers lesson JSON recursively and packages the site; no Python
 virtual environment or external service is needed. Audio scheduling, timestamps,
 assessment and animation stay in the browser. Keep this architecture unless a
 new requirement needs something else.
@@ -58,9 +58,12 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 The Web Audio clock schedules playback. Original event timestamps are converted
 to that time base for matching; animation never determines hit timing. Both
-views share the assessment. Notation caches engraving and keeps six rows of
+views share the assessment. Notation groups cymbals separately from drums/pedal,
+with opposite stems and independent rhythms; conflicting triplet grids isolate
+the hinted instrument. Notation caches engraving and keeps six rows of
 independent loop copies. Layout fits one to three bars per row from width and
 rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
+An opaque 1.8px end-of-bar line makes each boundary clear.
 Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
@@ -71,6 +74,12 @@ remains in memory until reset; the bounded sheet does not bound assessment histo
 `generated/lesson-catalog.js` and `_site/` are outputs, never hand-edited sources.
 Only runtime files and asset notices are packaged; project docs/tools/tests are
 excluded. There is no JavaScript compilation step.
+
+The generated catalog records stable filename IDs, relative JSON paths and
+folder group names. IDs must be unique across folders; moving a file keeps
+saved preferences. A small [LessonPicker](../src/lesson-picker.js) uses a native popover with
+folder flyouts, keyboard navigation and touch controls. Browsing does not
+change playback; choosing a lesson uses the existing loading/reset path.
 
 The generated index points to `runtime/<content-hash>/` through a relative base
 URL. CSS, modules, lessons/catalog, config, recordings and notation assets share
