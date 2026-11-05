@@ -1,0 +1,525 @@
+{
+  "californication": {
+    "version": 1,
+    "title": "Californication",
+    "bpm": 96,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "hi_hat_closed",
+        "notes": [
+          0,
+          48,
+          96,
+          144,
+          192,
+          240,
+          288,
+          336
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          96,
+          120,
+          168,
+          216,
+          288,
+          360
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          240
+        ]
+      }
+    ]
+  },
+  "swing-01": {
+    "version": 1,
+    "title": "Swing 01: kick quarters and snare",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288
+        ]
+      }
+    ]
+  },
+  "swing-03": {
+    "version": 1,
+    "title": "Swing 03: snare triplet pair",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 2,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352,
+          384,
+          480,
+          544,
+          576,
+          672,
+          736
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288,
+          480,
+          672
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160,
+          384,
+          544,
+          608,
+          640
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288,
+          384,
+          480,
+          576,
+          672
+        ]
+      }
+    ]
+  },
+  "come-undone": {
+    "version": 1,
+    "title": "Come Undone",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          48,
+          96,
+          144,
+          176,
+          192,
+          240,
+          288,
+          336,
+          352,
+          368
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          96,
+          288
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0
+        ]
+      }
+    ]
+  },
+  "fascination-street": {
+    "version": 1,
+    "title": "Fascination Street: bars 9\u201312",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 4,
+    "tracks": [
+      {
+        "instrument": "hi_hat_closed",
+        "notes": [
+          0,
+          24,
+          48,
+          72,
+          120,
+          144,
+          168,
+          192,
+          216,
+          240,
+          264,
+          312,
+          336,
+          360,
+          384,
+          408,
+          432,
+          456,
+          504,
+          528,
+          552,
+          576,
+          600,
+          624,
+          648,
+          696,
+          744,
+          768,
+          792,
+          816,
+          840,
+          888,
+          912,
+          936,
+          960,
+          984,
+          1008,
+          1032,
+          1104,
+          1128,
+          1152,
+          1176,
+          1200,
+          1224,
+          1272,
+          1296,
+          1320,
+          1344,
+          1368,
+          1392,
+          1416,
+          1464,
+          1512
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          96,
+          288,
+          480,
+          672,
+          720,
+          864,
+          1056,
+          1080,
+          1248,
+          1440,
+          1488
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          24,
+          144,
+          168,
+          216,
+          384,
+          408,
+          528,
+          552,
+          600,
+          624,
+          768,
+          792,
+          912,
+          936,
+          984,
+          1152,
+          1176,
+          1296,
+          1320,
+          1368,
+          1392
+        ]
+      }
+    ]
+  },
+  "chop-suey": {
+    "version": 1,
+    "title": "Chop Suey!",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 2,
+    "tracks": [
+      {
+        "instrument": "hi_hat_closed",
+        "notes": [
+          0,
+          48,
+          96,
+          144,
+          192,
+          240,
+          288,
+          336,
+          384,
+          432,
+          480,
+          528,
+          576,
+          624,
+          672,
+          720
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          96,
+          168,
+          288,
+          360,
+          480,
+          552,
+          672,
+          744
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          72,
+          192,
+          264,
+          384,
+          456,
+          576,
+          624
+        ]
+      }
+    ]
+  },
+  "swing-ride": {
+    "version": 1,
+    "title": "Swing ride and hi-hat",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 1,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": []
+      },
+      {
+        "instrument": "kick",
+        "notes": []
+      }
+    ]
+  },
+  "swing-04": {
+    "version": 1,
+    "title": "Swing 04: offbeat snare response",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 2,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352,
+          384,
+          480,
+          544,
+          576,
+          672,
+          736
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288,
+          480,
+          672
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160,
+          448,
+          544
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288,
+          384,
+          480,
+          576,
+          672
+        ]
+      }
+    ]
+  },
+  "swing-02": {
+    "version": 1,
+    "title": "Swing 02: two-bar snare phrase",
+    "bpm": 80,
+    "time_signature": [
+      4,
+      4
+    ],
+    "bars": 2,
+    "tracks": [
+      {
+        "instrument": "ride",
+        "notes": [
+          0,
+          96,
+          160,
+          192,
+          288,
+          352,
+          384,
+          480,
+          544,
+          576,
+          672,
+          736
+        ]
+      },
+      {
+        "instrument": "hi_hat_pedal",
+        "notes": [
+          96,
+          288,
+          480,
+          672
+        ]
+      },
+      {
+        "instrument": "snare",
+        "notes": [
+          0,
+          160,
+          384,
+          544,
+          640
+        ]
+      },
+      {
+        "instrument": "kick",
+        "notes": [
+          0,
+          96,
+          192,
+          288,
+          384,
+          480,
+          576,
+          672
+        ]
+      }
+    ]
+  }
+}

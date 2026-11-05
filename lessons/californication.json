@@ -1,9 +1,10 @@
 {
-  "version": 1,
+  "version": 2,
   "title": "Californication",
   "bpm": 96,
   "time_signature": [4, 4],
   "bars": 1,
+  "notation": {"feel": "straight"},
   "tracks": [
     {"instrument": "hi_hat_closed", "notes": [0, 48, 96, 144, 192, 240, 288, 336]},
     {"instrument": "snare", "notes": [96, 120, 168, 216, 288, 360]},

@@ -98,3 +98,17 @@ test("removing a selected repository lesson preserves other practice preferences
     assert.equal(loaded.settings.guideVolume, 23);
     assert.equal(loaded.settings.latencyOffsetMs, 12);
 });
+
+test("notation view persists and older/malformed view fields preserve other preferences", () => {
+    const settings = { ...defaultPracticeSettings(), view: "notation", guideVolume: 23, latencyOffsetMs: 17 };
+    assert.equal(validPracticeSettings(settings), true);
+    assert.deepEqual(loadPracticeSettings({ getItem: () => JSON.stringify(settings) }).settings, settings);
+    for (const view of [undefined, "obsolete", null]) {
+        const old = { ...settings, view };
+        const restored = loadPracticeSettings({ getItem: () => JSON.stringify(old) });
+        assert.equal(restored.settings.view, "lanes");
+        assert.equal(restored.settings.guideVolume, 23);
+        assert.equal(restored.settings.latencyOffsetMs, 17);
+        assert.equal(restored.warning, "");
+    }
+});

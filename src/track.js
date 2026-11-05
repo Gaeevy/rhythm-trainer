@@ -1,5 +1,5 @@
 import { INSTRUMENTS } from "./instruments.js";
-import { TICKS_PER_BEAT } from "./music-time.js";
+import { TICKS_PER_BEAT, BEATS_PER_BAR } from "./music-time.js";
 import { FEEDBACK, feedbackText } from "./feedback.js";
 
 export const VISIBLE_BEATS = 8;
@@ -84,7 +84,7 @@ export class Track {
         const right = left + VISIBLE_BEATS;
         for (let gridBeat = Math.ceil(left); gridBeat <= right; gridBeat++) {
             const x = (gridBeat - left) * scale;
-            const barStart = gridBeat % 4 === 0;
+            const barStart = gridBeat % BEATS_PER_BAR === 0;
             context.strokeStyle = barStart ? "#83927b" : "#465447";
             context.lineWidth = barStart ? 2 : 1;
             context.beginPath();
@@ -95,8 +95,8 @@ export class Track {
                 context.fillStyle = barStart ? "#bfcbac" : "#83917f";
                 context.font = `${barStart ? "600 " : ""}10px sans-serif`;
                 context.textAlign = "left";
-                const bar = Math.floor(gridBeat % this.loopBeats / 4) + 1;
-                context.fillText(barStart ? `Bar ${bar}` : String(gridBeat % 4 + 1), x + 5, 14);
+                const bar = Math.floor(gridBeat % this.loopBeats / BEATS_PER_BAR) + 1;
+                context.fillText(barStart ? `Bar ${bar}` : String(gridBeat % BEATS_PER_BAR + 1), x + 5, 14);
             }
         }
         context.lineWidth = 1;

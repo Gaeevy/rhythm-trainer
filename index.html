@@ -39,6 +39,32 @@
         <div><h2 id="lesson-title">Loading lesson…</h2><p id="lesson-detail">4/4 · Repeating lesson</p><button id="lesson-tempo" type="button" class="text-button" hidden>Use lesson tempo</button></div>
         <span class="mode-badge">DRUM PRACTICE</span>
       </div>
+      <div class="view-controls" role="group" aria-label="Practice view">
+        <span>VIEW</span>
+        <button id="view-lanes" type="button" aria-pressed="true">Lanes</button>
+        <button id="view-notation" type="button" aria-pressed="false">Notation</button>
+      </div>
+      <div id="notation-error" class="notation-error" role="status" hidden>
+        <span id="notation-error-text"></span>
+        <button id="notation-retry" type="button">Retry notation</button>
+      </div>
+      <section id="notation-panel" class="notation-panel" aria-label="Lesson notation" tabindex="0" hidden>
+        <div id="notation-instruments" class="notation-instruments" role="group" aria-label="Enabled notation instruments"></div>
+        <div class="notation-paper">
+          <div class="notation-navigation">
+            <p id="notation-feel"></p>
+            <div><button id="notation-previous" type="button" aria-label="Previous score bar">←</button>
+            <span id="notation-page" aria-live="polite"></span><span id="notation-loop"></span>
+            <button id="notation-next" type="button" aria-label="Next score bar">→</button></div>
+          </div>
+          <div id="notation-scroll" class="notation-scroll" tabindex="0" aria-label="Repeating score; scroll to read more bars">
+            <div id="notation-sheet" class="notation-sheet"></div>
+          </div>
+        </div>
+        <p class="notation-caption">The score continues down the page as the lesson repeats.</p>
+        <p id="notation-feedback" class="notation-feedback" role="status" aria-live="polite">Play to see timing feedback.</p>
+        <details class="notation-legend"><summary>Drum key</summary><ul id="notation-key"></ul></details>
+      </section>
       <div id="timeline" class="timeline" tabindex="0" aria-label="Drum practice. Space: start / stop. D: kick. F: snare. J: hi-hat. K: ride.">
         <div class="timeline-heading"><span>INSTRUMENT</span><span class="lane-heading"><span class="past-label">PAST</span><span class="now-label">NOW</span><span class="upcoming-label">UPCOMING NOTES →</span></span></div>
         <div id="tracks"></div>
