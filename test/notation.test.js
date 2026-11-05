@@ -1,3 +1,4 @@
+import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
@@ -81,7 +82,7 @@ test("straight eighths/sixteenths get beat-local beams and sorted references", (
 test("migrated lessons preserve all scheduled events and note identities from before notation", async () => {
     const originals = JSON.parse(await readFile(new URL("./fixtures/notation-originals.json", import.meta.url)));
     for (const [id, original] of Object.entries(originals)) {
-        const migrated = JSON.parse(await readFile(new URL(`../lessons/${id}.json`, import.meta.url)));
+        const migrated = JSON.parse(await readFile(new URL(`../lessons/${BUNDLED_LESSONS.find(lesson => lesson.id === id).path}`, import.meta.url)));
         validateLesson(migrated);
         for (const bpm of [60, 96, 180]) assert.deepEqual(lessonEvents(migrated, bpm), lessonEvents(original, bpm));
         const refs = references(lessonNotation(migrated));
@@ -156,7 +157,7 @@ test("Swing retains literal finer subdivisions without swinging or rounding them
 });
 
 test("Come Undone uses shared stems and only the rhythmically necessary triplet rest", async () => {
-    const lesson = JSON.parse(await readFile(new URL("../lessons/come-undone.json", import.meta.url)));
+    const lesson = JSON.parse(await readFile(new URL(`../lessons/${BUNDLED_LESSONS.find(lesson => lesson.id === "come-undone").path}`, import.meta.url)));
     const model = lessonNotation(lesson);
     assert.equal(model.bars[0].voices.length, 1);
     const notes = model.bars[0].voices[0].notes;

@@ -21,17 +21,28 @@ CATALOG_PATH = "generated/lesson-catalog.js"
 def catalog_source(root: Path) -> str:
     """Read catalog metadata. Full lesson validation belongs to src/lesson.js."""
     lessons = []
-    for path in sorted((root / "lessons").glob("*.json")):
-        if path.is_symlink() or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", path.stem):
-            raise ValueError(f"{path.name}: use a regular JSON file with a lowercase hyphenated name")
+    ids: set[str] = set()
+    lesson_root = root / "lessons"
+    if lesson_root.is_symlink() or any(path.is_symlink() for path in lesson_root.rglob("*")):
+        raise ValueError("lessons/: use regular JSON files and folders, not symbolic links")
+    for path in sorted(lesson_root.rglob("*.json")):
+        relative = path.relative_to(lesson_root)
+        if any(part.startswith(".") for part in relative.parts):
+            continue
+        if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", path.stem):
+            raise ValueError(f"{relative}: use a regular JSON file with a lowercase hyphenated name")
         try:
             lesson = json.loads(path.read_text(encoding="utf-8"))
         except (ValueError, OSError) as error:
-            raise ValueError(f"{path.name}: {error}") from error
+            raise ValueError(f"{relative}: {error}") from error
         title = lesson.get("title") if isinstance(lesson, dict) else None
         if not isinstance(title, str) or not title.strip():
-            raise ValueError(f"{path.name}: title must be a nonempty string")
-        lessons.append({"id": path.stem, "title": title})
+            raise ValueError(f"{relative}: title must be a nonempty string")
+        if path.stem in ids:
+            raise ValueError(f"{relative}: duplicate lesson ID {path.stem}; filenames must be unique across folders")
+        ids.add(path.stem)
+        group = relative.parent.as_posix() if relative.parent != Path(".") else ""
+        lessons.append({"id": path.stem, "title": title, "path": relative.as_posix(), "group": group})
     if not lessons:
         raise ValueError("lessons/: at least one JSON lesson is required")
     return "export const BUNDLED_LESSONS = Object.freeze(" + json.dumps(lessons, indent=2) + ");\n"

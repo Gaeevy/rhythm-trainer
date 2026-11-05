@@ -5,7 +5,7 @@ localhost. Open the app through HTTP, not by opening `index.html` directly.
 
 ## Controls
 
-Choose a lesson, set BPM and press **Start loop** or **Space**. The toolbar also
+Choose a lesson from Songs, Swing or Swing [YouTube], set BPM and press **Start loop** or **Space**. The toolbar also
 has metronome and guide volume sliders with speaker icons for mute.
 Metronome spans 0–300% gain; guide drums span 0–100%. Both use logarithmic
 travel for finer control at low levels, with exact silence at the left endpoint.

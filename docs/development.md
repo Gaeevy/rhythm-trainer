@@ -1,7 +1,7 @@
 # Development
 
 The app is static HTML/CSS and small JavaScript ES modules. Python's standard
-library serves files, discovers lesson JSON and packages the site; no Python
+library serves files, discovers lesson JSON recursively and packages the site; no Python
 virtual environment or external service is needed. Audio scheduling, timestamps,
 assessment and animation stay in the browser. Keep this architecture unless a
 new requirement needs something else.
@@ -71,6 +71,10 @@ remains in memory until reset; the bounded sheet does not bound assessment histo
 `generated/lesson-catalog.js` and `_site/` are outputs, never hand-edited sources.
 Only runtime files and asset notices are packaged; project docs/tools/tests are
 excluded. There is no JavaScript compilation step.
+
+The generated catalog records stable filename IDs, relative JSON paths and
+folder group names. IDs must be unique across folders; moving a file keeps
+saved preferences. The dropdown uses native option groups.
 
 The generated index points to `runtime/<content-hash>/` through a relative base
 URL. CSS, modules, lessons/catalog, config, recordings and notation assets share

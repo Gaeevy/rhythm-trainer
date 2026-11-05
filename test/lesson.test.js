@@ -14,8 +14,8 @@ function example() {
 
 test("all bundled lessons parse and validate", async () => {
     const directory = new URL("../lessons/", import.meta.url);
-    const files = (await readdir(directory)).filter(file => file.endsWith(".json"));
-    assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ id }) => `${id}.json`).sort(),
+    const files = (await readdir(directory, { recursive: true })).filter(file => file.endsWith(".json"));
+    assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ path }) => path).sort(),
         "Each lesson JSON must have exactly one entry in the generated catalog");
     for (const file of files) {
         parseLesson(await readFile(new URL(file, directory), "utf8"));
@@ -108,4 +108,18 @@ test("removed generic hi-hat IDs are rejected", () => {
     const lesson = example();
     lesson.tracks = [{ instrument: "hi_hat", notes: [0] }, { instrument: "hi_hat_pedal", notes: [96] }];
     assert.throws(() => validateLesson(lesson), /must be one of/);
+});
+
+test("sheet swing exercises 7 and 8 retain the photographed coordination", async () => {
+    for (const [id, snare] of [["swing-exercise-07", [0, 256]], ["swing-exercise-08", [96, 160]]]) {
+        const entry = BUNDLED_LESSONS.find(lesson => lesson.id === id);
+        assert.equal(entry.group, "Swing");
+        const lesson = parseLesson(await readFile(new URL(`../lessons/${entry.path}`, import.meta.url), "utf8"));
+        assert.equal(lesson.bpm, 80);
+        assert.equal(lesson.bars, 1);
+        assert.equal(lesson.notation.feel, "swing");
+        assert.deepEqual(lesson.tracks.map(track => [track.instrument, track.notes]), [
+            ["ride", [0, 96, 160, 192, 288, 352]], ["hi_hat_pedal", [96, 288]], ["snare", snare],
+        ]);
+    }
 });

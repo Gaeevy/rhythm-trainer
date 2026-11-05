@@ -100,13 +100,24 @@ function updateKeyHints() {
 }
 
 function renderLessonOptions() {
-    const options = BUNDLED_LESSONS.map(({ id, title }) => {
+    lessonSelect.replaceChildren();
+    const groups = new Map();
+    for (const { id, title, group } of BUNDLED_LESSONS) {
+        let parent = lessonSelect;
+        if (group) {
+            if (!groups.has(group)) {
+                const optgroup = document.createElement("optgroup");
+                optgroup.label = group;
+                groups.set(group, optgroup);
+                lessonSelect.append(optgroup);
+            }
+            parent = groups.get(group);
+        }
         const option = document.createElement("option");
         option.value = id;
         option.textContent = title;
-        return option;
-    });
-    lessonSelect.replaceChildren(...options);
+        parent.append(option);
+    }
     lessonSelect.value = activeLessonId ?? preferences.lastBundledLessonId;
 }
 
@@ -279,8 +290,10 @@ async function changeLesson(read, id, { initial = false } = {}) {
 function loadLesson(initial = false) {
     const id = lessonSelect.value;
     return changeLesson(async () => {
-        if (!BUNDLED_LESSONS.some(entry => entry.id === id)) throw new Error("Unknown bundled lesson");
-        const response = await fetch(new URL(`../lessons/${id}.json`, import.meta.url));
+        const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
+        if (!entry) throw new Error("Unknown bundled lesson");
+        const path = entry.path.split("/").map(encodeURIComponent).join("/");
+        const response = await fetch(new URL(`../lessons/${path}`, import.meta.url));
         if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
         return parseLesson(await response.text());
     }, id, { initial });

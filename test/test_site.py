@@ -22,15 +22,30 @@ class SiteTests(unittest.TestCase):
         self.add_lesson("swing-01", 'First "lesson"')
 
     def add_lesson(self, name: str, title: str) -> None:
-        (self.root / "lessons" / f"{name}.json").write_text(json.dumps({"title": title}))
+        path = self.root / "lessons" / f"{name}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"title": title}))
 
     def test_discovery_uses_filename_order_and_json_titles(self) -> None:
         source = catalog_source(self.root)
         catalog = json.loads(source.split("Object.freeze(")[1].removesuffix(");\n"))
         self.assertEqual(catalog, [
-            {"id": "swing-01", "title": 'First "lesson"'},
-            {"id": "swing-02", "title": "Second"},
+            {"id": "swing-01", "title": 'First "lesson"', "path": "swing-01.json", "group": ""},
+            {"id": "swing-02", "title": "Second", "path": "swing-02.json", "group": ""},
         ])
+
+    def test_folders_group_lessons_and_moves_preserve_ids(self) -> None:
+        self.add_lesson("Swing [YouTube]/swing-03", "Third")
+        (self.root / "lessons/Songs").mkdir()
+        (self.root / "lessons/swing-01.json").rename(self.root / "lessons/Songs/swing-01.json")
+        catalog = json.loads(catalog_source(self.root).split("Object.freeze(")[1].removesuffix(");\n"))
+        moved = next(entry for entry in catalog if entry["id"] == "swing-01")
+        self.assertEqual(moved["group"], "Songs")
+        self.assertEqual(moved["path"], "Songs/swing-01.json")
+        self.assertEqual(catalog[1]["group"], "Swing [YouTube]")
+        self.add_lesson("Swing/swing-03", "Duplicate")
+        with self.assertRaisesRegex(ValueError, "duplicate lesson ID swing-03"):
+            catalog_source(self.root)
 
     def test_invalid_catalog_has_filename_in_error(self) -> None:
         path = self.root / "lessons/swing-01.json"
@@ -53,6 +68,10 @@ class SiteTests(unittest.TestCase):
         (self.root / "lessons/link.json").symlink_to(target)
         with self.assertRaisesRegex(ValueError, "regular JSON"):
             catalog_source(self.root)
+        (self.root / "lessons/link.json").unlink()
+        (self.root / "lessons/linked-folder").symlink_to(self.root)
+        with self.assertRaisesRegex(ValueError, "symbolic links"):
+            catalog_source(self.root)
 
     def test_server_discovers_additions_and_deletions_without_restart(self) -> None:
         server = create_server(self.root, port=0)
@@ -67,9 +86,9 @@ class SiteTests(unittest.TestCase):
                 self.assertEqual(response.getheader("Cache-Control"), "no-store")
                 return response.status, response.read()
             self.assertEqual(request()[0], 200)
-            self.add_lesson("new-lesson", "New lesson")
+            self.add_lesson("Swing/new-lesson", "New lesson")
             self.assertIn(b'"id": "new-lesson"', request()[1])
-            (self.root / "lessons/new-lesson.json").unlink()
+            (self.root / "lessons/Swing/new-lesson.json").unlink()
             self.assertNotIn(b'"id": "new-lesson"', request()[1])
             self.assertEqual(request("HEAD"), (200, b""))
             (self.root / "lessons/swing-01.json").write_text("broken")
@@ -87,10 +106,12 @@ class SiteTests(unittest.TestCase):
         for name in ("index.html", "style.css", "AGENTS.md", "private.txt"):
             (self.root / name).write_text("test")
         (self.root / "index.html").write_text("<!doctype html><html><head></head><body></body></html>")
+        self.add_lesson("Swing [YouTube]/nested-lesson", "Nested")
         output = build_site(self.root)
         runtime = next((output / "runtime").iterdir())
         self.assertEqual((runtime / CATALOG_PATH).read_text(), catalog_source(self.root))
         self.assertTrue((runtime / "assets/asset.js").exists())
+        self.assertTrue((runtime / "lessons/Swing [YouTube]/nested-lesson.json").exists())
         self.assertFalse((runtime / "assets/.secret").exists())
         self.assertFalse((output / "AGENTS.md").exists())
         self.assertFalse((output / "private.txt").exists())

@@ -76,7 +76,7 @@ async function mockMidi(context, options = {}) {
 }
 
 async function mockFixtureLessons(context) {
-    const catalog = [...BUNDLED_LESSONS, ...Object.entries(FIXTURE_LESSONS).map(([id, lesson]) => ({ id, title: lesson.title }))];
+    const catalog = [...BUNDLED_LESSONS, ...Object.entries(FIXTURE_LESSONS).map(([id, lesson]) => ({ id, title: lesson.title, path: `${id}.json`, group: "Test fixtures" }))];
     await context.route("**/generated/lesson-catalog.js", route => route.fulfill({
         contentType: "text/javascript", body: `export const BUNDLED_LESSONS = ${JSON.stringify(catalog)};`,
     }));
@@ -98,12 +98,32 @@ async function catalogFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length);
-        for (const { id, title } of BUNDLED_LESSONS) {
+        assert.deepEqual(await page.locator("#lesson optgroup").evaluateAll(groups => groups.map(group => group.label)),
+            ["Songs", "Swing", "Swing [YouTube]"]);
+        for (const { id, title, group } of BUNDLED_LESSONS) {
+            assert.equal(await page.locator(`#lesson option[value="${id}"]`).textContent(), title);
+            assert.equal(await page.locator(`#lesson option[value="${id}"]`).evaluate(option => option.parentElement.label), group);
             await page.locator("#lesson").selectOption(id);
             await waitForLesson(page, id);
         }
         assert.deepEqual(errors, []);
-        console.log(`PASS repository lesson catalog: ${new URL(url).pathname}`);
+        await page.locator("#lesson").selectOption("swing-exercise-07");
+        await waitForLesson(page, "swing-exercise-07");
+        await page.locator("#notation-sheet svg").first().waitFor();
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-swing-exercise-07.png", fullPage: true });
+        await selectView(page, "lanes");
+        assert.equal(await page.locator(".track").count(), 3);
+        await setBpm(page, 93);
+        await page.reload();
+        await waitForLesson(page, "swing-exercise-07");
+        assert.equal(await page.locator("#bpm-level").textContent(), "93");
+        await page.locator("#lesson").selectOption("swing-exercise-08");
+        await waitForLesson(page, "swing-exercise-08");
+        await selectView(page, "notation");
+        await page.locator("#notation-sheet svg").first().waitFor();
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-swing-exercise-08.png", fullPage: true });
+        assert.deepEqual(errors, []);
+        console.log(`PASS grouped repository lesson catalog, nested assets, new exercises and persistence: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
 
@@ -201,7 +221,7 @@ async function practiceFlow(browser, url) {
         await selectView(page, "lanes");
         assert.equal(await page.locator("#lesson option").count(), BUNDLED_LESSONS.length + Object.keys(FIXTURE_LESSONS).length);
         for (const { id } of BUNDLED_LESSONS) {
-            const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
+            const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", BUNDLED_LESSONS.find(lesson => lesson.id === id).path), "utf8"));
             await page.locator("#lesson").selectOption(id);
             await waitForLesson(page, id);
             assert.deepEqual(await page.locator(".track").evaluateAll(lanes => lanes.map(lane => lane.dataset.instrument)),
@@ -643,7 +663,7 @@ async function notationFlow(browser, url) {
         await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 1");
         assert.equal(await page.locator("#notation-instruments button").count(), 4, "Empty tracks retain their controls");
         // Unsupported ticks are a test-only fixture; all production lessons now render.
-        await page.route("**/lessons/come-undone.json", route => route.fulfill({ json: {
+        await page.route("**/lessons/Songs/come-undone.json", route => route.fulfill({ json: {
             version: 1, title: "Unsupported test rhythm", bpm: 80, bars: 1, time_signature: [4, 4],
             tracks: [{ instrument: "snare", notes: [0, 383] }],
         } }));
@@ -708,6 +728,7 @@ async function scoreFollowingFlow(browser, url) {
             const { lessonNotation } = await import("./src/notation/model.js");
             const { renderScoreBar } = await import("./src/notation/renderer.js");
             const { markerX } = await import("./src/notation/position.js");
+            const { BUNDLED_LESSONS } = await import("./generated/lesson-catalog.js");
             const host = document.createElement("div");
             host.style.cssText = "position:absolute;left:-2000px;width:700px";
             document.body.append(host);
@@ -718,7 +739,7 @@ async function scoreFollowingFlow(browser, url) {
                     ["swing-01", 0, "ride", [160, 352]],
                     ["swing-03", 1, "snare", [608, 640]],
                 ]) {
-                    const response = await fetch(`./lessons/${id}.json`);
+                    const response = await fetch(`./lessons/${BUNDLED_LESSONS.find(lesson => lesson.id === id).path}`);
                     const model = lessonNotation(await response.json());
                     const bar = model.bars[barIndex];
                     const engraved = [];
@@ -972,7 +993,7 @@ async function notationCoverageFlow(browser, url) {
         await ready(page);
         await selectView(page, "notation");
         for (const id of [...BUNDLED_LESSONS.map(lesson => lesson.id), ...Object.keys(FIXTURE_LESSONS)]) {
-            const lesson = FIXTURE_LESSONS[id] ?? JSON.parse(await readFile(resolve(runtimeRoot, "lessons", `${id}.json`), "utf8"));
+            const lesson = FIXTURE_LESSONS[id] ?? JSON.parse(await readFile(resolve(runtimeRoot, "lessons", BUNDLED_LESSONS.find(lesson => lesson.id === id).path), "utf8"));
             await page.locator("#lesson").selectOption(id);
             await waitForLesson(page, id);
             await page.locator("#notation-score svg").waitFor();
