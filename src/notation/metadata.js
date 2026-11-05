@@ -1,3 +1,4 @@
+import { TICKS_PER_BEAT, TICKS_PER_EIGHTH } from "../music-time.js";
 /** Validate notation hints without changing performance notes or clocks. */
 export function validateNotation(notation, tracks) {
     const fail = message => { throw new Error(message); };
@@ -17,7 +18,7 @@ export function validateNotation(notation, tracks) {
         if (!Number.isSafeInteger(hint.tick) || !track?.notes.includes(hint.tick)) fail(`${path}: must reference an existing instrument/note tick`);
         const unit = hint.unit ?? 8;
         if (![8, 16].includes(unit)) fail(`${path}: unit must be 8 or 16`);
-        const span = unit === 8 ? 96 : 48;
+        const span = unit === 8 ? TICKS_PER_BEAT : TICKS_PER_EIGHTH;
         const start = Math.floor(hint.tick / span) * span;
         if (groups.some(group => group.instrument === hint.instrument && start < group.end && start + span > group.start)) {
             fail(`${path}: duplicates or overlaps an instrument/triplet group`);

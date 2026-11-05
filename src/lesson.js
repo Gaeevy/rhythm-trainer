@@ -1,5 +1,5 @@
 import { validateNotation } from "./notation/metadata.js";
-import { TICKS_PER_BAR } from "./music-time.js";
+import { TICKS_PER_BAR, BEATS_PER_BAR } from "./music-time.js";
 import { INSTRUMENTS } from "./instruments.js";
 
 export const SUPPORTED_INSTRUMENTS = Object.freeze(Object.keys(INSTRUMENTS));
@@ -44,7 +44,7 @@ export function validateLesson(lesson) {
     );
     requireCondition(
         Array.isArray(lesson.time_signature) && lesson.time_signature.length === 2
-            && lesson.time_signature[0] === 4 && lesson.time_signature[1] === 4,
+            && lesson.time_signature[0] === BEATS_PER_BAR && lesson.time_signature[1] === 4,
         "lesson.time_signature", "must be [4, 4]",
     );
     requireCondition(

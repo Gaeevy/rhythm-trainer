@@ -14,8 +14,8 @@ notices are from `vexflow/vexflow-fonts` revision
 - [Academico license](https://github.com/vexflow/vexflow-fonts/blob/b2bc3a6070225e4d395966b36de76c36a9429b1c/academico/LICENSE.txt)
 
 Bundle size: **728,171 bytes (711.1 KiB)** uncompressed, including embedded fonts.
-It is loaded only by the local notation preview in milestone 1. Site packaging
-copies it into `assets/`, but the practice app does not request it yet.
+The app loads it locally when Notation is first selected. Site packaging places
+it under the same versioned runtime path as the app; no runtime CDN is used.
 Source maps and the unused alternate bundles are not included.
 
 SHA-256:

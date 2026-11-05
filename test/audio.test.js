@@ -10,9 +10,9 @@ function harness() {
     const parameter = () => ({ value: 0, events: [],
         setValueAtTime(value, time) { this.events.push(["set", value, time]); },
         linearRampToValueAtTime(value, time) { this.events.push(["linear", value, time]); },
-        exponentialRampToValueAtTime() {}, cancelScheduledValues() {}, setTargetAtTime() {},
+        exponentialRampToValueAtTime(value, time) { this.events.push(["exponential", value, time]); }, cancelScheduledValues() {}, setTargetAtTime() {},
     });
-    const node = () => ({ connect() {}, disconnect() {}, gain: parameter() });
+    const node = () => ({ connections: [], connect(target) { this.connections.push(target); }, disconnect() {}, gain: parameter() });
     const source = kind => {
         const result = { ...node(), kind, frequency: parameter(), starts: [], stops: [],
             start(time) { this.starts.push(time); }, stop(time) { this.stops.push(time); } };
@@ -91,4 +91,26 @@ test("every instrument has a valid non-silent local PCM recording in a small sou
         bytes += wav.length;
     }
     assert.ok(bytes < 3 * 1024 * 1024);
+});
+
+
+test("unavailable guide recordings never create substitute sounds; metronome remains independent", async () => {
+    const h = harness();
+    assert.equal(await h.audio.loadSamples(async () => ({ ok: false, status: 404 })), false);
+    for (const instrument of Object.keys(DRUM_SAMPLES)) assert.throws(() => h.audio.schedule(instrument, 2), /Recording unavailable/);
+    assert.equal(h.sources.length, 0);
+    for (const [accent, frequency] of [[false, 1000], [true, 1400]]) {
+        h.audio.schedule("metronome", 3, accent);
+        const source = h.sources.at(-1);
+        assert.equal(source.type, "sine");
+        assert.deepEqual(source.frequency.events, [["set", frequency, 3], ["exponential", frequency, 3.035]]);
+        assert.deepEqual(source.connections[0].gain.events, [["set", 0, 3], ["linear", 0.25, 3.002], ["exponential", 0.0001, 3.035]]);
+        assert.deepEqual(source.starts, [3]);
+        assert.deepEqual(source.stops, [3 + 0.035 + 0.01]);
+        source.onended();
+        assert.equal(h.audio.sources.size, 0);
+    }
+    assert.equal(await h.audio.loadSamples(h.fetcher), true);
+    h.audio.schedule("kick", 4);
+    assert.equal(h.sources.at(-1).kind, "sample");
 });

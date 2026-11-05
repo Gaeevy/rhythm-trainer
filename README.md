@@ -57,11 +57,11 @@ The renderer/fonts load locally only when Notation is selected, adding about
 711 KiB plus notices. No CDN is required.
 [Version, licenses, hashes, and reproduction](assets/vendor/vexflow/README.md).
 [Version 2 format](notation-format.md) covers supported rhythms and authoring.
-The static three-example development preview remains at
-[localhost:8000/scripts/notation-preview.html](http://localhost:8000/scripts/notation-preview.html);
-it is excluded from the Pages artifact.
+The main app is also the notation review surface; the separate static preview
+has been removed. `npm run test:browser` checks actual app engraving and playback
+at root and the Pages subpath.
 
-For tomorrow's readability/scrolling review, start [localhost:8000](http://localhost:8000) and choose
+For a local practice check, start [localhost:8000](http://localhost:8000) and choose
 **Notation**:
 
 1. **Come Undone:** compare its shared stems and single necessary rest with the
@@ -175,9 +175,11 @@ separate storage. Activity totals are not stored or sent to a server.
 Twelve local acoustic recordings from **Karoryfer Big Rusty Drums**, under CC0,
 load once on first Start (about **1.8 MiB**). The metronome retains its synthesized
 sound. Closing the guide hi-hat cuts off an open recording at the scheduled time.
-If loading fails, the app uses synthesized drums and retries on the next Start.
-Stop during loading cannot start a delayed loop. Practice settings reports the
-current sound source. Listening balance remains subject to user review.
+Guide drums use recordings only. If a recording fails to load or decode, playback
+stays stopped with an error; press Start to retry after fixing the connection.
+No substitute drum sounds are played. The metronome's sound is unchanged.
+Stop during loading cannot start a delayed loop. Listening balance still needs
+user review.
 
 [Credits, license, source revision, and preparation details](assets/drums/README.md)
 are included with the assets. The optional macOS regeneration command is:
@@ -311,6 +313,15 @@ loops. Earlier rows preserve independent feedback. The
 versioned artifact is tested with cached prior CSS/modules. Native audio clocks
 and timers remain active. Sound quality and physical latency
 still require manual checks.
+
+The notation implementation separates engraving (`src/notation/renderer.js`),
+displayed bars and their SVG feedback (`src/notation/bar.js`), and score following
+(`src/notation/view.js`). Cached engraving is reused across loops. Note feedback
+is projected when results change or bars are created; summary text changes only
+when displayed values change. Animation continues to move the marker/score and
+expire extra-hit marks. Instrument labels come from `src/instruments.js`; musical
+timing constants come from `src/music-time.js`. MIDI mappings remain separate in
+the MPS-850 config.
 
 ## Deployment and remaining acceptance
 

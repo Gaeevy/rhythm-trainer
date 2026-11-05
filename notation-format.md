@@ -152,6 +152,12 @@ no notes are silently omitted. General ties/dotted durations, arbitrary tuplets,
 custom voices, dynamics/ghost-note volume, rim/bell/edge notation, other meters,
 variable swing, editing, and printing remain outside this iteration.
 
-For visual review, use the main app's Notation view. The static development page
-at `/scripts/notation-preview.html` still fetches Californication, Swing 01, and
-Swing 03 and displays their exact metadata. The preview is not deployed.
+For visual review, use the main app's Notation view. The obsolete static preview
+and its separate test runner have been removed. App browser checks cover every
+lesson, bundled fonts, actual marker geometry, resizing and recovery.
+
+`renderer.js` engraves reusable bars; `bar.js` creates each displayed copy and
+updates SVG noteheads/extras. `view.js` handles the bounded sheet and following.
+Noteheads are refreshed when assessment results change or a new copy appears;
+unchanged animation frames do not repeat the projection. Extra-hit expiry still
+uses animation time. The assessment remains the sole source of hit grading.

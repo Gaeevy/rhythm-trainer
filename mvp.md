@@ -119,7 +119,8 @@ Note On creates one hit. Rims and separate bow/edge/bell are excluded for now.
   source paths, pinned revision, and regeneration instructions in `assets/drums/`.
   The metronome stays synthesized and unchanged. No runtime external sample service.
 - Load/decode recordings once before scheduling. Stop invalidates pending Start.
-  Failed loads use synthesized guide sounds and can retry on the next Start.
+  Failed loads stop Start before scheduling, show a clear error, and retry on
+  the next Start. Guide drums use recordings only; the metronome is unchanged.
 - Choke open hi-hat guide recordings at scheduled closed-hit/pedal time. Stop
   cancels all active/scheduled sounds, including cymbal tails.
 - The module supplies the player's drum audio. Verify that the actual audio setup
@@ -267,8 +268,12 @@ checks include content-versioned runtime assets to prevent stale CSS/modules.
 The accepted release candidate is committed as `d6f9466`. A new uncommitted
 readability/scrolling follow-up combines compatible drums on shared stems,
 retains only necessary rests, and repeats the score vertically with bounded rows.
-It replaces current/upcoming bar swapping. Its checks and review are tracked in
-`notation-plan.md`; deployment remains pending.
+It replaces current/upcoming bar swapping. The approved readability version is
+committed as `8418cd7`. The subsequent refactor separates bar SVG work from score
+following, skips unchanged feedback/summary updates, retires the static preview,
+and makes guide drums recordings-only with explicit load failure/retry. That
+refactor remains uncommitted; checks and review are in `notation-plan.md`.
+Deployment and real-kit acceptance remain pending.
 Version 2 notation metadata is described in
 [notation-format.md](notation-format.md); version 1 and performance ticks remain
 supported unchanged. Its verification and user acceptance are recorded in that plan.

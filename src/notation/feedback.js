@@ -1,3 +1,4 @@
+import { TICKS_PER_BEAT, TICKS_PER_BAR } from "../music-time.js";
 import { FEEDBACK, feedbackText } from "../feedback.js";
 import { INSTRUMENTS } from "../instruments.js";
 
@@ -23,10 +24,10 @@ export function noteAppearance(assessment, ref, iteration, disabled = []) {
 /** Position an unmatched hit precisely; it is an overlay, never a written note. */
 export function extraPosition(result, assessment, bars) {
     if (result.status !== "extra" || !assessment) return null;
-    const total = (result.correctedTime - assessment.origin) / assessment.secondsPerBeat * 96;
+    const total = (result.correctedTime - assessment.origin) / assessment.secondsPerBeat * TICKS_PER_BEAT;
     if (!Number.isFinite(total) || total < 0) return null;
-    const bar = Math.floor(total / 384);
-    return { iteration: Math.floor(bar / bars), barIndex: bar % bars, tick: total - bar * 384 };
+    const bar = Math.floor(total / TICKS_PER_BAR);
+    return { iteration: Math.floor(bar / bars), barIndex: bar % bars, tick: total - bar * TICKS_PER_BAR };
 }
 
 export function feedbackColor(status) {

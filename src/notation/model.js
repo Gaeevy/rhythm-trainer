@@ -1,7 +1,13 @@
+import {
+    TICKS_PER_BEAT, TICKS_PER_BAR, BEATS_PER_BAR, TICKS_PER_EIGHTH,
+    TICKS_PER_SIXTEENTH, TICKS_PER_THIRTY_SECOND, TICKS_PER_EIGHTH_TRIPLET, SWING_EIGHTH_TICK,
+} from "../music-time.js";
 import { validateLesson } from "../lesson.js";
 import { DRUM_KEY } from "./drum-key.js";
 
 export class NotationError extends Error {}
+
+const onGrid = (offsets, spacing) => offsets.every(offset => offset % spacing === 0);
 
 // Combine only aligned quarter rests; never merge through a note or tuplet.
 function compactRests(notes, beams, tuplets) {
@@ -9,15 +15,15 @@ function compactRests(notes, beams, tuplets) {
     for (let index = 0; index < notes.length;) {
         const note = notes[index];
         let count = 1;
-        for (const candidate of [4, 2]) {
-            if (note.writtenTick % (96 * candidate) === 0
+        for (const candidate of [BEATS_PER_BAR, 2]) {
+            if (note.writtenTick % (TICKS_PER_BEAT * candidate) === 0
                 && notes.slice(index, index + candidate).length === candidate
-                && notes.slice(index, index + candidate).every(item => item.rest && item.durationTicks === 96)) {
+                && notes.slice(index, index + candidate).every(item => item.rest && item.durationTicks === TICKS_PER_BEAT)) {
                 count = candidate; break;
             }
         }
         for (let offset = 0; offset < count; offset++) indices.set(index + offset, compact.length);
-        compact.push(count === 1 ? note : { ...note, durationTicks: count * 96, duration: count === 4 ? "1r" : "2r" });
+        compact.push(count === 1 ? note : { ...note, durationTicks: count * TICKS_PER_BEAT, duration: count === BEATS_PER_BAR ? "1r" : "2r" });
         index += count;
     }
     const remap = groups => groups.map(group => group.map(index => indices.get(index)));
@@ -48,43 +54,44 @@ function convertLesson(lesson, combine) {
         const stem = id === "feet" || (separate.has(id) && id !== "ride") ? -1 : 1;
         for (const bar of bars) {
             const notes = [], beams = [], tuplets = [];
-            for (let beat = 0; beat < 4; beat++) {
-                const start = bar.index * 384 + beat * 96;
-                const hits = events.filter(event => event.performanceTick >= start && event.performanceTick < start + 96);
-                const beatHints = hints.filter(hint => voiceFor(hint.instrument) === id && Math.floor(hint.tick / 96) === start / 96);
+            for (let beat = 0; beat < BEATS_PER_BAR; beat++) {
+                const start = bar.index * TICKS_PER_BAR + beat * TICKS_PER_BEAT;
+                const hits = events.filter(event => event.performanceTick >= start && event.performanceTick < start + TICKS_PER_BEAT);
+                const beatHints = hints.filter(hint => voiceFor(hint.instrument) === id && Math.floor(hint.tick / TICKS_PER_BEAT) === start / TICKS_PER_BEAT);
                 const offsets = hits.map(hit => hit.performanceTick - start);
                 const eighthTriplet = beatHints.some(hint => (hint.unit ?? 8) === 8)
-                    || (feel === "straight" && offsets.some(offset => offset % 12 !== 0) && offsets.every(offset => offset % 32 === 0));
+                    || (feel === "straight" && !onGrid(offsets, TICKS_PER_THIRTY_SECOND) && onGrid(offsets, TICKS_PER_EIGHTH_TRIPLET));
                 const split = !eighthTriplet && (beatHints.some(hint => hint.unit === 16)
-                    || (feel === "straight" && offsets.some(offset => offset % 12 !== 0)));
-                const span = split ? 48 : 96;
-                for (let section = 0; section < 96; section += span) {
+                    || (feel === "straight" && !onGrid(offsets, TICKS_PER_THIRTY_SECOND)));
+                const span = split ? TICKS_PER_EIGHTH : TICKS_PER_BEAT;
+                for (let section = 0; section < TICKS_PER_BEAT; section += span) {
                     const sectionStart = start + section;
                     const sectionHits = hits.filter(hit => hit.performanceTick >= sectionStart && hit.performanceTick < sectionStart + span);
                     const local = sectionHits.map(hit => hit.performanceTick - sectionStart);
-                    let step = span, duration = span === 48 ? "8" : "4", triplet = false, swung = false;
-                    const sixteenthTriplet = split && (beatHints.some(hint => hint.unit === 16 && Math.floor(hint.tick / 48) === sectionStart / 48)
-                        || local.some(offset => offset % 12 !== 0));
+                    let step = span, duration = span === TICKS_PER_EIGHTH ? "8" : "4", triplet = false, swung = false;
+                    const finerBinary = local.some(offset => offset % TICKS_PER_EIGHTH !== 0 && offset % TICKS_PER_THIRTY_SECOND === 0);
+                    const sixteenthTriplet = split && (beatHints.some(hint => hint.unit === 16 && Math.floor(hint.tick / TICKS_PER_EIGHTH) === sectionStart / TICKS_PER_EIGHTH)
+                        || !onGrid(local, TICKS_PER_THIRTY_SECOND));
                     if (eighthTriplet || sixteenthTriplet) {
                         step = span / 3; duration = eighthTriplet ? "8" : "16"; triplet = true;
-                        if (!local.every(offset => offset % step === 0)) {
+                        if (!onGrid(local, step)) {
                             throw new NotationError(`${id}, bar ${bar.index + 1}, beat ${beat + 1}: unsupported rhythm; no notes were rounded`);
                         }
-                    } else if (feel === "swing" && !split && !local.some(offset => offset % 48 !== 0 && offset % 12 === 0)) {
-                        if (!local.every(offset => offset === 0 || offset === 64)) {
-                            throw new NotationError(`${id}, bar ${bar.index + 1}, beat ${beat + 1}: add an explicit triplet hint; swing eighths use offsets 0/64`);
+                    } else if (feel === "swing" && !split && !finerBinary) {
+                        if (!local.every(offset => offset === 0 || offset === SWING_EIGHTH_TICK)) {
+                            throw new NotationError(`${id}, bar ${bar.index + 1}, beat ${beat + 1}: add an explicit triplet hint; swing eighths use offsets 0/${SWING_EIGHTH_TICK}`);
                         }
                         swung = true;
-                        if (local.includes(64)) { step = 48; duration = "8"; }
+                        if (local.includes(SWING_EIGHTH_TICK)) { step = TICKS_PER_EIGHTH; duration = "8"; }
                     } else {
-                        if (!local.every(offset => offset % 12 === 0)) throw new NotationError(`${id}: unsupported rhythm; no notes were rounded`);
-                        if (local.some(offset => offset % 24 !== 0)) { step = 12; duration = "32"; }
-                        else if (local.some(offset => offset % 48 !== 0)) { step = 24; duration = "16"; }
-                        else if (local.includes(48)) { step = 48; duration = "8"; }
+                        if (!onGrid(local, TICKS_PER_THIRTY_SECOND)) throw new NotationError(`${id}: unsupported rhythm; no notes were rounded`);
+                        if (!onGrid(local, TICKS_PER_SIXTEENTH)) { step = TICKS_PER_THIRTY_SECOND; duration = "32"; }
+                        else if (!onGrid(local, TICKS_PER_EIGHTH)) { step = TICKS_PER_SIXTEENTH; duration = "16"; }
+                        else if (local.includes(TICKS_PER_EIGHTH)) { step = TICKS_PER_EIGHTH; duration = "8"; }
                     }
                     const group = [];
                     for (let offset = 0; offset < span; offset += step) {
-                        const performanceOffset = swung && offset === 48 ? 64 : offset;
+                        const performanceOffset = swung && offset === TICKS_PER_EIGHTH ? SWING_EIGHTH_TICK : offset;
                         const refs = sectionHits.filter(hit => hit.performanceTick === sectionStart + performanceOffset)
                             .map(hit => ({ ...hit, writtenTick: sectionStart + offset }));
                         const rest = refs.length === 0;

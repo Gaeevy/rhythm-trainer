@@ -1,3 +1,4 @@
+import { TICKS_PER_BAR } from "../music-time.js";
 /** A bounded six-row window into an indefinitely repeated lesson. */
 export function sheetWindow(absoluteBar, columns) {
     if (!Number.isSafeInteger(absoluteBar) || absoluteBar < 0 || ![1, 2].includes(columns)) {
@@ -9,5 +10,5 @@ export function sheetWindow(absoluteBar, columns) {
 
 export function sheetPosition(absoluteBar, bars, columns, tick) {
     return { barIndex: absoluteBar % bars, iteration: Math.floor(absoluteBar / bars),
-        rowProgress: (absoluteBar % columns + tick / 384) / columns };
+        rowProgress: (absoluteBar % columns + tick / TICKS_PER_BAR) / columns };
 }

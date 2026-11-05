@@ -4,7 +4,7 @@ import { Playback } from "./playback.js";
 import { NotationView } from "./notation/view.js";
 import { Track } from "./track.js";
 import { BEATS_PER_BAR } from "./music-time.js";
-import { Assessment } from "./assessment.js";
+import { Assessment, TimingStatus } from "./assessment.js";
 import { audioTimeForEvent } from "./clock.js";
 import { keyboardInstrument, keyboardTransport, instrumentKeyLabel, remapKey, DEFAULT_KEY_BINDINGS } from "./input.js";
 import { MidiInput } from "./midi.js";
@@ -35,6 +35,14 @@ let loading = true;
 let assessment = null;
 let activeLessonId = null;
 let sessionElapsedSeconds = 0;
+let summaryValues = [];
+const timingStates = Object.values(TimingStatus);
+
+function setText(id, value) {
+    const node = element(id);
+    const text = String(value);
+    if (node.textContent !== text) node.textContent = text;
+}
 
 function recordInputHit(hit) {
     if (!playback?.running || !assessment) return;
@@ -108,16 +116,18 @@ function updateTempoReset() {
 }
 
 function updateSummary() {
-    for (const state of ["on_time", "early", "late", "missed", "extra"]) {
-        element(`score-${state}`).textContent = assessment?.counts[state] ?? 0;
-    }
-    const meanError = assessment?.meanAbsoluteErrorMs;
-    element("mean-error").textContent = meanError == null ? "—" : `${meanError.toFixed(1)} ms`;
     const seconds = Math.floor(sessionElapsedSeconds);
-    element("session-duration").textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
     const loops = assessment ? Math.floor(sessionElapsedSeconds / assessment.loopSeconds) : 0;
-    element("session-loops").textContent = loops;
-    element("session-loop-label").textContent = loops === 1 ? "loop completed" : "loops completed";
+    const meanError = assessment?.meanAbsoluteErrorMs;
+    const counts = timingStates.map(state => assessment?.counts[state] ?? 0);
+    const values = [...counts, seconds, loops, meanError];
+    if (values.every((value, index) => Object.is(value, summaryValues[index]))) return;
+    summaryValues = values;
+    timingStates.forEach((state, index) => setText(`score-${state}`, counts[index]));
+    setText("mean-error", meanError == null ? "—" : `${meanError.toFixed(1)} ms`);
+    setText("session-duration", `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`);
+    setText("session-loops", loops);
+    setText("session-loop-label", loops === 1 ? "loop completed" : "loops completed");
 }
 
 function updateAssessment() {
@@ -185,7 +195,7 @@ function draw() {
         `Loop ${Math.floor(positiveBeat / loopBeats) + 1}`,
     ].join(" · ");
     if (playback?.running) {
-        showStatus(beat < 0 ? `Count-in · ${Math.min(4, Math.ceil(-beat))}` : "Playing");
+        showStatus(beat < 0 ? `Count-in · ${Math.min(BEATS_PER_BAR, Math.ceil(-beat))}` : "Playing");
         animation = requestAnimationFrame(draw);
     }
 }
@@ -227,7 +237,7 @@ async function changeLesson(read, id, { initial = false } = {}) {
         notationView.setLesson(lesson, preferences.disabledInstruments);
         void notationView.show(preferences.view);
         element("lesson-title").textContent = lesson.title;
-        element("lesson-detail").textContent = `4/4 · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
+        element("lesson-detail").textContent = `${lesson.time_signature.join("/")} · ${lesson.bars} ${lesson.bars === 1 ? "bar" : "bars"} · ${tracks.length} instruments · Repeating lesson`;
         const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
         bpmInput.value = requestedTempo;
         renderLessonOptions();
@@ -305,7 +315,8 @@ startButton.addEventListener("click", async () => {
         if (request !== startRequest) return;
         if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
         element("guide-sound-status").textContent = samplesReady ? "Guide drums: acoustic recordings."
-            : "Recorded drums unavailable; using synthesized guide sounds. Start again to retry loading.";
+            : "Could not load drum recordings. Check the connection, then press Start to retry.";
+        if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
         updateVolumes(false);
         playback.start(lesson, { bpm: Number(bpmInput.value), countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
         assessment = new Assessment(lesson, {

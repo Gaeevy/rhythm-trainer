@@ -1,9 +1,10 @@
-import { noteAppearance, extraPosition, notationFeedbackText, NOTATION_COLORS, feedbackColor } from "./feedback.js";
+import { BEATS_PER_BAR } from "../music-time.js";
+import { extraPosition, notationFeedbackText, feedbackColor } from "./feedback.js";
 import { sheetWindow, sheetPosition } from "./sheet.js";
 import { scorePosition, markerX } from "./position.js";
 import { lessonNotation } from "./model.js";
-import { renderPreview, renderDrumKey } from "./preview.js";
-import { DRUM_KEY } from "./drum-key.js";
+import { renderDrumKey } from "./renderer.js";
+import { createScoreBar, updateScoreFeedback, updateScoreExtras } from "./bar.js";
 import { INSTRUMENTS } from "../instruments.js";
 
 let rendererPromise;
@@ -47,6 +48,8 @@ export class NotationView {
         this.extras = [];
         this.extraSequence = 0;
         this.lastPlayedAt = -Infinity;
+        this.feedbackRevision = 0;
+        this.displayedResult = undefined;
         this.cache = new Map();
         this.cards = new Map();
         this.absoluteBar = 0;
@@ -116,7 +119,7 @@ export class NotationView {
             await loadRenderer();
             if (request !== this.request || !this.active) return;
             this.model = model;
-            renderDrumKey(element("notation-key"), this.lesson.tracks.map(track => ({ ...DRUM_KEY[track.instrument], instrument: track.instrument })));
+            renderDrumKey(element("notation-key"), this.lesson.tracks.map(track => track.instrument));
             this.renderSafely();
         } catch (error) {
             if (request === this.request) this.fallback(error);
@@ -154,7 +157,7 @@ export class NotationView {
         }
         if (running && this.model) this.selectFeedbackIteration(scorePosition(beat, this.model.bars.length).loop - 1);
         if (!this.active || !this.model) return;
-        const absoluteBar = Math.max(0, Math.floor(beat / 4));
+        const absoluteBar = Math.max(0, Math.floor(beat / BEATS_PER_BAR));
         if (running && absoluteBar !== this.absoluteBar) {
             this.absoluteBar = absoluteBar;
             this.renderSafely();
@@ -162,65 +165,9 @@ export class NotationView {
         else this.updateMarker();
     }
 
-    createCard(absoluteBar) {
-        const barIndex = absoluteBar % this.model.bars.length;
-        const iteration = Math.floor(absoluteBar / this.model.bars.length);
-        const node = document.createElement("section");
-        node.className = "notation-bar";
-        node.dataset.absoluteBar = String(absoluteBar);
-        node.dataset.barIndex = String(barIndex);
-        node.dataset.iteration = String(iteration);
-        const label = document.createElement("p");
-        label.className = "notation-bar-label";
-        label.textContent = `Loop ${iteration + 1} · Bar ${barIndex + 1}`;
-        const host = document.createElement("div");
-        host.className = "notation-score";
-        host.tabIndex = 0;
-        host.setAttribute("aria-label", `${label.textContent}; scroll horizontally if needed`);
-        node.append(label, host);
-        element("notation-sheet").append(node);
-        const style = getComputedStyle(host);
-        const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
-        const rowStart = absoluteBar % this.columns === 0;
-        const signature = absoluteBar === 0 ? "initial" : rowStart ? "row" : "continuation";
-        const key = `${barIndex}:${width}:${signature}`;
-        let template = this.cache.get(key);
-        if (!template) {
-            template = renderPreview(host, {
-                title: this.model.title, feel: this.model.feel, rhythmFeel: this.model.feel,
-                description: `Bar ${barIndex + 1}`, voices: this.model.bars[barIndex].voices,
-                showClef: rowStart, showMeter: absoluteBar === 0, continuous: true,
-            }, this.disabled);
-            this.cache.set(key, template);
-        }
-        const svg = template.svg.cloneNode(true);
-        // VexFlow's internal IDs are not used by this view. Do not duplicate them
-        // when a repeated bar is cloned; bind each hit through its source note ID.
-        for (const child of svg.querySelectorAll("[id]")) child.removeAttribute("id");
-        svg.removeAttribute("id");
-        host.replaceChildren(svg);
-        const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        marker.classList.add("notation-playhead");
-        marker.setAttribute("y1", "32");
-        marker.setAttribute("y2", "188");
-        marker.setAttribute("aria-hidden", "true");
-        marker.style.display = "none";
-        svg.append(marker);
-        const extraLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        extraLayer.setAttribute("aria-hidden", "true");
-        extraLayer.classList.add("notation-extra-hits");
-        svg.append(extraLayer);
-        const noteheads = template.noteheads.map(head => {
-            const node = svg.querySelector(`[data-note-id="${head.ref.id}"]`);
-            return { ref: head.ref, node, title: node.querySelector("title"), appearance: null };
-        });
-        return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
-            anchors: template.anchors, extraSignature: "", paddingLeft: parseFloat(style.paddingLeft) };
-    }
-
     renderSafely(rebuild = false) {
         try {
-            if (this.running) this.absoluteBar = Math.max(0, Math.floor(this.beat / 4));
+            if (this.running) this.absoluteBar = Math.max(0, Math.floor(this.beat / BEATS_PER_BAR));
             const columns = element("notation-scroll").clientWidth >= 1000 ? 2 : 1;
             if (rebuild || columns !== this.columns) {
                 this.cards.clear();
@@ -238,7 +185,7 @@ export class NotationView {
                 this.cards.delete(index);
             }
             for (let index = window.start; index < window.end; index++) if (!this.cards.has(index)) {
-                this.cards.set(index, this.createCard(index));
+                this.cards.set(index, createScoreBar(sheet, this.model, { absoluteBar: index, columns, cache: this.cache }));
             }
             // Backward navigation or a delayed frame can replace the whole window.
             for (const [index, card] of [...this.cards].sort((a, b) => a[0] - b[0])) {
@@ -303,6 +250,7 @@ export class NotationView {
     }
 
     showFeedback(result) {
+        this.feedbackRevision++;
         const now = performance.now();
         if (result.status !== "missed" || now - this.lastPlayedAt > 800) this.latestResult = result;
         if (result.status !== "missed") this.lastPlayedAt = now;
@@ -314,46 +262,19 @@ export class NotationView {
     }
 
     updateFeedback() {
-        const apply = (geometry, iteration, page) => {
-            if (!geometry) return;
-            for (const head of geometry.noteheads) {
-                const appearance = noteAppearance(this.assessment, head.ref, iteration, this.disabled);
-                const signature = `${iteration}:${appearance.status}:${appearance.errorMs}`;
-                if (head.appearance === signature) continue;
-                head.appearance = signature;
-                head.node.dataset.timing = appearance.status;
-                head.node.dataset.iteration = String(iteration);
-                head.node.setAttribute("aria-label", appearance.text);
-                head.title.textContent = appearance.text;
-                for (const glyph of head.node.querySelectorAll("text, path")) {
-                    glyph.style.fill = appearance.color;
-                    glyph.style.stroke = glyph.tagName.toLowerCase() === "text" ? "none" : appearance.color;
-                }
+        const now = performance.now();
+        const extras = this.running ? this.extras.filter(extra => extra.expires > now) : [];
+        for (const card of this.cards.values()) {
+            if (card.feedbackRevision !== this.feedbackRevision) {
+                updateScoreFeedback(card, this.assessment, this.disabled);
+                card.feedbackRevision = this.feedbackRevision;
             }
-            const visible = this.running ? this.extras.filter(extra => extra.expires > performance.now()
-                && extra.iteration === iteration && extra.barIndex === page).slice(-3) : [];
-            const signature = visible.map(extra => extra.id).join(":");
-            if (signature !== geometry.extraSignature) {
-                geometry.extraSignature = signature;
-                geometry.extraLayer.replaceChildren();
-                for (const [index, extra] of visible.entries()) {
-                    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                    text.classList.add("notation-extra-hit");
-                    text.setAttribute("x", String(markerX(extra.tick, geometry.anchors)));
-                    text.setAttribute("y", String(178 + index * 14));
-                    text.setAttribute("fill", NOTATION_COLORS.extra);
-                    text.dataset.instrument = extra.result.instrument;
-                    text.dataset.tick = String(extra.tick);
-                    text.textContent = "+";
-                    geometry.extraLayer.append(text);
-                }
-            }
-        };
-        for (const card of this.cards.values()) apply(card, card.iteration, card.barIndex);
-        const output = element("notation-feedback");
-        const text = this.latestResult ? notationFeedbackText(this.latestResult) : "Play to see timing feedback.";
-        if (output.textContent !== text) {
-            output.textContent = text;
+            updateScoreExtras(card, extras);
+        }
+        if (this.displayedResult !== this.latestResult) {
+            this.displayedResult = this.latestResult;
+            const output = element("notation-feedback");
+            output.textContent = this.latestResult ? notationFeedbackText(this.latestResult) : "Play to see timing feedback.";
             output.style.color = this.latestResult ? feedbackColor(this.latestResult.status) : "";
         }
     }

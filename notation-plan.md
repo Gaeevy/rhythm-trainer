@@ -495,3 +495,36 @@ database, and AI/MCP authoring are outside this iteration.
   necessary rests, and continuous score following, and requested its commit.
   Next: review simplification/refactoring opportunities, flagging any changes to
   the feature set separately. Deployment and physical acceptance remain separate.
+
+- **2026-11-05 — Refactoring authorized / in progress:** user requested removal
+  of the obsolete preview, separation of bar SVG work from score following,
+  result-driven note feedback and summary updates, shared instrument labels and
+  musical constants, and recordings-only guide drums. The accepted readability
+  implementation is committed as `8418cd7`. This follow-up stays uncommitted.
+  Keep Lanes, old lesson compatibility, stored controls/keys, and full assessment
+  history. Remove only the synthesized drum fallback; retain the exact metronome
+  and stop/retry on recording load failure. Next: complete code, regression and
+  focused rendering-work/audio-failure checks, update docs, and report for review.
+
+- **2026-11-05 — Refactoring ready for review:** removed the obsolete preview
+  HTML/CSS/script and its duplicate browser runner. The actual app is the review
+  surface; font checks now run there. Renamed the production engraver to
+  `renderer.js`; `bar.js` owns cloned SVGs, notehead bindings and overlays, while
+  `view.js` owns sheet/following controls. Note feedback is refreshed on result
+  revisions or new bar copies; summaries skip unchanged values and DOM text.
+  Instrument labels come from `INSTRUMENTS`; musical tick/subdivision constants
+  come from `music-time.js`. Kept Lanes, version 1 compatibility, saved controls,
+  MIDI mappings and full assessment history.
+  Guide drums now use recordings only. A failed load/decode leaves Start stopped
+  with a retry message and schedules no audio; the next Start retries. Removed
+  drum synthesis/noise generation and preserved the metronome's exact sine,
+  frequency, envelope, and stop timing. This supersedes the earlier fallback
+  requirement. **Verification:** clean `npm ci`, all 127 JavaScript tests, six
+  Python tests and 22 isolated browser scenarios pass at root/subpath. Added
+  tests for no substitute sound on failure, successful retry, the metronome
+  envelope, and eight unchanged native frames with zero note-feedback lookups
+  and zero summary DOM writes. Existing tests cover miss corrections, extras
+  expiring, independent loop feedback, disabled instruments, startup cancellation,
+  keyboard/MIDI, scrolling beyond 100 loops, all lessons and renderer recovery.
+  No assessment or scheduling rules changed. Final code and docs are uncommitted
+  and undeployed. Next: user review and a real-kit/listening check before release.

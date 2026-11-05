@@ -1,3 +1,5 @@
+import { INSTRUMENTS } from "../instruments.js";
+import { TICKS_PER_BAR, BEATS_PER_BAR } from "../music-time.js";
 import { DRUM_KEY } from "./drum-key.js";
 import { scoreAnchors } from "./position.js";
 
@@ -7,11 +9,14 @@ function addHiHatMark(note, index, entry) {
     note.addModifier(new Articulation(Glyphs[entry.articulation]).setPosition(Modifier.Position.ABOVE), index);
 }
 
-// SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
-export function renderPreview(host, example, disabledInstruments = []) {
-    const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
+export function scoreWidth(host) {
     const style = getComputedStyle(host);
-    const width = Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+    return Math.max(460, Math.floor(host.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)));
+}
+
+// SVG engraving from written-rhythm structures. Audio timing stays outside this renderer.
+export function renderScoreBar(host, example, width = scoreWidth(host)) {
+    const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Barline, Tuplet } = globalThis.VexFlow;
     host.replaceChildren();
     const renderer = new Renderer(host, Renderer.Backends.SVG);
     renderer.resize(width, 220);
@@ -19,8 +24,8 @@ export function renderPreview(host, example, disabledInstruments = []) {
     context.setFillStyle("#242820").setStrokeStyle("#242820");
     const stave = new Stave(12, 50, width - 24);
     if (example.showClef !== false) stave.addClef("percussion");
-    if (example.showMeter !== false) stave.addTimeSignature("4/4");
-    stave.setEndBarType(example.continuous ? Barline.type.SINGLE : Barline.type.DOUBLE);
+    if (example.showMeter !== false) stave.addTimeSignature(`${BEATS_PER_BAR}/4`);
+    stave.setEndBarType(Barline.type.SINGLE);
     stave.setContext(context).draw();
     // Mark closed at the start of each bar and after an open hit. Repeating +
     // above every closed sixteenth would hide the rhythm in dense grooves.
@@ -39,7 +44,6 @@ export function renderPreview(host, example, disabledInstruments = []) {
             const engraved = new StaveNote({ ...note, stemDirection: part.stem });
             for (const [index, ref] of (note.refs ?? []).entries()) {
                 if (hiHatMarks.has(ref.id)) addHiHatMark(engraved, index, DRUM_KEY[ref.instrument]);
-                if (disabledInstruments.includes(ref.instrument)) engraved.setKeyStyle(index, { fillStyle: "#a4a99f", strokeStyle: "#a4a99f" });
             }
             return engraved;
         });
@@ -51,7 +55,7 @@ export function renderPreview(host, example, disabledInstruments = []) {
         }
         engravedParts.push({ part, notes });
         // Tuplet multipliers must be applied before the strict voice totals its ticks.
-        return new Voice({ numBeats: 4, beatValue: 4 }).addTickables(notes);
+        return new Voice({ numBeats: BEATS_PER_BAR, beatValue: 4 }).addTickables(notes);
     });
     new Formatter().joinVoices(voices).formatToStave(voices, stave);
     for (const voice of voices) voice.draw(context, stave);
@@ -62,11 +66,11 @@ export function renderPreview(host, example, disabledInstruments = []) {
     svg.setAttribute("aria-label", `${example.title}. ${example.feel}. ${example.description}`);
     const positions = engravedParts.flatMap(({ part, notes }) => notes.map((engraved, index) => ({
         note: part.notes[index], voice: part.id,
-        x: part.notes[index].rest && part.notes[index].durationTicks === 384
+        x: part.notes[index].rest && part.notes[index].durationTicks === TICKS_PER_BAR
             ? stave.getNoteStartX() + 8 : (engraved.getNoteHeadBeginX() + engraved.getNoteHeadEndX()) / 2,
     })));
-    const barStart = Math.floor(example.voices[0].notes[0].writtenTick / 384) * 384;
-    const anchors = scoreAnchors(positions, { barStart, endX: stave.getNoteEndX() - 3, feel: example.rhythmFeel ?? "straight" });
+    const barStart = Math.floor(example.voices[0].notes[0].writtenTick / TICKS_PER_BAR) * TICKS_PER_BAR;
+    const anchors = scoreAnchors(positions, { barStart, endX: stave.getNoteEndX() - 3, feel: example.feel });
     const noteheads = engravedParts.flatMap(({ part, notes }) => notes.flatMap((engraved, index) => {
         return part.notes[index].refs.map((ref, headIndex) => {
             const node = engraved.noteHeads[headIndex].getSVGElement();
@@ -81,10 +85,11 @@ export function renderPreview(host, example, disabledInstruments = []) {
     return { svg, width, anchors, noteheads };
 }
 
-export function renderDrumKey(host, entries) {
+export function renderDrumKey(host, instruments) {
     const { Renderer, Stave, StaveNote, Formatter } = globalThis.VexFlow;
     host.replaceChildren();
-    for (const entry of entries) {
+    for (const instrument of instruments) {
+        const entry = DRUM_KEY[instrument];
         const item = document.createElement("li");
         const symbol = document.createElement("div");
         symbol.className = "key-symbol";
@@ -93,11 +98,11 @@ export function renderDrumKey(host, entries) {
         const context = renderer.getContext();
         const stave = new Stave(5, 25, 90).setContext(context);
         stave.draw();
-        const note = new StaveNote({ keys: [entry.key], duration: "4", stemDirection: entry.instrument === "hi_hat_pedal" ? -1 : 1 });
+        const note = new StaveNote({ keys: [entry.key], duration: "4", stemDirection: instrument === "hi_hat_pedal" ? -1 : 1 });
         addHiHatMark(note, 0, entry);
         Formatter.FormatAndDraw(context, stave, [note]);
         const label = document.createElement("strong");
-        label.textContent = entry.label;
+        label.textContent = INSTRUMENTS[instrument].label;
         const position = document.createElement("span");
         position.textContent = entry.position;
         const svg = symbol.querySelector("svg");

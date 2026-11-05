@@ -410,10 +410,12 @@ async function failureRecovery(browser, url) {
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
         await page.locator("#start-stop").click();
-        await playing(page);
-        assert.match(await page.locator("#guide-sound-status").textContent(), /synthesized/);
+        await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Could not start playback"));
+        await stopped(page);
+        assert.match(await page.locator("#guide-sound-status").textContent(), /press Start to retry/);
         assert.equal(await page.evaluate(() => window.smoke.audio.samples.size), 0);
-        await page.locator("#start-stop").click();
+        assert.equal(await page.evaluate(() => window.smoke.scheduled.length), 0, "Missing recordings must not schedule substitute sounds");
+        assert.equal(await page.evaluate(() => Boolean(window.smoke.assessment)), false);
         await page.unroute("**/assets/drums/kick.wav");
         await page.locator("#start-stop").click();
         await playing(page);
@@ -667,7 +669,7 @@ async function scoreFollowingFlow(browser, url) {
         // be reached at performance ticks even when written swing positions differ.
         const geometryChecks = await page.evaluate(async () => {
             const { lessonNotation } = await import("./src/notation/model.js");
-            const { renderPreview } = await import("./src/notation/preview.js");
+            const { renderScoreBar } = await import("./src/notation/renderer.js");
             const { markerX } = await import("./src/notation/position.js");
             const host = document.createElement("div");
             host.style.cssText = "position:absolute;left:-2000px;width:700px";
@@ -687,7 +689,7 @@ async function scoreFollowingFlow(browser, url) {
                     let geometry;
                     try {
                         window.VexFlow.StaveNote.prototype.draw = function (...args) { engraved.push(this); return draw.apply(this, args); };
-                        geometry = renderPreview(host, { title: id, feel: model.feel, rhythmFeel: model.feel, description: "Geometry check", voices: bar.voices });
+                        geometry = renderScoreBar(host, { title: id, feel: model.feel, description: "Geometry check", voices: bar.voices });
                     } finally { window.VexFlow.StaveNote.prototype.draw = draw; }
                     const notes = bar.voices.flatMap(voice => voice.notes);
                     if (engraved.length !== notes.length) throw new Error("Unexpected engraving note count");
@@ -704,7 +706,7 @@ async function scoreFollowingFlow(browser, url) {
                 }
                 const empty = lessonNotation({ version: 2, title: "Silent second bar", bpm: 80, bars: 2,
                     time_signature: [4, 4], notation: { feel: "straight" }, tracks: [{ instrument: "snare", notes: [0] }] });
-                const geometry = renderPreview(host, { title: empty.title, feel: empty.feel, rhythmFeel: empty.feel,
+                const geometry = renderScoreBar(host, { title: empty.title, feel: empty.feel,
                     description: "Empty bar check", voices: empty.bars[1].voices });
                 if (geometry.anchors[0].x > geometry.width / 3 || geometry.anchors.at(-1).x < geometry.width * 0.8) {
                     throw new Error("An empty bar must span the score, not begin at its centered whole-bar rest");
@@ -970,6 +972,8 @@ async function notationCoverageFlow(browser, url) {
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, id);
             await page.setViewportSize({ width: 1440, height: 1000 });
         }
+        assert.equal(await page.evaluate(() => document.fonts.check("20px Bravura") && document.fonts.check("14px Academico")), true,
+            "The app uses the bundled notation fonts");
         await page.locator("#lesson").selectOption("notation-sixteen-bars");
         await page.waitForFunction(() => document.querySelector("#notation-page").textContent === "Bar 1 of 16");
         await page.locator(".notation-legend summary").click();
@@ -984,6 +988,41 @@ async function notationCoverageFlow(browser, url) {
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-score-full-kit.png", fullPage: true });
         assert.deepEqual(errors, []);
         console.log(`PASS whole catalog, full kit, dense subdivisions, silent/sixteen-bar scores: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
+async function renderUpdatesFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        await page.goto(url);
+        await ready(page);
+        await page.locator("#lesson").selectOption("swing-01");
+        await page.locator("#view-notation").click();
+        await page.locator("#notation-score svg").waitFor();
+        await page.locator("#bpm").fill("60");
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
+        // Settle initial layout, then observe real frames with unchanged results.
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const work = await page.evaluate(async () => {
+            const assessment = window.smoke.assessment;
+            const resultFor = assessment.resultFor.bind(assessment);
+            let reads = 0, writes = 0;
+            assessment.resultFor = (...args) => { reads++; return resultFor(...args); };
+            const observer = new MutationObserver(records => { writes += records.length; });
+            observer.observe(document.querySelector(".session-summary"), { childList: true, subtree: true, characterData: true });
+            try {
+                for (let index = 0; index < 8; index++) await new Promise(resolve => requestAnimationFrame(resolve));
+                return { reads, writes };
+            } finally { observer.disconnect(); assessment.resultFor = resultFor; }
+        });
+        assert.deepEqual(work, { reads: 0, writes: 0 }, "Unchanged animation frames do not re-project note feedback or rewrite summary text");
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        console.log(`PASS unchanged frames skip note projection and summary DOM writes: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
 
@@ -1033,6 +1072,7 @@ try {
             await notationFeedbackFlow(browser, server.url);
             await notationCoverageFlow(browser, server.url);
             await cacheFlow(browser, server.url);
+            await renderUpdatesFlow(browser, server.url);
         } finally { await server.close(); }
     }
     console.log("Browser checks passed. Real-kit timing and audible sound quality still need manual checks.");
