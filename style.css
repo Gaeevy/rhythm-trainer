@@ -150,7 +150,8 @@ output { font-variant-numeric: tabular-nums; }
 .notation-playhead { stroke: #33755c; stroke-width: 2; pointer-events: none; }
 #notation-loop { color: #68705e; }
 
-.notation-extra-hit { font: 600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; pointer-events: none; }
+.notation-extra-hit { fill: #f8f5ec; stroke: #242820; stroke-width: 1.8; pointer-events: none; animation: notation-extra-fade 900ms linear forwards; }
+@keyframes notation-extra-fade { from { opacity: 1; } to { opacity: 0; } }
 
 .tempo-reset:disabled { cursor: default; opacity: .3; }
 
@@ -193,4 +194,5 @@ output { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   .notation-notehead-motion { transition: none; }
   .notation-notehead-motion.is-new-miss { animation: none; }
+  .notation-extra-hit { animation: none; }
 }

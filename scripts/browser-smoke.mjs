@@ -1033,6 +1033,32 @@ async function notationFeedbackFlow(browser, url) {
         await page.waitForFunction(() => document.querySelector('#notation-score [data-note-id="snare:160"]').dataset.timing === "missed");
         await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 59, 114], window.smoke.stamp(0, 17)));
         await page.locator("#notation-score .notation-extra-hit").waitFor();
+        await page.evaluate(() => {
+            window.extraProbe = document.querySelector("#notation-score .notation-extra-hit");
+            window.midiTest.sendData("kit", [0x99, 38, 90], window.smoke.stamp(0, 50));
+            window.midiTest.sendData("kit", [0x99, 36, 90], window.smoke.stamp(0, 70));
+        });
+        await page.waitForFunction(() => document.querySelectorAll("#notation-score .notation-extra-hit").length === 3);
+        const overlays = await page.locator("#notation-score").evaluate(host => {
+            return [...host.querySelectorAll(".notation-extra-hit")].map(extra => {
+                const head = host.querySelector(`[data-instrument="${extra.dataset.instrument}"][data-note-id]`);
+                const bounds = head.getBBox();
+                return { instrument: extra.dataset.instrument, tag: extra.tagName,
+                    y: Number(extra.getAttribute("cy")), expectedY: bounds.y + bounds.height / 2,
+                    x: Number(extra.getAttribute("cx")), tick: Number(extra.dataset.tick),
+                    fill: getComputedStyle(extra).fill, animation: getComputedStyle(extra).animationName };
+            });
+        });
+        assert.deepEqual(overlays.map(extra => extra.instrument).sort(), ["kick", "ride", "snare"]);
+        for (const extra of overlays) {
+            assert.equal(extra.tag, "ellipse", "Extra hits use hollow noteheads without stems");
+            assert.ok(Math.abs(extra.y - extra.expectedY) < 2, `${extra.instrument}: same staff position as written head`);
+            assert.equal(extra.fill, "rgb(248, 245, 236)");
+            assert.equal(extra.animation, "notation-extra-fade");
+        }
+        assert.ok(overlays[0].x < overlays[1].x && overlays[1].x < overlays[2].x, "Extras preserve precise timing order");
+        assert.equal(await page.evaluate(() => window.extraProbe.isConnected), true, "New extras retain existing fades");
+        assert.equal(await page.locator("#notation-score [data-note-id]").count(), headsBefore);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notation-feedback-desktop.png", fullPage: true });
         await page.waitForFunction(() => document.querySelectorAll("#notation-score .notation-extra-hit").length === 0);
         await page.waitForFunction(() => Number(document.querySelector("#session-loops").textContent) >= 1);
@@ -1580,6 +1606,10 @@ try {
             if (process.argv.includes("--notehead-motion-only")) {
                 await noteheadMotionFlow(browser, server.url);
                 await missedNoteFlow(browser, server.url);
+                continue;
+            }
+            if (process.argv.includes("--notation-feedback-only")) {
+                await notationFeedbackFlow(browser, server.url);
                 continue;
             }
             if (process.argv.includes("--lesson-menu-only")) {

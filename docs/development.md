@@ -105,6 +105,18 @@ caps, independent hits/loops, correction and read-only projection. Browser check
 measure actual SVG displacement, fixed shared stems/beams, future copies,
 keyboard/MIDI, resize/view changes, stop/restart and reduced motion.
 
+Extra hits use hollow SVG ellipses in each bar's overlay, without stems or beams.
+`extraPosition()` retains the corrected input time; `markerX()` maps its precise
+tick to the engraving anchors. The renderer exposes `staffYs` for all
+instruments, resolved through VexFlow on the same stave using `DRUM_KEY`, so
+extras share printed note positions even when that instrument has no notes in
+the bar. This does not add notes to the engraving model or affect assessment.
+The existing bounded overlay lifetime remains 900 ms (six recent extras total,
+three per bar); CSS fades each head until removal by the existing update loop.
+Live overlay nodes are retained when another extra arrives, preserving their
+fade. Reconstruction uses the remaining lifetime. Reduced motion disables the
+fade, while Stop/reset removes overlays as before.
+
 ## Notation layout
 
 **One policy, one entry point:** `lessonNotation()` in

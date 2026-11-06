@@ -1,7 +1,7 @@
 import { TICKS_PER_BAR } from "../music-time.js";
 import { renderScoreBar, scoreWidth } from "./renderer.js";
 import { markerX } from "./position.js";
-import { noteAppearance, noteheadShift, NOTATION_COLORS } from "./feedback.js";
+import { noteAppearance, noteheadShift } from "./feedback.js";
 
 /** Clone cached engraving into a bar with independent noteheads and overlays. */
 export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
@@ -72,7 +72,7 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
             title: node.querySelector("title"), appearance: null };
     });
     return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
-        anchors: template.anchors, height: template.height, extraSignature: "", feedbackRevision: -1,
+        anchors: template.anchors, staffYs: template.staffYs, height: template.height, extraSignature: "", feedbackRevision: -1,
         paddingLeft: parseFloat(getComputedStyle(host).paddingLeft) };
 }
 
@@ -106,17 +106,24 @@ export function updateScoreExtras(bar, extras) {
     const signature = visible.map(extra => extra.id).join(":");
     if (signature !== bar.extraSignature) {
         bar.extraSignature = signature;
-        bar.extraLayer.replaceChildren();
-        for (const [index, extra] of visible.entries()) {
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.classList.add("notation-extra-hit");
-            text.setAttribute("x", String(markerX(extra.tick, bar.anchors)));
-            text.setAttribute("y", String(bar.height - 32 + index * 14));
-            text.setAttribute("fill", NOTATION_COLORS.extra);
-            text.dataset.instrument = extra.result.instrument;
-            text.dataset.tick = String(extra.tick);
-            text.textContent = "+";
-            bar.extraLayer.append(text);
+        // Retain live overlays so another extra never restarts their fade.
+        const ids = new Set(visible.map(extra => String(extra.id)));
+        for (const node of [...bar.extraLayer.children]) if (!ids.has(node.dataset.extraId)) node.remove();
+        for (const extra of visible) {
+            if (bar.extraLayer.querySelector(`[data-extra-id="${extra.id}"]`)) continue;
+            const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+            head.classList.add("notation-extra-hit");
+            const x = markerX(extra.tick, bar.anchors), y = bar.staffYs[extra.result.instrument];
+            head.setAttribute("cx", String(x));
+            head.setAttribute("cy", String(y));
+            head.setAttribute("rx", "6");
+            head.setAttribute("ry", "4");
+            head.setAttribute("transform", `rotate(-20 ${x} ${y})`);
+            head.dataset.extraId = String(extra.id);
+            head.dataset.instrument = extra.result.instrument;
+            head.dataset.tick = String(extra.tick);
+            head.style.animationDuration = `${Math.max(0, extra.expires - performance.now())}ms`;
+            bar.extraLayer.append(head);
         }
     }
 }
