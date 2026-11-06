@@ -102,8 +102,8 @@ retain their own scale conversions, persistence and playback behavior.
 
 ## Practice analytics
 
-The approved [analytics plan](plans/practice-analytics.md) is being implemented
-in stages. The current panel shows overall, per-pad and consistency scores/trends.
+The analytics feature ([history](history/2026-11-06-practice-analytics.md)) shows
+overall, per-pad and consistency scores/trends.
 Overall uses the 70/30 blend; when the enabled lesson has no simultaneous groups
 it uses pads only and hides consistency. Session totals are folded below it.
 The minimal UI labels overall as “Score”, uses large numeric outputs and separates
@@ -128,8 +128,22 @@ misses and extras; the blend is 70% pads/30% consistency, or 100% pads when the
 enabled lesson has no simultaneous groups. Missing samples are `null`, not zero.
 
 The half-life is 8 bars; trends compare with all completed bars except the last
-8, require at least 16 completed bars and use a ±3-point neutral band. All math
-keeps full precision. See [deterministic examples](../test/analytics.test.js).
+8 and require at least 16 completed bars. Changes of at least 3 points are up/down;
+smaller changes are neutral. All math keeps full precision. See
+[deterministic examples](../test/analytics.test.js).
+
+```text
+quality = exp(-0.5 * (errorMs / widthMs)**2)
+weight = 2 ** (-barAge / 8)
+pad score = 100 * sum(weight * quality) / sum(weight * opportunities)
+overall = 0.70 * pooled pad score + 0.30 * consistency score
+```
+
+Consistency applies the same quality function to simultaneous-hit spread, one
+opportunity per group. Missing members receive zero group quality. Pad pooling
+uses weighted opportunities, not an equal average of rounded pad scores. No
+simultaneous groups means 100% pads. The visual on-time category is independent
+of continuous quality; a near-center on-time hit need not receive exactly 100.
 
 `barClosingDelay()` caches a conservative lesson-wide delay for late windows that
 cross a bar end (zero when none do). `completedBarCount()` uses elapsed audio
@@ -138,18 +152,23 @@ late-window boundary. Assessment advances before rendering scores. The projectio
 rejects absent expected results; it never advances time, matches input or finalizes
 misses. Recomputing incorporates delayed timestamped miss corrections.
 
-`AnalyticsView` gates the read-only full-history snapshot on assessment identity,
-completed-bar count, hit count and missed count. Unchanged frames do no history
-projection or analytics DOM writes. Its work scales with completed bars/expected
-notes and recorded hits on meaningful changes; consider per-bar aggregation only
-if long-session profiling requires it. No parallel matcher or hit recorder.
+`app.js` sends each assessment result through one `showFeedback()` helper to
+Lanes, Notation and analytics. `resultBar()` assigns matched/missed results to
+their expected bar and extras to corrected input time, shared with score assembly.
+`AnalyticsView.onResult()` marks a snapshot dirty only for a result in an already
+completed bar. New/unfinished-bar hits and misses wait for bar completion.
+Assessment identity and completed-bar changes also refresh the snapshot.
+Unchanged frames and unfinished-bar input do no history projection or analytics
+DOM writes; delayed corrections/extras in completed bars update immediately.
+Work still scales with session length at refresh points. No parallel matcher,
+hit recorder or per-bar cache was introduced.
 Stop freezes the elapsed time/results; Start and lesson/track changes reset.
 Volume/mute/view changes preserve the same assessment. The panel shows enabled
 lesson instruments only. No stored analytics or new settings.
 
-Consistency also exposes `groups` and `completeGroups` across completed session
-bars in the calculation result, though the minimal UI does not display them.
-The score itself uses recency weights. A missing member makes group quality zero, while a delayed
+The report exposes only overall, individual pads and consistency. Pooled pad
+quality stays internal to the blend; unused group-count and repeated bar-count
+outputs were removed. A missing member makes group quality zero, while a delayed
 correction can complete it. An eligible group scheduled in a later bar does not
 earn invented credit: consistency and overall stay empty until a group has been
 finalized.
@@ -287,8 +306,12 @@ pushes to `main`. Successful `main` runs deploy `_site/` to
 [GitHub Pages](https://gaeevy.github.io/rhythm-trainer/). After release approval,
 commit/open a PR, wait for checks, merge, wait for Pages, then verify the live
 lesson list, notation assets, keyboard/MIDI flow, mixer and console. Local checks
-alone do not verify the live release. Latest acceptance is in the
-[notation history](history/2026-11-04-notation-plan.md#acceptance).
+alone do not verify the live release. Merged PRs and Actions runs record release
+checks; [dated history](history/README.md) records the major delivery decisions.
+
+README screenshots live in `docs/images/` and are excluded from the runtime
+package with the other docs. They show the actual app with simulated demo input,
+captured through a disposable browser profile. Refresh them after major UI changes.
 
 ## Asset sources
 

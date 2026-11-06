@@ -10,6 +10,10 @@
 - Keep current guides accurate in the same change. History under `docs/history/`
   is context, not an active plan; do not append routine per-turn logs. For a new
   multi-step feature, track the agreed plan and checks separately while active.
+- Use `docs/plans/` for active agreed work only. On completion, compact the plan
+  into a dated `docs/history/` summary, update its index and fix incoming links.
+  Keep current behavior in the guides; historical approval notes are not active
+  instructions. Git retains intermediate plans and detailed review logs.
 - The user knows Python and practices jazz on an MPS-850 in Chrome on macOS.
   Favor simple code and consistent terms: lesson, track, lane, bar, beat, note,
   hit, tick, early, on time, late, missed, extra. One beat is a quarter note;

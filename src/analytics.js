@@ -27,6 +27,14 @@ export function completedBarCount(assessment, elapsedSeconds, closingDelay = bar
         / (assessment.secondsPerBeat * BEATS_PER_BAR)));
 }
 
+/** Matched/missed results use their expected bar; extras use corrected input time. */
+export function resultBar(assessment, result) {
+    const barSeconds = assessment.secondsPerBeat * BEATS_PER_BAR;
+    if (result.expected) return result.expected.iteration * Math.round(assessment.loopSeconds / barSeconds)
+        + Math.floor(result.expected.tick / TICKS_PER_BAR);
+    return Math.floor((result.correctedTime - assessment.origin) / barSeconds);
+}
+
 export function gaussianQuality(errorMs, widthMs) {
     if (!Number.isFinite(errorMs) || !Number.isFinite(widthMs) || widthMs <= 0) {
         throw new RangeError("Quality needs a finite error and positive finite width");
@@ -72,7 +80,7 @@ function summarize(bars, instruments, hasConsistency) {
     const consistency = hasConsistency ? weightedScore(bars, bar => bar.consistency) : null;
     const overall = padScore === null || (hasConsistency && consistency === null) ? null
         : hasConsistency ? (1 - CONSISTENCY_WEIGHT) * padScore + CONSISTENCY_WEIGHT * consistency : padScore;
-    return { pads, padScore, consistency, overall };
+    return { pads, consistency, overall };
 }
 
 /** Read one finalized assessment snapshot. Never match, advance or mutate it.
@@ -96,7 +104,7 @@ export function scorePractice(assessment, completedBars) {
     const hasConsistency = [...groups.values()].some(members => members.length > 1);
     const bars = Array.from({ length: completedBars }, (_, absoluteBar) => ({
         absoluteBar, pads: Object.fromEntries(instruments.map(instrument => [instrument, emptySample()])),
-        consistency: { ...emptySample(), complete: 0 },
+        consistency: emptySample(),
     }));
     for (const bar of bars) {
         const iteration = Math.floor(bar.absoluteBar / barsPerLoop);
@@ -116,7 +124,6 @@ export function scorePractice(assessment, completedBars) {
             if (members.length > 1) {
                 bar.consistency.opportunities++;
                 if (errors.every(error => error !== null)) {
-                    bar.consistency.complete++;
                     const spread = Math.max(...errors) - Math.min(...errors);
                     bar.consistency.quality += gaussianQuality(spread, CONSISTENCY_WIDTH_MS);
                 }
@@ -127,22 +134,16 @@ export function scorePractice(assessment, completedBars) {
     // The canonical hit list contains each extra once, including duplicate hits.
     for (const hit of assessment.hits) {
         if (hit.status !== TimingStatus.EXTRA) continue;
-        const absoluteBar = Math.floor((hit.correctedTime - assessment.origin) / barSeconds);
+        const absoluteBar = resultBar(assessment, hit);
         const sample = bars[absoluteBar]?.pads[hit.instrument];
         if (sample) sample.opportunities++;
     }
     const current = summarize(bars, instruments, hasConsistency);
     const reference = summarize(bars.slice(0, Math.max(0, completedBars - TREND_BARS)), instruments, hasConsistency);
     return {
-        completedBars,
         overall: scoreTrend(current.overall, reference.overall, completedBars),
-        padScore: scoreTrend(current.padScore, reference.padScore, completedBars),
         pads: instruments.map(instrument => ({ instrument,
             ...scoreTrend(current.pads[instrument], reference.pads[instrument], completedBars) })),
-        consistency: hasConsistency ? {
-            ...scoreTrend(current.consistency, reference.consistency, completedBars),
-            groups: bars.reduce((sum, bar) => sum + bar.consistency.opportunities, 0),
-            completeGroups: bars.reduce((sum, bar) => sum + bar.consistency.complete, 0),
-        } : null,
+        consistency: hasConsistency ? scoreTrend(current.consistency, reference.consistency, completedBars) : null,
     };
 }
