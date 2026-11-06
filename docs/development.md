@@ -38,6 +38,19 @@ npm run test:browser
   remain active. Checks cover the catalog, subdivisions, full kit, feedback,
   bounded score repetition, resize, cached assets and failure recovery.
 
+[`scripts/browser-smoke.mjs`](../scripts/browser-smoke.mjs) is the browser runner.
+Scenarios live under [`scripts/browser/`](../scripts/browser/): `lessons.mjs`
+(catalog, menu and release cache), `transport.mjs` (practice, tracks and loading
+recovery), `midi.mjs`, `notation.mjs` (view, lifecycle, following and layout),
+`notation-feedback.mjs` and `toolbar.mjs`. Shared page/input/clock helpers are
+in `helpers.mjs`; `server.mjs` serves the packaged artifact. Keep test clocks
+and simulated MIDI there rather than duplicating setup in scenarios.
+
+For focused checks, append `-- --cleanup-only`, `-- --notehead-motion-only`,
+`-- --notation-feedback-only`, `-- --lesson-menu-only` or
+`-- --notation-coverage` to `npm run test:browser`. Every mode runs at both
+mounts. The full command remains the release check.
+
 Browser timing assertions allow 0.25 ms between the separately sampled native
 output-clock anchors used to create and handle a simulated hit. Deterministic
 clock-conversion unit tests retain exact numeric checks. This sampling allowance
@@ -51,7 +64,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 
 | Area | Source |
 | --- | --- |
-| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js) |
+| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
@@ -71,6 +84,19 @@ An opaque 1.8px end-of-bar line makes each boundary clear.
 Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
+
+`NotationView.resetSession()` clears session feedback and displayed bars while
+retaining cached engraving. `clearBars()` only clears displayed geometry; lesson
+and viewport changes invalidate engraving explicitly. Instrument toggles refresh
+feedback without invalidating engraving. The folded drum key is rendered by
+`showDrumKey()` only when open, reused across view/open-close changes and rebuilt
+when the lesson changes. Failed key loading can be retried by closing/reopening.
+
+`app.js` uses one `loadLesson()` path for fetching, validation and installation.
+Its request counter guards late successes, errors and cleanup; a failed load
+keeps the previous lesson available. `bindSliderKeys()` shares only keyboard
+stepping in displayed units (arrows ±1, Page ±10, Home/End limits). BPM and volume
+retain their own scale conversions, persistence and playback behavior.
 
 ## Notehead timing feedback
 

@@ -2,6 +2,8 @@
 
 These guides describe the current app. Use the history summaries only for context.
 
+Completed plan: [practice code cleanup](plans/practice-code-cleanup.md).
+
 | Guide | Use it to |
 | --- | --- |
 | [Practice](practice.md) | Connect the kit, use controls, read feedback and troubleshoot |
