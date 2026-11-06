@@ -46,7 +46,8 @@ recovery), `midi.mjs`, `notation.mjs` (view, lifecycle, following and layout),
 in `helpers.mjs`; `server.mjs` serves the packaged artifact. Keep test clocks
 and simulated MIDI there rather than duplicating setup in scenarios.
 
-For focused checks, append `-- --analytics-only`, `-- --cleanup-only`, `-- --notehead-motion-only`,
+For focused checks, append `-- --polish-only`, `-- --analytics-only`,
+`-- --cleanup-only`, `-- --notehead-motion-only`,
 `-- --notation-feedback-only`, `-- --lesson-menu-only` or
 `-- --notation-coverage` to `npm run test:browser`. Every mode runs at both
 mounts. The full command remains the release check.
@@ -102,10 +103,17 @@ retain their own scale conversions, persistence and playback behavior.
 ## Practice analytics
 
 The approved [analytics plan](plans/practice-analytics.md) is being implemented
-in stages. The current panel shows overall, per-pad and consistency scores/trends
-below either view. Overall uses the 70/30 blend; when the enabled lesson has no
-simultaneous groups it uses pads only and hides consistency. Existing session
-totals remain below it. No sidebar or animation change in this step.
+in stages. The current panel shows overall, per-pad and consistency scores/trends.
+Overall uses the 70/30 blend; when the enabled lesson has no simultaneous groups
+it uses pads only and hides consistency. Session totals are folded below it.
+
+At viewport widths of at least 1600 px, `.practice-body` uses a score/Lanes column
+and a 300 px analytics sidebar. The page maximum width expands to 1840 px, leaving
+over 1100 px for the practice view at the breakpoint. Below it, the same analytics
+DOM stays below the full-width view. The top toolbar and folded setup sections
+remain outside the columns. CSS controls placement; no reparenting or saved layout
+setting. The existing notation ResizeObserver handles column/width changes and
+`sheetColumns()` still fits bars according to rhythmic density.
 
 `scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
 returns raw 0–100 overall/per-pad/consistency scores plus historical references,
@@ -157,10 +165,17 @@ horizontal displacement.
 [bar.js](../src/notation/bar.js) wraps each cloned notehead in an SVG group and
 translates only that wrapper. VexFlow transforms, stems, beams, original marker
 anchors and cached templates stay unchanged. Each hit/loop copy keeps its own
-offset. Only changed feedback writes the transform; CSS animates it for 180 ms
-and holds the final position. No new JS timers or animation-driven assessment.
+offset. Only changed feedback writes the transform. Mild timing errors slide for
+180 ms. `timingSeverity()` selects severe errors above max(60 ms, twice the
+on-time tolerance), only for matched early/late hits. A newly displayed severe
+result gets one 320 ms horizontal settling animation, staying between zero and
+the existing capped final shift, then holding that shift. CSS reads the same
+shift from `--notehead-shift`; no overshoot, extra wrappers or JS timers.
+This presentation rule never changes Gaussian scoring or input assessment.
 Waiting/disabled resets snap to zero; reduced-motion preferences disable the
-transition while retaining the spatial feedback. Existing colors and tooltips
+transition/settling while retaining the spatial feedback. Historical severe
+results reconstructed on resize/view changes keep their offset without replay.
+Existing colors and tooltips
 remain, with no new visible labels or markers.
 
 A newly missed displayed head gets one 280 ms vertical shake (±2 px), then

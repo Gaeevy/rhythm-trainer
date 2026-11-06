@@ -79,6 +79,29 @@ export async function analyticsFlow(browser, url) {
         const frozen = await page.locator("#analytics").textContent();
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         assert.equal(await page.locator("#analytics").textContent(), frozen);
+        await page.setViewportSize({ width: 2000, height: 1100 });
+        await page.waitForFunction(() => getComputedStyle(document.querySelector(".practice-body")).display === "grid");
+        const wide = await page.evaluate(() => {
+            const view = document.querySelector(".practice-view").getBoundingClientRect();
+            const panel = document.querySelector(".practice-analytics").getBoundingClientRect();
+            const toolbar = document.querySelector(".lesson-controls").getBoundingClientRect();
+            return { sideBySide: Math.abs(view.right - panel.left) < 1 && Math.abs(view.top - panel.top) < 1,
+                readable: view.width > 1000, sidebarWidth: panel.width, toolbarAbove: toolbar.bottom <= view.top,
+                overflow: document.documentElement.scrollWidth > innerWidth };
+        });
+        assert.deepEqual(wide, { sideBySide: true, readable: true, sidebarWidth: 300, toolbarAbove: true, overflow: false });
+        assert.equal(await page.locator("#analytics").count(), 1, "Sidebar uses the same panel, not duplicated stats");
+        assert.equal(await page.locator("#analytics").textContent(), frozen);
+        await page.locator(".session-details > summary").click();
+        assert.equal(await page.locator("#score-on_time").isVisible(), true);
+        await page.locator(".session-details > summary").click();
+        await selectView(page, "lanes");
+        assert.equal(await page.locator("#timeline").isVisible(), true);
+        assert.equal(await page.locator("#analytics").textContent(), frozen);
+        await selectView(page, "notation");
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-analytics-wide.png", fullPage: true });
+        await page.setViewportSize({ width: 1440, height: 1100 });
+        assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".practice-body")).display), "block");
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-analytics-desktop.png", fullPage: true });
         await page.setViewportSize({ width: 390, height: 844 });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

@@ -43,12 +43,15 @@ all-disabled tracks permit metronome-only practice.
 
 ## Scores and trends
 
-The panel below the score/Lanes shows an **Overall score** out of 100, individual
+The analytics panel shows an **Overall score** out of 100, individual
 scores for enabled lesson pads, and **Consistency** for simultaneous notes.
 Overall combines 70% pad scores with 30% consistency. Pads share their weight by
 expected notes plus extras, including misses. If no enabled instruments have
 notes scheduled together, the score uses **Pads only** and hides consistency.
-Existing session counts/error below it are still session totals.
+Open **Session totals** beneath the scores for session counts and timing error.
+On wide screens (1600 px or more), analytics sits to the right of the practice
+view. On smaller screens it stays below, preserving score space. The toolbar
+stays at the top; setup sections remain folded below the practice area.
 
 Closer to the expected time earns more points, even inside the visual on-time
 band. A missed note earns zero; an extra adds a zero-point opportunity. Recent
@@ -71,7 +74,7 @@ trend”. Silent pads keep “—” until they have scoring opportunities.
 
 Stop freezes the panel. Start, lesson changes and enabling/disabling pads reset
 practice; mixer and view changes preserve the results. Scores last for this
-session only. No new settings, sidebar or animation changes in this step.
+session only. There are no extra analytics settings.
 
 ## Input and sound
 
@@ -144,6 +147,11 @@ stay fixed; on-time heads stay attached. The shifted heads remain while that bar
 copy is displayed, including after Stop. Start resets them. Reduced-motion
 preferences keep the same offsets without animation. Simultaneous hits move
 independently, even when their notes share a stem.
+
+Mild errors use a smooth slide. Severe errors (more than 60 ms, or twice your
+on-time tolerance if larger) use a brief horizontal settling motion within the
+same travel limit. This visual distinction does not change the continuous score.
+Reopening/resizing a score does not replay the severe effect.
 
 Colors remain: on time (green), early (blue), late (amber) or missed (red).
 A missed note gives a brief vertical shake, returns to its printed position,

@@ -1,8 +1,8 @@
 # Practice accuracy analytics
 
 Agreed design, 2026-11-06. Branch: `codex/practice-analytics-plan`.
-Milestones 1 and 2 committed as `20849a5` and `ecd1c4d`. Milestone 3 is
-implemented and verified locally. Do not commit milestone 3 yet.
+Milestones 1–3 committed as `20849a5`, `ecd1c4d` and `13eea2b`. Milestone 4
+passed user review and is approved for commit. Core milestones are complete.
 
 ## Current direction from the user
 
@@ -26,8 +26,8 @@ early or late notes through animation, consider a right-hand analytics panel,
 and split delivery into small reviewable steps. Keeping code/UI simple is the
 strongest constraint. A streak is optional, not a required extra score.
 
-Scoring defaults below are approved for the calculation foundation. Animation
-and layout details remain proposals for their later review gates.
+Scoring defaults below are approved. The implemented layout and animation trial
+remain subject to real-practice review.
 
 ## Scoring specification
 
@@ -215,7 +215,7 @@ Continuous scoring does not require a separate animation for every score:
    the tested 30/70 combination and explicit no-group/no-data behavior. Before this
    milestone, label any pad-only preview clearly rather than claiming the final
    overall formula is already implemented.
-4. **Layout and animation polish.** Trial a responsive right-hand panel on wide
+4. **Implemented, under review: layout and animation polish.** Trial a responsive right-hand panel on wide
    screens, keep top transport/mixer and readable score width, fall back below
    on narrow screens. Trial slightly different bounded horizontal motion for
    small/large errors; missed vertical shake and hollow extras stay distinct.
@@ -313,7 +313,40 @@ keyboard/MIDI and desktop/narrow layouts. Screenshots inspected; current guides
 and local documentation links updated/checked. Physical-kit practice remains
 the user acceptance step.
 
-Current status: milestone 3 passed user review and is approved for commit.
-Milestone 4 is authorized next and remains uncommitted for review; milestone 5
-is optional and unstarted. Curve calibration can be revisited after practice;
-accepted defaults do not need to be reconfirmed before the next step.
+Milestone 3 passed user review and was committed as `13eea2b`.
+
+## Milestone 4 result
+
+- A single responsive panel sits in a 300 px right-hand sidebar from 1600 px
+  viewport width; below that, it stays beneath the full-width practice view.
+  Page width expands to use wide screens; notation density still determines
+  bars per row via the existing layout code. Both views share the same panel.
+- Toolbar stays across the top; setup stays below. Session totals are folded
+  within the analytics area, without duplicated counters or new settings.
+- Mild early/late results retain the 180 ms slide. Severe errors above
+  max(60 ms, twice on-time tolerance) use one 320 ms horizontal settling motion
+  inside the same capped displacement, never beyond it. Scoring is unchanged.
+- Reconstructed historical results do not replay the severe effect; reduced
+  motion keeps a static final offset. Missed vertical shakes and hollow extras
+  retain their distinct behavior. No JS animation timers or extra SVG wrappers.
+
+Verification: 157 Node tests, focused sidebar/animation browser checks and all
+38 full browser scenarios pass at both mounts. Checks observe actual
+bounded left/right animation, fixed stems/beams, history/resize, reduced motion,
+reset, single-panel wide/narrow placement, shared views and expandable totals.
+Current guides and documentation links updated/checked; wide/desktop/narrow
+screenshots inspected. Real-kit readability/animation feel remains user review.
+
+Current status: milestone 4 passed user review and is approved for commit.
+Core milestones 1–4 are complete. No push or deployment requested.
+
+## Optional follow-up review
+
+Recommendation: practice with the completed feature before adding another
+indicator. A clean-bar streak would reintroduce a binary success threshold;
+a small chart could expose changes that the trend arrow hides, but adds screen
+space and another representation to maintain. Neither is necessary for the
+agreed overall/per-pad/consistency scores and trend indicators.
+
+Milestone 5 remains optional, pending the user's choice. Do not implement a
+streak, chart or additional automation automatically.
