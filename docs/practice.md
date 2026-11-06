@@ -41,6 +41,29 @@ Track controls disable an instrument's guide notes and assessment. Its lane or
 noteheads stay dimmed. Changing enabled tracks stops/resets the session;
 all-disabled tracks permit metronome-only practice.
 
+## Pad scores and trends
+
+The panel below the score/Lanes shows a **Pad score** out of 100 and individual
+scores for enabled lesson pads. This preview is labelled **without consistency**:
+the 70/30 overall score and simultaneous-hit consistency will be displayed in
+the next step. Existing session counts/error below it are still session totals.
+
+Closer to the expected time earns more points, even inside the visual on-time
+band. A missed note earns zero; an extra adds a zero-point opportunity. Recent
+results count more: results eight bars older have half the weight. Scores use
+completed bars after their late-hit windows close; “—” means no scored notes yet,
+not zero accuracy. A delayed timestamped hit can correct a previous miss/score.
+
+After 16 completed bars and sufficient earlier samples, ↑ means at least 3 points
+better than the same weighted score ending eight bars ago; ↓ means at least 3
+points worse; ~ means a smaller change. Hover the symbol for the numeric change;
+screen readers receive the description too. Until then, the panel says “Building
+trend”. Silent pads keep “—” until they have scoring opportunities.
+
+Stop freezes the panel. Start, lesson changes and enabling/disabling pads reset
+practice; mixer and view changes preserve the results. Scores last for this
+session only. No new settings, sidebar or animation changes in this preview.
+
 ## Input and sound
 
 Connect the module's **USB MIDI** port to the Mac. Chrome may ask permission.

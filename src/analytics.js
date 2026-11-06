@@ -1,5 +1,5 @@
 import { TimingStatus } from "./assessment.js";
-import { BEATS_PER_BAR, TICKS_PER_BAR } from "./music-time.js";
+import { BEATS_PER_BAR, TICKS_PER_BAR, TICKS_PER_BEAT } from "./music-time.js";
 
 // Scoring calibration, not matching windows or user settings. Quality stays 0–1;
 // only the returned scores use 0–100. No rounding before presentation.
@@ -9,6 +9,23 @@ export const HALF_LIFE_BARS = 8;
 export const TREND_BARS = 8;
 export const TREND_POINTS = 3;
 const CONSISTENCY_WEIGHT = 0.3;
+
+/** Conservative lesson-wide delay for notes whose late windows cross a bar end. */
+export function barClosingDelay(assessment) {
+    const barSeconds = assessment.secondsPerBeat * BEATS_PER_BAR;
+    return Math.max(0, ...[...assessment.tracks.values()].flatMap(track => track.notes.map(note =>
+        (note.tick % TICKS_PER_BAR) / TICKS_PER_BEAT * assessment.secondsPerBeat
+            + note.lateWindow - barSeconds)));
+}
+
+/** elapsedSeconds is frozen on Stop; apply the same latency correction as misses.
+ * The tiny boundary allowance matches Assessment's inclusive late windows.
+ */
+export function completedBarCount(assessment, elapsedSeconds, closingDelay = barClosingDelay(assessment)) {
+    const correctedElapsed = elapsedSeconds - assessment.latencyOffsetMs / 1000;
+    return Math.max(0, Math.floor((correctedElapsed - closingDelay - 1e-9)
+        / (assessment.secondsPerBeat * BEATS_PER_BAR)));
+}
 
 export function gaussianQuality(errorMs, widthMs) {
     if (!Number.isFinite(errorMs) || !Number.isFinite(widthMs) || widthMs <= 0) {
@@ -118,7 +135,7 @@ export function scorePractice(assessment, completedBars) {
     return {
         completedBars,
         overall: scoreTrend(current.overall, reference.overall, completedBars),
-        padScore: current.padScore,
+        padScore: scoreTrend(current.padScore, reference.padScore, completedBars),
         pads: instruments.map(instrument => ({ instrument,
             ...scoreTrend(current.pads[instrument], reference.pads[instrument], completedBars) })),
         consistency: hasConsistency ? scoreTrend(current.consistency, reference.consistency, completedBars) : null,

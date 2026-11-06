@@ -6,6 +6,7 @@ import { midiFlow } from "./browser/midi.mjs";
 import { notationFlow, notationLifecycleFlow, scoreFollowingFlow, notationCoverageFlow, sheetLayoutFlow } from "./browser/notation.mjs";
 import { notationFeedbackFlow, noteheadMotionFlow, missedNoteFlow, renderUpdatesFlow } from "./browser/notation-feedback.mjs";
 import { toolbarFlow } from "./browser/toolbar.mjs";
+import { analyticsFlow } from "./browser/analytics.mjs";
 
 let browser;
 try {
@@ -14,6 +15,10 @@ try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
         const server = await serve(mount);
         try {
+            if (process.argv.includes("--analytics-only")) {
+                await analyticsFlow(browser, server.url);
+                continue;
+            }
             if (process.argv.includes("--cleanup-only")) {
                 await failureRecovery(browser, server.url);
                 await notationLifecycleFlow(browser, server.url);
@@ -55,6 +60,7 @@ try {
             await cacheFlow(browser, server.url);
             await renderUpdatesFlow(browser, server.url);
             await toolbarFlow(browser, server.url);
+            await analyticsFlow(browser, server.url);
             await sheetLayoutFlow(browser, server.url);
         } finally { await server.close(); }
     }

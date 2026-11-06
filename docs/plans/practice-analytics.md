@@ -1,7 +1,8 @@
 # Practice accuracy analytics
 
 Agreed design, 2026-11-06. Branch: `codex/practice-analytics-plan`.
-Milestone 1 calculations are implemented; no UI integration. Do not commit yet.
+Milestone 1 committed as `20849a5`. Milestone 2 pad-score preview is implemented
+and verified locally. Do not commit milestone 2 yet.
 
 ## Current direction from the user
 
@@ -208,7 +209,7 @@ Continuous scoring does not require a separate animation for every score:
 1. **Complete: agree and test the math.** Calibrate Gaussian widths, weight
    denominator, recency and trend reference. Implement pure calculations with
    deterministic example tests. Review examples before changing the live UI.
-2. **Overall and pad scores.** Connect weighted scores and trends in a compact
+2. **Implemented, under review: overall and pad scores.** Connect weighted scores and trends in a compact
    panel in the current layout. No sidebar, new animation or streak yet.
 3. **Consistency and combined overall.** Expose complete/missing simultaneous groups,
    the tested 30/70 combination and explicit no-group/no-data behavior. Before this
@@ -236,8 +237,8 @@ short design → critique → revise loop with concrete examples; no unattended
 - `src/assessment.js` provides exact results, expected identities, counts and miss
   correction; `src/app.js` coordinates session/UI; notation feedback modules only
   render. Preserve current layout policy and both views.
-- Update current practice/development guides as implemented. Calculation code
-  exists; analytics is not yet visible in the current app.
+- Update current practice/development guides as implemented. The pad-score preview
+  is visible; consistency and the 70/30 overall are not displayed yet.
 
 ## Milestone 1 result
 
@@ -259,12 +260,36 @@ Illustrative raw-score examples (rounded here only):
 | −42, −40, −38 ms | 72.6 | 98.7 | 80.4 |
 | −40, 0, +40 ms | 81.7 | 0.6 | 57.4 |
 
-The source is a full-history projection for this foundation. The next UI step
-must supply completed-bar/clock handling and gate calculations on meaningful
-changes; do not add an every-frame history scan. Review those integration costs
-before choosing any cache. Stop/reset/browser checks remain integration work.
+The source is a full-history projection. Milestone 1 deliberately left clock,
+Stop/reset and browser integration to milestone 2; no history scan should run on
+unchanged frames. Review long-session costs before adding aggregate caches.
 
-Current status: milestone 1 passed user review and is approved for commit.
-Milestone 2 is authorized next; its changes must remain uncommitted for review.
-Curve calibration can be revisited after actual practice;
-the accepted defaults do not need to be reconfirmed before milestone 2.
+## Milestone 2 result
+
+- `AnalyticsView` displays the combined weighted pad score and enabled per-pad
+  scores with trends below either practice view. The preview is explicitly
+  labelled “without consistency”; no final overall score claim yet.
+- Pad score now returns the same score/reference/change/trend structure as
+  overall and individual pads. Existing raw scoring formulas remain unchanged.
+- Completed-bar selection uses elapsed audio time, latency correction and a
+  conservative cached delay for late windows crossing a bar end. Silent/empty
+  pads and no-data warm-up remain distinct from zero accuracy.
+- Gated snapshots respond to completed bars, hits and misses, including delayed
+  corrections. Unchanged frames do not project history or rewrite analytics.
+- Stop freezes the panel; Start and lesson/track changes reset it. Mixer/view
+  changes preserve the session. No new settings, stored data, sidebar, chart or
+  animation change. Existing session totals remain below the panel.
+- Unit tests cover late-window closure with positive/negative latency. Browser
+  checks cover real-time bar completion, a 50→100→67 correction/extra example,
+  16-bar trend warm-up, unchanged-frame work, mixer/view continuity, Stop/reset,
+  disabled pads, lesson changes and desktop/narrow layouts at both mounts.
+
+Verification: 156 Node tests, focused browser checks and all 36 full browser
+scenarios pass at `/` and `/rhythm-trainer/`. Desktop/narrow screenshots inspected;
+current guides and documentation links updated/checked. Real-kit practice remains
+the user acceptance step.
+
+Current status: milestone 2 passed user review and is approved for commit.
+Milestone 3 is authorized next; its changes remain uncommitted for review.
+Milestones 3–5 remain unstarted. Curve calibration can be revisited after practice;
+the accepted defaults do not need to be reconfirmed before the next step.

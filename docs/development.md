@@ -42,11 +42,11 @@ npm run test:browser
 Scenarios live under [`scripts/browser/`](../scripts/browser/): `lessons.mjs`
 (catalog, menu and release cache), `transport.mjs` (practice, tracks and loading
 recovery), `midi.mjs`, `notation.mjs` (view, lifecycle, following and layout),
-`notation-feedback.mjs` and `toolbar.mjs`. Shared page/input/clock helpers are
+`notation-feedback.mjs`, `toolbar.mjs` and `analytics.mjs`. Shared page/input/clock helpers are
 in `helpers.mjs`; `server.mjs` serves the packaged artifact. Keep test clocks
 and simulated MIDI there rather than duplicating setup in scenarios.
 
-For focused checks, append `-- --cleanup-only`, `-- --notehead-motion-only`,
+For focused checks, append `-- --analytics-only`, `-- --cleanup-only`, `-- --notehead-motion-only`,
 `-- --notation-feedback-only`, `-- --lesson-menu-only` or
 `-- --notation-coverage` to `npm run test:browser`. Every mode runs at both
 mounts. The full command remains the release check.
@@ -67,7 +67,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 | App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
-| Analytics calculations (not yet connected to the UI) | [analytics.js](../src/analytics.js) |
+| Analytics calculations / pad-score preview | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
 | Dynamic lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
 | Lesson validation / notation model | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
@@ -99,11 +99,13 @@ keeps the previous lesson available. `bindSliderKeys()` shares only keyboard
 stepping in displayed units (arrows ±1, Page ±10, Home/End limits). BPM and volume
 retain their own scale conversions, persistence and playback behavior.
 
-## Analytics foundation
+## Practice analytics
 
 The approved [analytics plan](plans/practice-analytics.md) is being implemented
-in stages. Only the calculation foundation currently exists; the app does not
-import it, and the practice screen/scoring feedback remains unchanged.
+in stages. The current panel shows weighted pad scores and trends below either
+view. Its combined pad score is explicitly labelled “without consistency”; the
+tested 70/30 overall and consistency calculations are not displayed yet. Existing
+session totals remain below it. No sidebar or animation change in this step.
 
 `scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
 returns raw 0–100 overall/per-pad/consistency scores plus historical references,
@@ -117,16 +119,21 @@ The half-life is 8 bars; trends compare with all completed bars except the last
 8, require at least 16 completed bars and use a ±3-point neutral band. All math
 keeps full precision. See [deterministic examples](../test/analytics.test.js).
 
-The caller supplies the number of completed bars after all their expected late
-windows have closed and Assessment has advanced. The projection rejects absent
-expected results; it never advances the clock, matches input or finalizes misses.
-Recomputing incorporates a delayed timestamped miss correction. Completion-clock,
-Stop/reset and rendering integration belong to the next milestones.
+`barClosingDelay()` caches a conservative lesson-wide delay for late windows that
+cross a bar end (zero when none do). `completedBarCount()` uses elapsed audio
+time, this delay and the assessment's latency offset; it preserves the inclusive
+late-window boundary. Assessment advances before rendering scores. The projection
+rejects absent expected results; it never advances time, matches input or finalizes
+misses. Recomputing incorporates delayed timestamped miss corrections.
 
-This is a read-only full-history snapshot, with work proportional to completed
-bars/expected notes and recorded hits. Do not call it on every animation frame.
-Before UI integration, gate work on result/completed-bar changes and measure
-whether per-bar aggregation is needed. No parallel matcher or hit recorder.
+`AnalyticsView` gates the read-only full-history snapshot on assessment identity,
+completed-bar count, hit count and missed count. Unchanged frames do no history
+projection or analytics DOM writes. Its work scales with completed bars/expected
+notes and recorded hits on meaningful changes; consider per-bar aggregation only
+if long-session profiling requires it. No parallel matcher or hit recorder.
+Stop freezes the elapsed time/results; Start and lesson/track changes reset.
+Volume/mute/view changes preserve the same assessment. The panel shows enabled
+lesson instruments only. No stored analytics or new settings.
 
 ## Notehead timing feedback
 

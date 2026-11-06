@@ -43,6 +43,18 @@ kbd { font-size: 9px; font-family: inherit; padding: 2px 4px; border: 1px solid 
 .timeline:focus { outline: 1px solid #879663; outline-offset: 3px; }
 .session-summary { display: grid; grid-template-columns: repeat(5, 1fr) 1.7fr; gap: 10px; padding: 18px 26px; border-top: 1px solid var(--border); background: #202c23; }
 .session-summary > div { display: flex; flex-direction: column; gap: 7px; }
+.analytics { padding: 16px 26px; border-top: 1px solid var(--border); }
+.analytics-total { display: flex; align-items: baseline; gap: 12px; }
+.analytics-total > span:first-child { font-size: 12px; }
+.analytics-total small { color: var(--muted); font-size: 10px; margin-left: 5px; }
+.analytics-total output { font-size: 26px; }
+.analytics-trend { min-width: 14px; font-size: 18px; }
+.analytics-pads { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 12px; }
+.analytics-pad { display: flex; align-items: baseline; gap: 8px; font-size: 11px; }
+.analytics-pad > span:first-child { color: var(--muted); }
+.analytics-pad output { font-size: 15px; }
+.analytics-pad .analytics-trend { font-size: 14px; }
+.analytics-progress { margin: 10px 0 0; color: var(--muted); font-size: 10px; }
 .session-summary span { color: var(--muted); font-size: 10px; }
 .session-summary output { font-size: 22px; font-weight: 500; }
 .session-meta { margin: 0; padding: 0 26px 17px; background: #202c23; font-size: 10px; color: var(--muted); }

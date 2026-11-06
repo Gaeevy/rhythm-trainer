@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Assessment } from "../src/assessment.js";
-import { gaussianQuality, scorePractice, scoreTrend, TIMING_WIDTH_MS, CONSISTENCY_WIDTH_MS } from "../src/analytics.js";
+import { gaussianQuality, scorePractice, scoreTrend, barClosingDelay, completedBarCount, TIMING_WIDTH_MS, CONSISTENCY_WIDTH_MS } from "../src/analytics.js";
 import { TICKS_PER_BAR, TICKS_PER_BEAT } from "../src/music-time.js";
 
 function session(tracks = [{ instrument: "snare", notes: [0] }], bars = 1, options = {}) {
@@ -96,13 +96,13 @@ test("consistency rewards tightly grouped early hits, separately from timing, us
         tracks.forEach((track, index) => hit(assessment, track.instrument, 0, errors[index]));
         const report = finish(assessment, 1);
         const expectedPad = errors.reduce((sum, error) => sum + gaussianQuality(error, TIMING_WIDTH_MS), 0) / 3 * 100;
-        close(report.padScore, expectedPad);
+        close(report.padScore.score, expectedPad);
         close(report.consistency.score, 100 * gaussianQuality(Math.max(...errors) - Math.min(...errors), CONSISTENCY_WIDTH_MS));
         close(report.overall.score, 0.7 * expectedPad + 0.3 * report.consistency.score);
         reports.push(report);
     }
     assert.ok(reports[0].consistency.score > reports[1].consistency.score);
-    assert.ok(reports[0].padScore < reports[1].padScore, "Centered average is not the same as coordination");
+    assert.ok(reports[0].padScore.score < reports[1].padScore.score, "Centered average is not the same as coordination");
 });
 
 test("partial simultaneous groups score zero and delayed timestamped hits correct the snapshot", () => {
@@ -127,7 +127,7 @@ test("eligible groups later in the lesson do not receive invented consistency cr
     const assessment = session([{ instrument: "snare", notes: [0, 384] }, { instrument: "kick", notes: [384] }], 2);
     hit(assessment, "snare", 0);
     const report = finish(assessment, 1);
-    assert.equal(report.padScore, 100);
+    assert.equal(report.padScore.score, 100);
     assert.equal(report.consistency.score, null);
     assert.equal(report.overall.score, null);
 });
@@ -198,11 +198,30 @@ test("trend reference uses all earlier bars excluding eight, for pads, consisten
     const earlier = finish(assessment, 16);
     const current = finish(assessment, 24);
     close(current.overall.referenceScore, earlier.overall.score);
+    close(current.padScore.referenceScore, earlier.padScore.score);
     close(current.consistency.referenceScore, earlier.consistency.score);
     close(pad(current).referenceScore, pad(earlier).score);
     assert.equal(current.overall.trend, "up");
     assert.equal(current.consistency.trend, "up");
     assert.equal(pad(current).trend, "up");
+});
+
+test("completed bars wait past late windows and use assessment latency, including sparse end-of-bar notes", () => {
+    for (const latencyOffsetMs of [-100, 0, 100]) {
+        const assessment = session([{ instrument: "snare", notes: [383] }], 1, { latencyOffsetMs });
+        const delay = barClosingDelay(assessment);
+        close(delay, 0.15 - 1 / 96);
+        const boundary = 4 + delay + latencyOffsetMs / 1000;
+        assert.equal(completedBarCount(assessment, boundary, delay), 0);
+        assert.equal(completedBarCount(assessment, boundary + 1e-6, delay), 1);
+        assessment.advance(assessment.origin + boundary + 1e-6);
+        assert.equal(scorePractice(assessment, 1).padScore.score, 0);
+        assert.equal(completedBarCount(assessment, -4, delay), 0);
+    }
+    assert.equal(barClosingDelay(session()), 0);
+    const disabled = session(undefined, 1, { disabledInstruments: ["snare"] });
+    assert.equal(barClosingDelay(disabled), 0);
+    assert.equal(completedBarCount(disabled, 4.001), 1);
 });
 
 test("long sessions stay finite, use raw precision and never mutate or advance the assessment", () => {

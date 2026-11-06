@@ -17,6 +17,7 @@ import { loadPracticeSettings, savePracticeSettings } from "./practice-settings.
 import { renderKeyboardBindings } from "./keyboard-view.js";
 import { INSTRUMENTS } from "./instruments.js";
 import { bindSliderKeys } from "./slider-keys.js";
+import { AnalyticsView } from "./analytics-view.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
@@ -42,6 +43,7 @@ let activeLessonId = null;
 let sessionElapsedSeconds = 0;
 let summaryValues = [];
 const timingStates = Object.values(TimingStatus);
+const analyticsView = new AnalyticsView(element("analytics"));
 
 function setText(id, value) {
     const node = element(id);
@@ -124,6 +126,7 @@ function updateTempoReset() {
 }
 
 function updateSummary() {
+    analyticsView.update(assessment, sessionElapsedSeconds);
     const seconds = Math.floor(sessionElapsedSeconds);
     const loops = assessment ? Math.floor(sessionElapsedSeconds / assessment.loopSeconds) : 0;
     const meanError = assessment?.meanAbsoluteErrorMs;
@@ -171,6 +174,7 @@ function toggleTrack(instrument) {
     assessment = null;
     sessionElapsedSeconds = 0;
     for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
+    analyticsView.setInstruments(tracks.filter(track => track.enabled).map(track => track.data.instrument));
     notationView.updateInstruments(preferences.disabledInstruments);
     persistPractice();
     draw();
@@ -248,6 +252,7 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
             () => toggleTrack(track.instrument),
         ));
         for (const track of tracks) track.setEnabled(!preferences.disabledInstruments.includes(track.data.instrument));
+        analyticsView.setInstruments(tracks.filter(track => track.enabled).map(track => track.data.instrument));
         element("tracks").style.setProperty("--track-count", tracks.length);
         element("tracks").replaceChildren(...tracks.map(track => track.element));
         notationView.setLesson(lesson, preferences.disabledInstruments);
