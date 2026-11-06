@@ -48,6 +48,22 @@ export async function analyticsFlow(browser, url) {
         assert.equal(await page.locator(".analytics-consistency output").textContent(), "100");
         await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 38, 90], window.smoke.stamp(0, 17)));
         await page.waitForFunction(() => document.querySelector(".analytics-total output").textContent === "77");
+        const unfinished = await page.evaluate(() => {
+            const assessment = window.smoke.assessment, original = assessment.resultFor;
+            let reads = 0;
+            assessment.resultFor = function (...args) { reads++; return original.apply(this, args); };
+            try {
+                // Both duplicate hits are outside the completed score window.
+                // Matching and analytics update synchronously; notation's later
+                // animation frame is deliberately outside this measurement.
+                for (const beat of [4, 8]) window.midiTest.sendData("kit", [0x99, 38, 90], window.smoke.stamp(beat, 17));
+                return { reads, completedBars: document.querySelector("#analytics").dataset.completedBars,
+                    score: document.querySelector(".analytics-total output").textContent,
+                    status: assessment.hits.at(-1).status };
+            } finally { assessment.resultFor = original; }
+        });
+        assert.deepEqual(unfinished, { reads: 0, completedBars: "1", score: "77", status: "extra" },
+            "Unfinished/future hits must not re-project completed history");
         // Allow the pending notation feedback frame to consume that input too.
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const work = await page.evaluate(async () => {

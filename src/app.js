@@ -51,6 +51,12 @@ function setText(id, value) {
     if (node.textContent !== text) node.textContent = text;
 }
 
+function showFeedback(result) {
+    tracks.find(track => track.data.instrument === result.instrument)?.showFeedback(result);
+    notationView.showFeedback(result);
+    analyticsView.onResult(result);
+}
+
 function recordInputHit(hit) {
     if (!playback?.running || !assessment) return;
     const instrument = hit.instrument;
@@ -58,10 +64,7 @@ function recordInputHit(hit) {
     const result = assessment.recordHit({
         ...hit, instrument, audioTime: audioTimeForEvent(audio.context, hit.originalTimeStamp),
     });
-    if (result) {
-        tracks.find(track => track.data.instrument === instrument).showFeedback(result);
-        notationView.showFeedback(result);
-    }
+    if (result) showFeedback(result);
     updateSummary();
 }
 
@@ -145,10 +148,7 @@ function updateAssessment() {
     if (assessment && playback?.running) {
         const now = audioTimeForEvent(audio.context, performance.now());
         sessionElapsedSeconds = Math.max(0, now - assessment.origin);
-        for (const result of assessment.advance(now)) {
-            tracks.find(track => track.data.instrument === result.instrument)?.showFeedback(result);
-            notationView.showFeedback(result);
-        }
+        for (const result of assessment.advance(now)) showFeedback(result);
     }
     updateSummary();
 }
