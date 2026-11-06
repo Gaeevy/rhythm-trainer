@@ -1,8 +1,8 @@
 # Practice accuracy analytics
 
 Agreed design, 2026-11-06. Branch: `codex/practice-analytics-plan`.
-Milestone 1 committed as `20849a5`. Milestone 2 pad-score preview is implemented
-and verified locally. Do not commit milestone 2 yet.
+Milestones 1 and 2 committed as `20849a5` and `ecd1c4d`. Milestone 3 is
+implemented and verified locally. Do not commit milestone 3 yet.
 
 ## Current direction from the user
 
@@ -211,7 +211,7 @@ Continuous scoring does not require a separate animation for every score:
    deterministic example tests. Review examples before changing the live UI.
 2. **Implemented, under review: overall and pad scores.** Connect weighted scores and trends in a compact
    panel in the current layout. No sidebar, new animation or streak yet.
-3. **Consistency and combined overall.** Expose complete/missing simultaneous groups,
+3. **Implemented, under review: consistency and combined overall.** Expose complete/missing simultaneous groups,
    the tested 30/70 combination and explicit no-group/no-data behavior. Before this
    milestone, label any pad-only preview clearly rather than claiming the final
    overall formula is already implemented.
@@ -237,8 +237,8 @@ short design → critique → revise loop with concrete examples; no unattended
 - `src/assessment.js` provides exact results, expected identities, counts and miss
   correction; `src/app.js` coordinates session/UI; notation feedback modules only
   render. Preserve current layout policy and both views.
-- Update current practice/development guides as implemented. The pad-score preview
-  is visible; consistency and the 70/30 overall are not displayed yet.
+- Update current practice/development guides as implemented. Overall, consistency
+  and individual pad scores/trends are visible; layout/animation polish is next.
 
 ## Milestone 1 result
 
@@ -289,7 +289,31 @@ scenarios pass at `/` and `/rhythm-trainer/`. Desktop/narrow screenshots inspect
 current guides and documentation links updated/checked. Real-kit practice remains
 the user acceptance step.
 
-Current status: milestone 2 passed user review and is approved for commit.
-Milestone 3 is authorized next; its changes remain uncommitted for review.
-Milestones 3–5 remain unstarted. Curve calibration can be revisited after practice;
-the accepted defaults do not need to be reconfirmed before the next step.
+Milestone 2 passed user review and was committed as `ecd1c4d`.
+
+## Milestone 3 result
+
+- Display the already-tested 70% pads/30% consistency overall and consistency
+  score/trend, alongside unchanged individual pad scores. The preview qualifier
+  is removed; the applied blend is visible.
+- Add completed/eligible simultaneous-group counts for completed session bars.
+  Counts are unweighted context; scores keep their recency weights. Missing
+  members score zero, and delayed corrections update both scores and counts.
+- No simultaneous groups means 100% pads and no consistency row. Eligible groups
+  later in the lesson leave overall/consistency empty until finalized, with an
+  explicit waiting message. Reset clears the consistency display.
+- Keep both views, frame gating, current layout, all scoring formulas and existing
+  animations. No new settings or persistence.
+
+Verification: 156 Node tests, focused browser checks and all 36 full browser
+scenarios pass at both mounts. Checks cover the 35→100→77 combined
+score example, stable high consistency for equally late hits, its trend, group
+counts/correction, disabled-member fallback, future-group/no-data behavior,
+keyboard/MIDI and desktop/narrow layouts. Screenshots inspected; current guides
+and local documentation links updated/checked. Physical-kit practice remains
+the user acceptance step.
+
+Current status: milestone 3 passed user review and is approved for commit.
+Milestone 4 is authorized next and remains uncommitted for review; milestone 5
+is optional and unstarted. Curve calibration can be revisited after practice;
+accepted defaults do not need to be reconfirmed before the next step.

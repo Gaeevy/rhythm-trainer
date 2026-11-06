@@ -112,10 +112,13 @@ test("partial simultaneous groups score zero and delayed timestamped hits correc
     hit(assessment, "kick", 0);
     const partial = finish(assessment, 1);
     assert.equal(partial.consistency.score, 0);
+    assert.equal(partial.consistency.groups, 1);
+    assert.equal(partial.consistency.completeGroups, 0);
     close(partial.overall.score, 0.7 * 200 / 3);
     hit(assessment, "ride", 0);
     assert.equal(scorePractice(assessment, 1).overall.score, 100);
     assert.equal(scorePractice(assessment, 1).consistency.score, 100);
+    assert.equal(scorePractice(assessment, 1).consistency.completeGroups, 1);
     const disabled = session(tracks, 1, { disabledInstruments: ["kick", "ride"] });
     hit(disabled, "snare", 0);
     const report = finish(disabled, 1);

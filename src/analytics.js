@@ -96,7 +96,7 @@ export function scorePractice(assessment, completedBars) {
     const hasConsistency = [...groups.values()].some(members => members.length > 1);
     const bars = Array.from({ length: completedBars }, (_, absoluteBar) => ({
         absoluteBar, pads: Object.fromEntries(instruments.map(instrument => [instrument, emptySample()])),
-        consistency: emptySample(),
+        consistency: { ...emptySample(), complete: 0 },
     }));
     for (const bar of bars) {
         const iteration = Math.floor(bar.absoluteBar / barsPerLoop);
@@ -116,6 +116,7 @@ export function scorePractice(assessment, completedBars) {
             if (members.length > 1) {
                 bar.consistency.opportunities++;
                 if (errors.every(error => error !== null)) {
+                    bar.consistency.complete++;
                     const spread = Math.max(...errors) - Math.min(...errors);
                     bar.consistency.quality += gaussianQuality(spread, CONSISTENCY_WIDTH_MS);
                 }
@@ -138,6 +139,10 @@ export function scorePractice(assessment, completedBars) {
         padScore: scoreTrend(current.padScore, reference.padScore, completedBars),
         pads: instruments.map(instrument => ({ instrument,
             ...scoreTrend(current.pads[instrument], reference.pads[instrument], completedBars) })),
-        consistency: hasConsistency ? scoreTrend(current.consistency, reference.consistency, completedBars) : null,
+        consistency: hasConsistency ? {
+            ...scoreTrend(current.consistency, reference.consistency, completedBars),
+            groups: bars.reduce((sum, bar) => sum + bar.consistency.opportunities, 0),
+            completeGroups: bars.reduce((sum, bar) => sum + bar.consistency.complete, 0),
+        } : null,
     };
 }

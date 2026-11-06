@@ -57,15 +57,23 @@ export class AnalyticsView {
         if (key === this.key) return;
         this.key = key;
         const report = assessment && completedBars > 0 ? scorePractice(assessment, completedBars) : null;
-        showScore(this.host.querySelector(".analytics-total"), report?.padScore);
+        showScore(this.host.querySelector(".analytics-total"), report?.overall);
+        const consistency = this.host.querySelector(".analytics-consistency");
+        consistency.hidden = !report?.consistency;
+        showScore(consistency, report?.consistency);
+        text(this.host.querySelector(".analytics-blend"), !report ? ""
+            : report.consistency ? "70% pads · 30% consistency" : "Pads only");
+        text(this.host.querySelector(".analytics-groups"), !report?.consistency ? ""
+            : report.consistency.groups === 0 ? "No groups yet"
+                : `${report.consistency.completeGroups}/${report.consistency.groups} groups complete`);
         for (const [instrument, row] of this.rows) showScore(row, report?.pads.find(pad => pad.instrument === instrument));
         this.host.dataset.completedBars = String(completedBars);
         const progress = this.rows.size === 0 ? "No enabled pads"
             : completedBars === 0 ? "Waiting for a completed bar"
             : `${completedBars} completed ${completedBars === 1 ? "bar" : "bars"} · `
-                + (report?.padScore.score === null ? "No scored notes"
+                + (report?.overall.score === null ? (report?.padScore.score === null ? "No scored notes" : "Waiting for simultaneous notes")
                     : completedBars < 16 ? `Building trend (${completedBars}/16 bars)`
-                    : report?.padScore.trend == null ? "Building trend" : "Trend compares with 8 bars ago");
+                    : report?.overall.trend == null ? "Building trend" : "Trend compares with 8 bars ago");
         text(this.host.querySelector(".analytics-progress"), progress);
     }
 }

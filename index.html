@@ -61,7 +61,10 @@
       <p id="status" class="practice-status" role="status">Loading lesson…</p>
       <p id="position" class="visually-hidden">Bar 1 / 1 · Beat 1 · Loop 1</p>
       <section id="analytics" class="analytics" aria-label="Practice scores">
-        <div class="analytics-total"><span>Pad score <small>without consistency</small></span><output aria-label="Pad score out of 100">—</output><span class="analytics-trend" aria-label="Building trend" title="Building trend"></span></div>
+        <div class="analytics-headline">
+          <div class="analytics-total"><span>Overall score <small class="analytics-blend"></small></span><output aria-label="Overall score out of 100">—</output><span class="analytics-trend" aria-label="Building trend" title="Building trend"></span></div>
+          <div class="analytics-consistency" hidden><span title="How tightly simultaneous hits land together. Incomplete groups receive zero points.">Consistency <small class="analytics-groups" title="Completed groups across this session; scores favor recent bars."></small></span><output aria-label="Consistency score out of 100">—</output><span class="analytics-trend" aria-label="Building trend" title="Building trend"></span></div>
+        </div>
         <div class="analytics-pads" aria-label="Scores by pad"></div>
         <p class="analytics-progress">Waiting for a completed bar</p>
       </section>

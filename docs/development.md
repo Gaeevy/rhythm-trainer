@@ -67,7 +67,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 | App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
-| Analytics calculations / pad-score preview | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
+| Analytics calculations / scores panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
 | Dynamic lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
 | Lesson validation / notation model | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
@@ -102,10 +102,10 @@ retain their own scale conversions, persistence and playback behavior.
 ## Practice analytics
 
 The approved [analytics plan](plans/practice-analytics.md) is being implemented
-in stages. The current panel shows weighted pad scores and trends below either
-view. Its combined pad score is explicitly labelled “without consistency”; the
-tested 70/30 overall and consistency calculations are not displayed yet. Existing
-session totals remain below it. No sidebar or animation change in this step.
+in stages. The current panel shows overall, per-pad and consistency scores/trends
+below either view. Overall uses the 70/30 blend; when the enabled lesson has no
+simultaneous groups it uses pads only and hides consistency. Existing session
+totals remain below it. No sidebar or animation change in this step.
 
 `scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
 returns raw 0–100 overall/per-pad/consistency scores plus historical references,
@@ -134,6 +134,13 @@ if long-session profiling requires it. No parallel matcher or hit recorder.
 Stop freezes the elapsed time/results; Start and lesson/track changes reset.
 Volume/mute/view changes preserve the same assessment. The panel shows enabled
 lesson instruments only. No stored analytics or new settings.
+
+Consistency also exposes `groups` and `completeGroups` across completed session
+bars. These unweighted counts explain completeness; the score itself still uses
+recency weights. A missing member makes the group quality zero, while a delayed
+correction can complete it. An eligible group scheduled in a later bar does not
+earn invented credit: consistency and overall stay empty until a group has been
+finalized, and the panel says it is waiting for simultaneous notes.
 
 ## Notehead timing feedback
 
