@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Assessment } from "../src/assessment.js";
 import { lessonNotation } from "../src/notation/model.js";
-import { noteAppearance, extraPosition, NOTATION_COLORS, notationFeedbackText } from "../src/notation/feedback.js";
+import { noteheadShift, noteAppearance, extraPosition, NOTATION_COLORS, notationFeedbackText } from "../src/notation/feedback.js";
 
 const lesson = { version: 2, title: "Feedback", bpm: 60, bars: 1, time_signature: [4, 4], notation: { feel: "straight" },
     tracks: [{ instrument: "snare", notes: [0, 96, 192] }, { instrument: "hi_hat_closed", notes: [0, 96] }] };
@@ -91,4 +91,38 @@ test("an eligible early hit for the next loop is already assigned to that iterat
     assert.equal(early.expected.iteration, 1);
     assert.equal(noteAppearance(assessment, ref("snare", 0), 0).status, "on_time");
     assert.equal(noteAppearance(assessment, ref("snare", 0), 1).status, "early");
+});
+
+test("notehead movement shows signed error, grows with error and respects visual bounds", () => {
+    assert.equal(noteheadShift({ status: "early", errorMs: -20 }), -3.5);
+    assert.equal(noteheadShift({ status: "early", errorMs: -40 }), -7);
+    assert.equal(noteheadShift({ status: "late", errorMs: 20 }), 3.5);
+    assert.equal(noteheadShift({ status: "late", errorMs: 40 }), 7);
+    assert.equal(noteheadShift({ status: "early", errorMs: -150 }), -9);
+    assert.equal(noteheadShift({ status: "late", errorMs: 150 }), 9);
+    assert.equal(noteheadShift({ status: "late", errorMs: 80 }, 6), 6);
+    assert.equal(noteheadShift({ status: "early", errorMs: -80 }, 6), -6);
+    for (const status of ["on_time", "waiting", "disabled", "missed", "extra"]) {
+        assert.equal(noteheadShift({ status, errorMs: 40 }), 0);
+    }
+    assert.equal(noteheadShift({ status: "early", errorMs: NaN }), 0);
+});
+
+test("spatial feedback is independent for simultaneous hits, loops, miss correction and reset", () => {
+    const assessment = makeAssessment();
+    hit(assessment, "snare", 9.95);
+    hit(assessment, "hi_hat_closed", 10);
+    assert.ok(noteheadShift(noteAppearance(assessment, ref("snare", 0), 0)) < 0);
+    assert.equal(noteheadShift(noteAppearance(assessment, ref("hi_hat_closed", 0), 0)), 0);
+    assert.equal(noteheadShift(noteAppearance(assessment, ref("snare", 0), 1)), 0);
+    assessment.advance(11.2);
+    assert.equal(noteheadShift(noteAppearance(assessment, ref("snare", 96), 0)), 0);
+    hit(assessment, "snare", 11.05);
+    const before = structuredClone({ counts: assessment.counts, hits: assessment.hits, results: assessment.noteResults });
+    for (let index = 0; index < 20; index++) {
+        assert.ok(noteheadShift(noteAppearance(assessment, ref("snare", 96), 0)) > 0);
+        assert.equal(noteheadShift(noteAppearance(assessment, ref("snare", 96), 0, ["snare"])), 0);
+    }
+    assert.deepEqual({ counts: assessment.counts, hits: assessment.hits, results: assessment.noteResults }, before);
+    assert.equal(noteheadShift(noteAppearance(null, ref("snare", 0), 0)), 0);
 });

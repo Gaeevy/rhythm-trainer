@@ -1,6 +1,7 @@
+import { TICKS_PER_BAR } from "../music-time.js";
 import { renderScoreBar, scoreWidth } from "./renderer.js";
 import { markerX } from "./position.js";
-import { noteAppearance, NOTATION_COLORS } from "./feedback.js";
+import { noteAppearance, noteheadShift } from "./feedback.js";
 
 /** Clone cached engraving into a bar with independent noteheads and overlays. */
 export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
@@ -52,10 +53,26 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
     svg.append(extraLayer);
     const noteheads = template.noteheads.map(head => {
         const node = svg.querySelector(`[data-note-id="${head.ref.id}"]`);
-        return { ref: head.ref, node, title: node.querySelector("title"), appearance: null };
+        // Wrap the glyph, preserving VexFlow's transforms and fixed stems/beams.
+        // Cached templates and later loop copies must never inherit a played offset.
+        const bounds = node.getBBox();
+        const motion = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        motion.classList.add("notation-notehead-motion");
+        node.before(motion);
+        motion.append(node);
+        const tick = head.ref.performanceTick % TICKS_PER_BAR;
+        const targetX = markerX(tick, template.anchors);
+        // Bound motion inside neighboring time columns, including dense subdivisions.
+        const gap = Math.min(...template.anchors.filter(anchor => anchor.tick !== tick)
+            .map(anchor => Math.abs(anchor.x - targetX)).filter(distance => distance > 0));
+        // Halve the full geometry budget too, so capped offsets also move half as far.
+        const availableTravel = Math.max(0, Math.min(gap * 0.4,
+            bounds.x - 2, template.width - bounds.x - bounds.width - 2)) * 0.5;
+        return { ref: head.ref, node, motion, availableTravel,
+            title: node.querySelector("title"), appearance: null };
     });
     return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
-        anchors: template.anchors, height: template.height, extraSignature: "", feedbackRevision: -1,
+        anchors: template.anchors, staffYs: template.staffYs, height: template.height, extraSignature: "", feedbackRevision: -1,
         paddingLeft: parseFloat(getComputedStyle(host).paddingLeft) };
 }
 
@@ -64,9 +81,17 @@ export function updateScoreFeedback(bar, assessment, disabled) {
         const appearance = noteAppearance(assessment, head.ref, bar.iteration, disabled);
         const signature = `${bar.iteration}:${appearance.status}:${appearance.errorMs}`;
         if (head.appearance === signature) continue;
+        // Shake only a newly missed displayed head, never a replayed historical miss
+        // after resize/view changes. Correction/reset removes the class immediately.
+        const newMiss = head.appearance !== null && head.node.dataset.timing !== "missed" && appearance.status === "missed";
+        head.motion.classList.toggle("is-new-miss", newMiss);
         head.appearance = signature;
         head.node.dataset.timing = appearance.status;
         head.node.dataset.iteration = String(bar.iteration);
+        const shift = noteheadShift(appearance, head.availableTravel);
+        head.motion.dataset.timing = appearance.status;
+        head.motion.dataset.shift = String(shift);
+        head.motion.style.transform = `translateX(${shift}px)`;
         head.node.setAttribute("aria-label", appearance.text);
         head.title.textContent = appearance.text;
         for (const glyph of head.node.querySelectorAll("text, path")) {
@@ -81,17 +106,24 @@ export function updateScoreExtras(bar, extras) {
     const signature = visible.map(extra => extra.id).join(":");
     if (signature !== bar.extraSignature) {
         bar.extraSignature = signature;
-        bar.extraLayer.replaceChildren();
-        for (const [index, extra] of visible.entries()) {
-            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            text.classList.add("notation-extra-hit");
-            text.setAttribute("x", String(markerX(extra.tick, bar.anchors)));
-            text.setAttribute("y", String(bar.height - 32 + index * 14));
-            text.setAttribute("fill", NOTATION_COLORS.extra);
-            text.dataset.instrument = extra.result.instrument;
-            text.dataset.tick = String(extra.tick);
-            text.textContent = "+";
-            bar.extraLayer.append(text);
+        // Retain live overlays so another extra never restarts their fade.
+        const ids = new Set(visible.map(extra => String(extra.id)));
+        for (const node of [...bar.extraLayer.children]) if (!ids.has(node.dataset.extraId)) node.remove();
+        for (const extra of visible) {
+            if (bar.extraLayer.querySelector(`[data-extra-id="${extra.id}"]`)) continue;
+            const head = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+            head.classList.add("notation-extra-hit");
+            const x = markerX(extra.tick, bar.anchors), y = bar.staffYs[extra.result.instrument];
+            head.setAttribute("cx", String(x));
+            head.setAttribute("cy", String(y));
+            head.setAttribute("rx", "6");
+            head.setAttribute("ry", "4");
+            head.setAttribute("transform", `rotate(-20 ${x} ${y})`);
+            head.dataset.extraId = String(extra.id);
+            head.dataset.instrument = extra.result.instrument;
+            head.dataset.tick = String(extra.tick);
+            head.style.animationDuration = `${Math.max(0, extra.expires - performance.now())}ms`;
+            bar.extraLayer.append(head);
         }
     }
 }

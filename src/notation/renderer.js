@@ -95,7 +95,11 @@ export function renderScoreBar(host, example, width = scoreWidth(host, example))
             return { ref, node, title, appearance: null };
         });
     }));
-    return { svg, width, height, anchors, noteheads };
+    // Resolve every instrument through the same stave/key table, even if it has
+    // no written notes in this bar. Extras must not invent a second staff map.
+    const staffYs = Object.fromEntries(Object.entries(DRUM_KEY).map(([instrument, entry]) =>
+        [instrument, new StaveNote({ keys: [entry.key], duration: "4" }).setStave(stave).getYs()[0]]));
+    return { svg, width, height, anchors, noteheads, staffYs };
 }
 
 export function renderDrumKey(host, instruments) {

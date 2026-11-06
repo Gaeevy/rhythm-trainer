@@ -106,10 +106,26 @@ staff positions: open hi-hat has a circle, closed has + at bar start/after openi
 and pedal uses X below the staff. Other closed hits keep plain X heads.
 Unsupported notation or renderer errors leave Lanes usable with an explanation.
 
-Noteheads show on time (green), early (blue), late (amber) or missed (red).
+Matched early noteheads slide left; late noteheads slide right. Larger timing
+errors move them farther, with travel capped for dense patterns. Stems and beams
+stay fixed; on-time heads stay attached. The shifted heads remain while that bar
+copy is displayed, including after Stop. Start resets them. Reduced-motion
+preferences keep the same offsets without animation. Simultaneous hits move
+independently, even when their notes share a stem.
+
+Colors remain: on time (green), early (blue), late (amber) or missed (red).
+A missed note gives a brief vertical shake, returns to its printed position,
+and remains dimmed. Reduced motion uses dimming alone. If a delayed hit corrects
+the miss, the shake/dimming is cancelled and its matched timing offset is shown.
+Historical misses do not shake again when switching views or resizing.
+Unplayed and disabled heads stay in place.
 Notehead tooltips and screen-reader feedback show the instrument and matched
 error to 0.1 ms; stored error keeps full precision. Routine prompts below the
-score are hidden, while actionable playback errors remain visible. Extras appear briefly as purple + marks, not printed notes.
+score are hidden, while actionable playback errors remain visible. Extra hits
+appear as hollow noteheads at their instrument's staff position and actual hit
+time, without stems or beams. They fade over 900 ms, then disappear. Reduced
+motion keeps them static until removal. Their hollow shape distinguishes them
+without relying on color; they do not change the printed lesson.
 Each repeated bar has its own feedback; earlier rows retain results while new
 loops start fresh. Totals accumulate across loops.
 
