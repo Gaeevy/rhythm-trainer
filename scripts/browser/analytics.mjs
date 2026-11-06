@@ -20,7 +20,10 @@ export async function analyticsFlow(browser, url) {
         await setBpm(page, 300);
         const total = page.locator(".analytics-total output");
         assert.equal(await total.textContent(), "—");
-        assert.match(await page.locator(".analytics-total").textContent(), /Overall score/);
+        assert.match(await page.locator(".analytics-total").textContent(), /Score/);
+        assert.equal(await page.locator(".analytics-blend, .analytics-groups, .analytics-progress").count(), 0);
+        assert.equal(await total.evaluate(node => parseFloat(getComputedStyle(node).fontSize)), 56);
+        assert.equal(await page.locator(".analytics-pads").evaluate(node => getComputedStyle(node).borderTopWidth), "1px");
         await observePlayback(page);
         await page.locator("#start-stop").click();
         await playing(page);
@@ -39,13 +42,10 @@ export async function analyticsFlow(browser, url) {
         await page.waitForFunction(() => document.querySelector("#analytics").dataset.completedBars === "1");
         assert.equal(await total.textContent(), "35", "Pad score 50 plus incomplete-group consistency 0 gives overall 35");
         assert.equal(await page.locator(".analytics-consistency output").textContent(), "0");
-        assert.equal(await page.locator(".analytics-groups").textContent(), "0/1 groups complete");
         assert.equal(await page.locator('.analytics-pad[data-instrument="ride"] output').textContent(), "—");
         await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 36, 90], window.smoke.stamp(0)));
         await page.waitForFunction(() => document.querySelector(".analytics-total output").textContent === "100");
         assert.equal(await page.locator(".analytics-consistency output").textContent(), "100");
-        assert.equal(await page.locator(".analytics-groups").textContent(), "1/1 groups complete");
-        assert.equal(await page.locator(".analytics-blend").textContent(), "70% pads · 30% consistency");
         await page.evaluate(() => window.midiTest.sendData("kit", [0x99, 38, 90], window.smoke.stamp(0, 17)));
         await page.waitForFunction(() => document.querySelector(".analytics-total output").textContent === "77");
         // Allow the pending notation feedback frame to consume that input too.
@@ -122,7 +122,6 @@ export async function analyticsFlow(browser, url) {
         await page.waitForFunction(() => document.querySelector("#analytics").dataset.completedBars === "1");
         assert.equal(await total.textContent(), "100");
         assert.equal(await page.locator(".analytics-consistency").isVisible(), false);
-        assert.equal(await page.locator(".analytics-blend").textContent(), "Pads only", "Disabling the other group member uses 100% pads");
         await page.locator("#start-stop").click();
         await selectLesson(page, "swing-01");
         await waitForLesson(page, "swing-01");
@@ -144,14 +143,11 @@ export async function analyticsFlow(browser, url) {
         await page.waitForFunction(() => document.querySelector("#analytics").dataset.completedBars === "1");
         assert.equal(await total.textContent(), "—", "Future groups must not receive invented consistency credit");
         assert.equal(await page.locator(".analytics-consistency output").textContent(), "—");
-        assert.match(await page.locator(".analytics-progress").textContent(), /Waiting for simultaneous notes/);
         await page.waitForFunction(() => document.querySelector("#analytics").dataset.completedBars === "2");
         assert.equal(await page.locator(".analytics-consistency output").textContent(), "0");
-        assert.equal(await page.locator(".analytics-groups").textContent(), "0/1 groups complete");
         await timedKey(page, "KeyF", 4);
         await timedKey(page, "KeyD", 4);
         await page.waitForFunction(() => document.querySelector(".analytics-total output").textContent === "100");
-        assert.equal(await page.locator(".analytics-groups").textContent(), "1/1 groups complete");
         await page.locator("#start-stop").click();
         assert.deepEqual(errors, []);
         console.log(`PASS 70/30 overall, pad/consistency trends, group coverage/correction, no-group fallback, native bars, frame gating and reset: ${new URL(url).pathname}`);

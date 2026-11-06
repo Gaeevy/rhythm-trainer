@@ -106,6 +106,10 @@ The approved [analytics plan](plans/practice-analytics.md) is being implemented
 in stages. The current panel shows overall, per-pad and consistency scores/trends.
 Overall uses the 70/30 blend; when the enabled lesson has no simultaneous groups
 it uses pads only and hides consistency. Session totals are folded below it.
+The minimal UI labels overall as “Score”, uses large numeric outputs and separates
+pad rows with a divider. Formula, complete-group counts and bar-progress text
+are omitted from the DOM, not merely hidden. Trend descriptions remain available
+on hover and to screen readers; calculations and no-data rules are unchanged.
 
 At viewport widths of at least 1600 px, `.practice-body` uses a score/Lanes column
 and a 300 px analytics sidebar. The page maximum width expands to 1840 px, leaving
@@ -144,11 +148,11 @@ Volume/mute/view changes preserve the same assessment. The panel shows enabled
 lesson instruments only. No stored analytics or new settings.
 
 Consistency also exposes `groups` and `completeGroups` across completed session
-bars. These unweighted counts explain completeness; the score itself still uses
-recency weights. A missing member makes the group quality zero, while a delayed
+bars in the calculation result, though the minimal UI does not display them.
+The score itself uses recency weights. A missing member makes group quality zero, while a delayed
 correction can complete it. An eligible group scheduled in a later bar does not
 earn invented credit: consistency and overall stay empty until a group has been
-finalized, and the panel says it is waiting for simultaneous notes.
+finalized.
 
 ## Notehead timing feedback
 

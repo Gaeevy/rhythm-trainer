@@ -1,8 +1,9 @@
 # Practice accuracy analytics
 
 Agreed design, 2026-11-06. Branch: `codex/practice-analytics-plan`.
-Milestones 1–3 committed as `20849a5`, `ecd1c4d` and `13eea2b`. Milestone 4
-passed user review and is approved for commit. Core milestones are complete.
+Milestones 1–4 committed as `20849a5`, `ecd1c4d`, `13eea2b` and `c308a1e`.
+Core milestones and the presentation refinement passed user review. Approved for
+commit, push and deployment; the optional follow-up is not part of this release.
 
 ## Current direction from the user
 
@@ -350,3 +351,17 @@ agreed overall/per-pad/consistency scores and trend indicators.
 
 Milestone 5 remains optional, pending the user's choice. Do not implement a
 streak, chart or additional automation automatically.
+
+## Minimal presentation refinement
+
+User requested larger, more polished numbers with only Score, Consistency and
+individual pad labels/values. A visual divider separates pads; no “Pads” heading.
+Remove the visible 70/30 formula, complete-group counts and completed-bar/trend
+explanation. Preserve scoring, trends, hover/accessibility descriptions, existing
+sidebar responsiveness and folded session totals. The corresponding DOM and
+rendering code are removed, rather than hiding stale text with CSS.
+
+Implemented: 56 px Score, 42 px Consistency, 27 px pad values, neutral trend
+arrows and a thin divider. 157 Node tests and focused analytics browser checks
+pass at both site mounts; wide/desktop/narrow screenshots inspected. Current
+guides updated. User review passed; approved for commit, push and deployment.

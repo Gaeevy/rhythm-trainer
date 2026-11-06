@@ -43,11 +43,14 @@ all-disabled tracks permit metronome-only practice.
 
 ## Scores and trends
 
-The analytics panel shows an **Overall score** out of 100, individual
+The minimal analytics panel shows **Score** out of 100, individual
 scores for enabled lesson pads, and **Consistency** for simultaneous notes.
 Overall combines 70% pad scores with 30% consistency. Pads share their weight by
 expected notes plus extras, including misses. If no enabled instruments have
-notes scheduled together, the score uses **Pads only** and hides consistency.
+notes scheduled together, the score uses pads only and hides consistency.
+Large numbers emphasize Score and Consistency; a divider separates individual
+pad scores. Formula, group counts and completed-bar explanations are not printed
+in the panel. Trend arrows retain their hover/screen-reader descriptions.
 Open **Session totals** beneath the scores for session counts and timing error.
 On wide screens (1600 px or more), analytics sits to the right of the practice
 view. On smaller screens it stays below, preserving score space. The toolbar
@@ -61,16 +64,17 @@ not zero accuracy. A delayed timestamped hit can correct a previous miss/score.
 
 Consistency measures how tightly notes scheduled together land: closer together
 earns more points even if all are early or late. Missing any member gives that
-group zero points. The complete-group count is for the completed session bars;
-the score favors recent bars. If the first simultaneous group is in a later
-bar, overall and consistency wait for it rather than assuming perfect results.
+group zero points; the score favors recent bars. If the first simultaneous group
+is in a later bar, overall and consistency wait for it rather than assuming
+perfect results.
 
 For overall, each pad and consistency, after 16 completed bars and sufficient
 earlier samples, ↑ means at least 3 points
 better than the same weighted score ending eight bars ago; ↓ means at least 3
 points worse; ~ means a smaller change. Hover the symbol for the numeric change;
-screen readers receive the description too. Until then, the panel says “Building
-trend”. Silent pads keep “—” until they have scoring opportunities.
+screen readers receive the description too. Until then, the arrow is blank and
+its description is “Building trend”. Silent pads keep “—” until they have scoring
+opportunities.
 
 Stop freezes the panel. Start, lesson changes and enabling/disabling pads reset
 practice; mixer and view changes preserve the results. Scores last for this
