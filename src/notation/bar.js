@@ -1,7 +1,7 @@
 import { TICKS_PER_BAR } from "../music-time.js";
 import { renderScoreBar, scoreWidth } from "./renderer.js";
 import { markerX } from "./position.js";
-import { noteAppearance, noteheadShift } from "./feedback.js";
+import { noteAppearance, noteheadShift, timingSeverity } from "./feedback.js";
 
 /** Clone cached engraving into a bar with independent noteheads and overlays. */
 export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
@@ -79,18 +79,23 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
 export function updateScoreFeedback(bar, assessment, disabled) {
     for (const head of bar.noteheads) {
         const appearance = noteAppearance(assessment, head.ref, bar.iteration, disabled);
-        const signature = `${bar.iteration}:${appearance.status}:${appearance.errorMs}`;
+        const severity = timingSeverity(appearance, assessment?.toleranceMs);
+        const signature = `${bar.iteration}:${appearance.status}:${appearance.errorMs}:${severity}`;
         if (head.appearance === signature) continue;
         // Shake only a newly missed displayed head, never a replayed historical miss
         // after resize/view changes. Correction/reset removes the class immediately.
         const newMiss = head.appearance !== null && head.node.dataset.timing !== "missed" && appearance.status === "missed";
         head.motion.classList.toggle("is-new-miss", newMiss);
+        // Historical feedback reconstructed after resize/view changes stays still.
+        head.motion.classList.toggle("is-new-severe", head.appearance !== null && severity === "severe");
         head.appearance = signature;
         head.node.dataset.timing = appearance.status;
         head.node.dataset.iteration = String(bar.iteration);
         const shift = noteheadShift(appearance, head.availableTravel);
         head.motion.dataset.timing = appearance.status;
         head.motion.dataset.shift = String(shift);
+        head.motion.dataset.severity = severity ?? "";
+        head.motion.style.setProperty("--notehead-shift", `${shift}px`);
         head.motion.style.transform = `translateX(${shift}px)`;
         head.node.setAttribute("aria-label", appearance.text);
         head.title.textContent = appearance.text;

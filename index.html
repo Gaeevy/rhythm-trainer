@@ -39,6 +39,8 @@
         <span id="notation-error-text"></span>
         <button id="notation-retry" type="button">Retry notation</button>
       </div>
+      <div class="practice-body">
+      <div class="practice-view">
       <section id="notation-panel" class="notation-panel" aria-label="Lesson notation" tabindex="0" hidden>
         <div id="notation-instruments" class="notation-instruments" role="group" aria-label="Enabled notation instruments"></div>
         <div class="notation-paper">
@@ -60,6 +62,16 @@
       </div>
       <p id="status" class="practice-status" role="status">Loading lesson…</p>
       <p id="position" class="visually-hidden">Bar 1 / 1 · Beat 1 · Loop 1</p>
+      </div>
+      <aside class="practice-analytics" aria-label="Practice analytics">
+      <section id="analytics" class="analytics" aria-label="Practice scores">
+        <div class="analytics-headline">
+          <div class="analytics-total"><span>Score</span><output aria-label="Overall score out of 100">—</output><span class="analytics-trend" aria-label="Building trend" title="Building trend"></span></div>
+          <div class="analytics-consistency" hidden><span title="How tightly simultaneous hits land together. Incomplete groups receive zero points.">Consistency</span><output aria-label="Consistency score out of 100">—</output><span class="analytics-trend" aria-label="Building trend" title="Building trend"></span></div>
+        </div>
+        <div class="analytics-pads" aria-label="Scores by pad"></div>
+      </section>
+      <details class="session-details"><summary>Session totals</summary>
       <div class="session-summary" aria-label="Session totals">
         <div><span>On time</span><output id="score-on_time">0</output></div>
         <div><span>Early</span><output id="score-early">0</output></div>
@@ -69,6 +81,9 @@
         <div><span>Mean absolute error</span><output id="mean-error">—</output></div>
       </div>
       <p class="session-meta"><output id="session-duration">0:00</output> played · <output id="session-loops">0</output> <span id="session-loop-label">loops completed</span></p>
+      </details>
+      </aside>
+      </div>
       <details id="practice-panel" class="settings-panel">
         <summary>PRACTICE SETTINGS</summary>
         <div class="practice-content">

@@ -317,6 +317,85 @@ export async function missedNoteFlow(browser, url) {
     } finally { await context.close(); }
 }
 
+export async function severityMotionFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 2000, height: 1100 }, reducedMotion: "no-preference" });
+    await mockMidi(context, { ports: ["kit"] });
+    await mockFixtureLessons(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await selectLesson(page, "basic-straight");
+        await waitForLesson(page, "basic-straight");
+        await setBpm(page, 60);
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#practice-panel > summary").click();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        await page.evaluate(() => {
+            window.severityProbe = { ended: [], samples: [], paths: [...document.querySelectorAll('[data-absolute-bar="0"] .vf-stem path, [data-absolute-bar="0"] .vf-beam path')].map(path => path.getAttribute("d")) };
+            for (const id of ["hi_hat_closed:0", "kick:0"]) {
+                const motion = document.querySelector(`[data-absolute-bar="0"] [data-note-id="${id}"]`).parentElement;
+                motion.addEventListener("animationstart", event => {
+                    if (event.animationName !== "notation-severe-settle") return;
+                    const sample = () => {
+                        const matrix = new DOMMatrixReadOnly(getComputedStyle(motion).transform);
+                        window.severityProbe.samples.push({ x: matrix.m41, y: matrix.m42, shift: Number(motion.dataset.shift) });
+                        if (motion.getAnimations().some(animation => animation.animationName === "notation-severe-settle")) requestAnimationFrame(sample);
+                    };
+                    requestAnimationFrame(sample);
+                });
+                motion.addEventListener("animationend", event => {
+                    if (event.animationName === "notation-severe-settle") window.severityProbe.ended.push(id);
+                });
+            }
+        });
+        assert.equal((await timedKey(page, "KeyJ", 0, -100)).status, "early");
+        assert.equal((await timedKey(page, "KeyD", 0, 100)).status, "late");
+        assert.equal((await timedKey(page, "KeyF", 1, 40)).status, "late");
+        await page.waitForFunction(() => window.severityProbe.ended.length === 2);
+        assert.equal(await page.evaluate(() => window.severityProbe.samples.some(sample => sample.x < -0.1)
+            && window.severityProbe.samples.some(sample => sample.x > 0.1)), true, "Both severe directions visibly animate");
+        assert.equal(await page.evaluate(() => window.severityProbe.samples.every(({ x, y, shift }) => y === 0
+            && x >= Math.min(0, shift) - 0.01 && x <= Math.max(0, shift) + 0.01)), true, "Severe settling stays inside its capped horizontal range");
+        const heads = await page.locator('[data-absolute-bar="0"]').evaluate(host => {
+            return ["hi_hat_closed:0", "kick:0", "snare:96"].map(id => {
+                const motion = host.querySelector(`[data-note-id="${id}"]`).parentElement;
+                const style = getComputedStyle(motion);
+                return { severity: motion.dataset.severity, animation: style.animationName, transition: style.transitionDuration,
+                    x: new DOMMatrixReadOnly(style.transform).m41, shift: Number(motion.dataset.shift) };
+            });
+        });
+        assert.deepEqual(heads.map(head => head.severity), ["severe", "severe", "mild"]);
+        assert.equal(heads[2].animation, "none");
+        assert.equal(heads[2].transition, "0.18s");
+        for (const head of heads) assert.ok(Math.abs(head.x - head.shift) < 0.01);
+        assert.deepEqual(await page.locator('[data-absolute-bar="0"] .vf-stem path, [data-absolute-bar="0"] .vf-beam path')
+            .evaluateAll(paths => paths.map(path => path.getAttribute("d"))), await page.evaluate(() => window.severityProbe.paths));
+        await page.setViewportSize({ width: 1440, height: 1100 });
+        await page.waitForFunction(() => !document.querySelector('[data-absolute-bar="0"] .is-new-severe'));
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-severity="severe"]').count(), 2, "Resize preserves severe offsets without replay");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        assert.equal((await timedKey(page, "KeyF", 3, 100)).status, "late");
+        await page.waitForFunction(() => document.querySelector('[data-absolute-bar="0"] [data-note-id="snare:288"]').parentElement.dataset.severity === "severe");
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="snare:288"]').evaluate(head => {
+            const style = getComputedStyle(head.parentElement);
+            return style.animationName === "none" && style.transitionDuration === "0s"
+                && Math.abs(new DOMMatrixReadOnly(style.transform).m41 - Number(head.parentElement.dataset.shift)) < 0.01;
+        }), true, "Reduced motion retains only the final severe offset");
+        await page.locator("#start-stop").click();
+        await page.getByRole("button", { name: "Disable Snare in notation", exact: true }).click();
+        assert.equal(await page.locator(".is-new-severe").count(), 0);
+        assert.deepEqual(errors, []);
+        console.log(`PASS mild/severe motion, bounded settling, fixed stems/beams, resize history, reduced motion and reset: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 export async function renderUpdatesFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     await mockMidi(context);

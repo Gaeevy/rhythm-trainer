@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Assessment } from "../src/assessment.js";
 import { lessonNotation } from "../src/notation/model.js";
-import { noteheadShift, noteAppearance, extraPosition, NOTATION_COLORS, notationFeedbackText } from "../src/notation/feedback.js";
+import { noteheadShift, noteAppearance, extraPosition, NOTATION_COLORS, notationFeedbackText, timingSeverity } from "../src/notation/feedback.js";
 
 const lesson = { version: 2, title: "Feedback", bpm: 60, bars: 1, time_signature: [4, 4], notation: { feel: "straight" },
     tracks: [{ instrument: "snare", notes: [0, 96, 192] }, { instrument: "hi_hat_closed", notes: [0, 96] }] };
@@ -10,6 +10,22 @@ const makeAssessment = () => new Assessment(lesson, { origin: 10 });
 const refs = lessonNotation(lesson).bars[0].voices.flatMap(voice => voice.notes.flatMap(note => note.refs));
 const ref = (instrument, tick) => refs.find(ref => ref.instrument === instrument && ref.performanceTick === tick);
 const hit = (assessment, instrument, time) => assessment.recordHit({ instrument, audioTime: time, originalTimeStamp: time * 1000 });
+
+test("timing severity changes presentation only, with inclusive mild boundaries and tolerance protection", () => {
+    for (const sign of [-1, 1]) {
+        const appearance = error => ({ status: sign < 0 ? "early" : "late", errorMs: sign * error });
+        assert.equal(timingSeverity(appearance(60), 30), "mild");
+        assert.equal(timingSeverity(appearance(60.0001), 30), "severe");
+        assert.equal(timingSeverity(appearance(60), 0), "mild");
+        assert.equal(timingSeverity(appearance(100), 50), "mild");
+        assert.equal(timingSeverity(appearance(100.0001), 50), "severe");
+    }
+    for (const status of ["on_time", "missed", "extra", "waiting", "disabled"]) {
+        assert.equal(timingSeverity({ status, errorMs: 120 }, 30), null);
+    }
+    assert.equal(timingSeverity({ status: "late", errorMs: null }, 30), null);
+    assert.equal(timingSeverity({ status: "late", errorMs: 100 }), "severe");
+});
 
 test("each simultaneous/shared-stem note reads its own existing result and retains raw error", () => {
     const assessment = makeAssessment();

@@ -42,11 +42,12 @@ npm run test:browser
 Scenarios live under [`scripts/browser/`](../scripts/browser/): `lessons.mjs`
 (catalog, menu and release cache), `transport.mjs` (practice, tracks and loading
 recovery), `midi.mjs`, `notation.mjs` (view, lifecycle, following and layout),
-`notation-feedback.mjs` and `toolbar.mjs`. Shared page/input/clock helpers are
+`notation-feedback.mjs`, `toolbar.mjs` and `analytics.mjs`. Shared page/input/clock helpers are
 in `helpers.mjs`; `server.mjs` serves the packaged artifact. Keep test clocks
 and simulated MIDI there rather than duplicating setup in scenarios.
 
-For focused checks, append `-- --cleanup-only`, `-- --notehead-motion-only`,
+For focused checks, append `-- --polish-only`, `-- --analytics-only`,
+`-- --cleanup-only`, `-- --notehead-motion-only`,
 `-- --notation-feedback-only`, `-- --lesson-menu-only` or
 `-- --notation-coverage` to `npm run test:browser`. Every mode runs at both
 mounts. The full command remains the release check.
@@ -67,6 +68,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 | App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
+| Analytics calculations / scores panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
 | Dynamic lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
 | Lesson validation / notation model | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
@@ -98,6 +100,60 @@ keeps the previous lesson available. `bindSliderKeys()` shares only keyboard
 stepping in displayed units (arrows ±1, Page ±10, Home/End limits). BPM and volume
 retain their own scale conversions, persistence and playback behavior.
 
+## Practice analytics
+
+The approved [analytics plan](plans/practice-analytics.md) is being implemented
+in stages. The current panel shows overall, per-pad and consistency scores/trends.
+Overall uses the 70/30 blend; when the enabled lesson has no simultaneous groups
+it uses pads only and hides consistency. Session totals are folded below it.
+The minimal UI labels overall as “Score”, uses large numeric outputs and separates
+pad rows with a divider. Formula, complete-group counts and bar-progress text
+are omitted from the DOM, not merely hidden. Trend descriptions remain available
+on hover and to screen readers; calculations and no-data rules are unchanged.
+
+At viewport widths of at least 1600 px, `.practice-body` uses a score/Lanes column
+and a 300 px analytics sidebar. The page maximum width expands to 1840 px, leaving
+over 1100 px for the practice view at the breakpoint. Below it, the same analytics
+DOM stays below the full-width view. The top toolbar and folded setup sections
+remain outside the columns. CSS controls placement; no reparenting or saved layout
+setting. The existing notation ResizeObserver handles column/width changes and
+`sheetColumns()` still fits bars according to rhythmic density.
+
+`scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
+returns raw 0–100 overall/per-pad/consistency scores plus historical references,
+changes and trends. It reads enabled tracks, canonical expected-note results
+and extras from Assessment. Gaussian quality uses fixed widths of 50 ms for
+timing and 25 ms for simultaneous-hit spread. Weighted opportunities include
+misses and extras; the blend is 70% pads/30% consistency, or 100% pads when the
+enabled lesson has no simultaneous groups. Missing samples are `null`, not zero.
+
+The half-life is 8 bars; trends compare with all completed bars except the last
+8, require at least 16 completed bars and use a ±3-point neutral band. All math
+keeps full precision. See [deterministic examples](../test/analytics.test.js).
+
+`barClosingDelay()` caches a conservative lesson-wide delay for late windows that
+cross a bar end (zero when none do). `completedBarCount()` uses elapsed audio
+time, this delay and the assessment's latency offset; it preserves the inclusive
+late-window boundary. Assessment advances before rendering scores. The projection
+rejects absent expected results; it never advances time, matches input or finalizes
+misses. Recomputing incorporates delayed timestamped miss corrections.
+
+`AnalyticsView` gates the read-only full-history snapshot on assessment identity,
+completed-bar count, hit count and missed count. Unchanged frames do no history
+projection or analytics DOM writes. Its work scales with completed bars/expected
+notes and recorded hits on meaningful changes; consider per-bar aggregation only
+if long-session profiling requires it. No parallel matcher or hit recorder.
+Stop freezes the elapsed time/results; Start and lesson/track changes reset.
+Volume/mute/view changes preserve the same assessment. The panel shows enabled
+lesson instruments only. No stored analytics or new settings.
+
+Consistency also exposes `groups` and `completeGroups` across completed session
+bars in the calculation result, though the minimal UI does not display them.
+The score itself uses recency weights. A missing member makes group quality zero, while a delayed
+correction can complete it. An eligible group scheduled in a later bar does not
+earn invented credit: consistency and overall stay empty until a group has been
+finalized.
+
 ## Notehead timing feedback
 
 This is display-only feedback, independent of the layout policy below.
@@ -113,10 +169,17 @@ horizontal displacement.
 [bar.js](../src/notation/bar.js) wraps each cloned notehead in an SVG group and
 translates only that wrapper. VexFlow transforms, stems, beams, original marker
 anchors and cached templates stay unchanged. Each hit/loop copy keeps its own
-offset. Only changed feedback writes the transform; CSS animates it for 180 ms
-and holds the final position. No new JS timers or animation-driven assessment.
+offset. Only changed feedback writes the transform. Mild timing errors slide for
+180 ms. `timingSeverity()` selects severe errors above max(60 ms, twice the
+on-time tolerance), only for matched early/late hits. A newly displayed severe
+result gets one 320 ms horizontal settling animation, staying between zero and
+the existing capped final shift, then holding that shift. CSS reads the same
+shift from `--notehead-shift`; no overshoot, extra wrappers or JS timers.
+This presentation rule never changes Gaussian scoring or input assessment.
 Waiting/disabled resets snap to zero; reduced-motion preferences disable the
-transition while retaining the spatial feedback. Existing colors and tooltips
+transition/settling while retaining the spatial feedback. Historical severe
+results reconstructed on resize/view changes keep their offset without replay.
+Existing colors and tooltips
 remain, with no new visible labels or markers.
 
 A newly missed displayed head gets one 280 ms vertical shake (±2 px), then

@@ -12,6 +12,12 @@ export const NOTATION_COLORS = Object.freeze({
 const NOTEHEAD_PIXELS_PER_MS = 0.175;
 const MAX_NOTEHEAD_SHIFT_PX = 9;
 
+/** Presentation only. Scoring remains continuous and matching stays unchanged. */
+export function timingSeverity(appearance, toleranceMs = 30) {
+    if (!["early", "late"].includes(appearance.status) || !Number.isFinite(appearance.errorMs)) return null;
+    return Math.abs(appearance.errorMs) > Math.max(60, 2 * toleranceMs) ? "severe" : "mild";
+}
+
 /** On-time/unplayed notes stay attached; early/late heads show their signed error. */
 export function noteheadShift(appearance, availableTravel = MAX_NOTEHEAD_SHIFT_PX) {
     if (!["early", "late"].includes(appearance.status) || !Number.isFinite(appearance.errorMs)) return 0;

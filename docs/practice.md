@@ -41,6 +41,45 @@ Track controls disable an instrument's guide notes and assessment. Its lane or
 noteheads stay dimmed. Changing enabled tracks stops/resets the session;
 all-disabled tracks permit metronome-only practice.
 
+## Scores and trends
+
+The minimal analytics panel shows **Score** out of 100, individual
+scores for enabled lesson pads, and **Consistency** for simultaneous notes.
+Overall combines 70% pad scores with 30% consistency. Pads share their weight by
+expected notes plus extras, including misses. If no enabled instruments have
+notes scheduled together, the score uses pads only and hides consistency.
+Large numbers emphasize Score and Consistency; a divider separates individual
+pad scores. Formula, group counts and completed-bar explanations are not printed
+in the panel. Trend arrows retain their hover/screen-reader descriptions.
+Open **Session totals** beneath the scores for session counts and timing error.
+On wide screens (1600 px or more), analytics sits to the right of the practice
+view. On smaller screens it stays below, preserving score space. The toolbar
+stays at the top; setup sections remain folded below the practice area.
+
+Closer to the expected time earns more points, even inside the visual on-time
+band. A missed note earns zero; an extra adds a zero-point opportunity. Recent
+results count more: results eight bars older have half the weight. Scores use
+completed bars after their late-hit windows close; “—” means no scored notes yet,
+not zero accuracy. A delayed timestamped hit can correct a previous miss/score.
+
+Consistency measures how tightly notes scheduled together land: closer together
+earns more points even if all are early or late. Missing any member gives that
+group zero points; the score favors recent bars. If the first simultaneous group
+is in a later bar, overall and consistency wait for it rather than assuming
+perfect results.
+
+For overall, each pad and consistency, after 16 completed bars and sufficient
+earlier samples, ↑ means at least 3 points
+better than the same weighted score ending eight bars ago; ↓ means at least 3
+points worse; ~ means a smaller change. Hover the symbol for the numeric change;
+screen readers receive the description too. Until then, the arrow is blank and
+its description is “Building trend”. Silent pads keep “—” until they have scoring
+opportunities.
+
+Stop freezes the panel. Start, lesson changes and enabling/disabling pads reset
+practice; mixer and view changes preserve the results. Scores last for this
+session only. There are no extra analytics settings.
+
 ## Input and sound
 
 Connect the module's **USB MIDI** port to the Mac. Chrome may ask permission.
@@ -112,6 +151,11 @@ stay fixed; on-time heads stay attached. The shifted heads remain while that bar
 copy is displayed, including after Stop. Start resets them. Reduced-motion
 preferences keep the same offsets without animation. Simultaneous hits move
 independently, even when their notes share a stem.
+
+Mild errors use a smooth slide. Severe errors (more than 60 ms, or twice your
+on-time tolerance if larger) use a brief horizontal settling motion within the
+same travel limit. This visual distinction does not change the continuous score.
+Reopening/resizing a score does not replay the severe effect.
 
 Colors remain: on time (green), early (blue), late (amber) or missed (red).
 A missed note gives a brief vertical shake, returns to its printed position,
