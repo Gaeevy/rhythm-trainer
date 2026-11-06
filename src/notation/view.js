@@ -37,22 +37,16 @@ export class NotationView {
         this.lesson = null;
         this.model = null;
         this.disabled = [];
-        this.page = 0;
         this.request = 0;
         this.active = false;
         this.running = false;
         this.beat = 0;
-        this.assessment = null;
-        this.feedbackIteration = 0;
-        this.latestResult = null;
-        this.extras = [];
         this.extraSequence = 0;
-        this.lastPlayedAt = -Infinity;
         this.feedbackRevision = 0;
         this.displayedResult = undefined;
         this.cache = new Map();
         this.cards = new Map();
-        this.absoluteBar = 0;
+        this.resetSession();
         this.columns = 2;
         element("notation-previous").onclick = () => this.changePage(-1);
         element("notation-next").onclick = () => this.changePage(1);
@@ -73,30 +67,39 @@ export class NotationView {
         this.observer.observe(element("notation-scroll"));
     }
 
+    clearBars() {
+        this.geometry = null;
+        this.cards.clear();
+        element("notation-sheet").replaceChildren();
+    }
+
+    resetSession(assessment = null) {
+        this.assessment = assessment;
+        this.latestResult = null;
+        this.extras = [];
+        this.feedbackIteration = 0;
+        this.lastPlayedAt = -Infinity;
+        this.absoluteBar = 0;
+        this.page = 0;
+        this.clearBars();
+        element("notation-scroll").scrollTop = 0;
+    }
+
     setLesson(lesson, disabled) {
         this.request++;
         this.lesson = lesson;
         this.disabled = disabled;
         this.model = null;
-        this.assessment = null;
-        this.latestResult = null;
-        this.extras = [];
-        this.feedbackIteration = 0;
-        this.lastPlayedAt = -Infinity;
+        this.resetSession();
         this.cache.clear();
-        this.geometry = null;
-        this.absoluteBar = 0;
-        this.cards.clear();
-        element("notation-sheet").replaceChildren();
-        this.page = 0;
         this.updateInstruments(disabled);
+        this.drumKeyLesson = null;
         element("notation-key").replaceChildren();
         if (element("notation-key").parentElement.open) void this.showDrumKey();
     }
 
     updateInstruments(disabled) {
         this.disabled = disabled;
-        this.cache.clear();
         const buttons = this.lesson?.tracks.map(track => {
             const enabled = !disabled.includes(track.instrument);
             const button = document.createElement("button");
@@ -108,7 +111,9 @@ export class NotationView {
             return button;
         }) ?? [];
         element("notation-instruments").replaceChildren(...buttons);
-        if (this.active && this.model) this.renderSafely(true);
+        // Disabling changes feedback, not engraving or its measured geometry.
+        this.feedbackRevision++;
+        if (this.active && this.model) this.updateFeedback();
     }
 
     async show(view) {
@@ -123,8 +128,8 @@ export class NotationView {
             await loadRenderer();
             if (request !== this.request || !this.active) return;
             this.model = model;
-            renderDrumKey(element("notation-key"), this.lesson.tracks.map(track => track.instrument));
             this.renderSafely();
+            void this.showDrumKey();
         } catch (error) {
             if (request === this.request) this.fallback(error);
         }
@@ -132,10 +137,14 @@ export class NotationView {
 
     async showDrumKey() {
         const lesson = this.lesson;
-        if (!lesson) return;
+        const host = element("notation-key");
+        if (!lesson || !host.parentElement.open || this.drumKeyLesson === lesson) return;
         try {
             await loadRenderer();
-            if (lesson === this.lesson) renderDrumKey(element("notation-key"), lesson.tracks.map(track => track.instrument));
+            if (lesson === this.lesson && host.parentElement.open && this.drumKeyLesson !== lesson) {
+                renderDrumKey(host, lesson.tracks.map(track => track.instrument));
+                this.drumKeyLesson = lesson;
+            }
         } catch {
             if (lesson === this.lesson) {
                 const message = document.createElement("li");
@@ -164,15 +173,7 @@ export class NotationView {
         this.beat = beat;
         this.running = running;
         if (assessment !== this.assessment) {
-            this.assessment = assessment;
-            this.latestResult = null;
-            this.extras = [];
-            this.feedbackIteration = 0;
-            this.lastPlayedAt = -Infinity;
-            this.absoluteBar = 0;
-            this.cards.clear();
-            element("notation-sheet").replaceChildren();
-            element("notation-scroll").scrollTop = 0;
+            this.resetSession(assessment);
         }
         if (running && this.model) this.selectFeedbackIteration(scorePosition(beat, this.model.bars.length).loop - 1);
         if (!this.active || !this.model) return;
@@ -192,8 +193,7 @@ export class NotationView {
             const available = sheet.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
             const columns = sheetColumns(available, this.model.bars);
             if (rebuild || columns !== this.columns) {
-                this.cards.clear();
-                element("notation-sheet").replaceChildren();
+                this.clearBars();
             }
             this.columns = columns;
             sheet.style.setProperty("--score-columns", columns);

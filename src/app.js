@@ -16,6 +16,7 @@ import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 import { loadPracticeSettings, savePracticeSettings } from "./practice-settings.js";
 import { renderKeyboardBindings } from "./keyboard-view.js";
 import { INSTRUMENTS } from "./instruments.js";
+import { bindSliderKeys } from "./slider-keys.js";
 
 const element = id => document.getElementById(id);
 const lessonSelect = element("lesson");
@@ -223,14 +224,19 @@ function stop(message = "Stopped") {
     showStatus(message);
 }
 
-async function changeLesson(read, id, { initial = false } = {}) {
+async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     const request = ++lessonRequest;
     stop("Loading lesson…");
     loading = true;
     startButton.disabled = true;
     element("lesson-error").hidden = true;
     try {
-        const nextLesson = await read();
+        const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
+        if (!entry) throw new Error("Unknown bundled lesson");
+        const path = entry.path.split("/").map(encodeURIComponent).join("/");
+        const response = await fetch(new URL(`../lessons/${path}`, import.meta.url));
+        if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
+        const nextLesson = parseLesson(await response.text());
         if (request !== lessonRequest) return;
         lesson = nextLesson;
         activeLessonId = id;
@@ -269,17 +275,6 @@ async function changeLesson(read, id, { initial = false } = {}) {
             startButton.disabled = !lesson;
         }
     }
-}
-
-function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
-    return changeLesson(async () => {
-        const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
-        if (!entry) throw new Error("Unknown bundled lesson");
-        const path = entry.path.split("/").map(encodeURIComponent).join("/");
-        const response = await fetch(new URL(`../lessons/${path}`, import.meta.url));
-        if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
-        return parseLesson(await response.text());
-    }, id, { initial });
 }
 
 startButton.addEventListener("click", async () => {
@@ -348,16 +343,9 @@ startButton.addEventListener("click", async () => {
 for (const bus of Object.keys(VOLUME_MAX)) {
     const slider = element(`${bus}-volume`);
     slider.addEventListener("input", updateVolumes);
-    slider.addEventListener("keydown", event => {
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
-        const volume = preferences[`${bus}Volume`];
-        const values = { ArrowLeft: volume - 1, ArrowDown: volume - 1,
-            ArrowRight: volume + 1, ArrowUp: volume + 1,
-            PageDown: volume - 10, PageUp: volume + 10, Home: 0, End: VOLUME_MAX[bus] };
-        if (!Object.hasOwn(values, event.code)) return;
-        event.preventDefault();
-        slider.value = positionFromVolume(values[event.code], VOLUME_MAX[bus]);
-        slider.dispatchEvent(new Event("input"));
+    bindSliderKeys(slider, {
+        value: () => preferences[`${bus}Volume`], min: 0, max: VOLUME_MAX[bus],
+        position: value => positionFromVolume(value, VOLUME_MAX[bus]),
     });
     element(`${bus}-mute`).addEventListener("click", event => {
         const button = event.currentTarget;
@@ -374,15 +362,8 @@ bpmInput.addEventListener("input", () => {
         persistPractice();
     }
 });
-bpmInput.addEventListener("keydown", event => {
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
-    const values = { ArrowLeft: currentBpm - 1, ArrowDown: currentBpm - 1,
-        ArrowRight: currentBpm + 1, ArrowUp: currentBpm + 1,
-        PageDown: currentBpm - 10, PageUp: currentBpm + 10, Home: MIN_BPM, End: MAX_BPM };
-    if (!Object.hasOwn(values, event.code)) return;
-    event.preventDefault();
-    bpmInput.value = positionFromBpm(values[event.code]);
-    bpmInput.dispatchEvent(new Event("input"));
+bindSliderKeys(bpmInput, {
+    value: () => currentBpm, min: MIN_BPM, max: MAX_BPM, position: positionFromBpm,
 });
 countInInput.addEventListener("change", () => {
     stop("Count-in changed · Press Start to restart");
