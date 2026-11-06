@@ -8,6 +8,17 @@ export const NOTATION_COLORS = Object.freeze({
     early: "#146982", late: "#8c5a08", missed: "#a53735", extra: "#75508b",
 });
 
+// Visual magnification only: never feed these pixels back into clocks or assessment.
+const NOTEHEAD_PIXELS_PER_MS = 0.35;
+const MAX_NOTEHEAD_SHIFT_PX = 18;
+
+/** On-time/unplayed notes stay attached; early/late heads show their signed error. */
+export function noteheadShift(appearance, availableTravel = MAX_NOTEHEAD_SHIFT_PX) {
+    if (!["early", "late"].includes(appearance.status) || !Number.isFinite(appearance.errorMs)) return 0;
+    const limit = Math.max(0, Math.min(MAX_NOTEHEAD_SHIFT_PX, availableTravel));
+    return Math.max(-limit, Math.min(limit, appearance.errorMs * NOTEHEAD_PIXELS_PER_MS));
+}
+
 export function notationFeedbackText(result) {
     return `${INSTRUMENTS[result.instrument].label} · ${feedbackText(result, 1)}`;
 }

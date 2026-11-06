@@ -176,3 +176,8 @@ output { font-variant-numeric: tabular-nums; }
 
 /* Keep noteheads/feedback and bar lines dark; soften only the combined voice's stems and beams. */
 .notation-score svg[data-layout="combined"] :is(.vf-stem, .vf-beam) :is(path, text) { fill: #777b73; stroke: #777b73; }
+
+/* Only played noteheads move; stems, beams and playhead anchors remain fixed. */
+.notation-notehead-motion { transform: translateX(0); transition: transform 180ms ease-out; }
+.notation-notehead-motion[data-timing="waiting"], .notation-notehead-motion[data-timing="disabled"] { transition: none; }
+@media (prefers-reduced-motion: reduce) { .notation-notehead-motion { transition: none; } }

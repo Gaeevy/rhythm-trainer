@@ -1067,6 +1067,112 @@ async function notationFeedbackFlow(browser, url) {
     } finally { await context.close(); }
 }
 
+async function noteheadMotionFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: "no-preference" });
+    await mockMidi(context, { ports: ["kit"] });
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await selectLesson(page, "californication");
+        await waitForLesson(page, "californication");
+        await page.locator("#notation-score svg").waitFor();
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#tolerance").fill("10");
+        await page.locator("#practice-panel > summary").click();
+        await setBpm(page, 60);
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        await page.evaluate(() => {
+            const host = document.querySelector('[data-absolute-bar="0"] .notation-score');
+            const hat = host.querySelector('[data-note-id="hi_hat_closed:0"]');
+            const kick = host.querySelector('[data-note-id="kick:0"]');
+            window.motionProbe = { hatX: hat.getBoundingClientRect().x, kickX: kick.getBoundingClientRect().x,
+                sameStem: hat.closest(".vf-stavenote") === kick.closest(".vf-stavenote"),
+                paths: [...host.querySelectorAll(".vf-stem path, .vf-beam path")].map(path => path.getAttribute("d")),
+                count: host.querySelectorAll("[data-note-id]").length, transitions: 0 };
+            for (const head of [hat, kick]) head.parentElement.addEventListener("transitionrun", event => {
+                if (event.propertyName === "transform") window.motionProbe.transitions++;
+            });
+        });
+        assert.equal(await page.evaluate(() => window.motionProbe.sameStem), true);
+        assert.equal((await timedKey(page, "KeyJ", 0, -40)).status, "early");
+        assert.equal((await timedKey(page, "KeyD", 0, 40)).status, "late");
+        await page.waitForFunction(() => {
+            const host = document.querySelector('[data-absolute-bar="0"]');
+            return Number(host.querySelector('[data-note-id="hi_hat_closed:0"]').parentElement.dataset.shift) < 0
+                && Number(host.querySelector('[data-note-id="kick:0"]').parentElement.dataset.shift) > 0;
+        });
+        assert.equal(await page.locator('[data-absolute-bar="0"] .notation-notehead-motion').first()
+            .evaluate(node => getComputedStyle(node).transitionDuration), "0.18s");
+        await page.waitForFunction(() => [...document.querySelectorAll('[data-absolute-bar="0"] .notation-notehead-motion')]
+            .every(node => Math.abs(new DOMMatrixReadOnly(getComputedStyle(node).transform).m41 - Number(node.dataset.shift)) < 0.01));
+        assert.equal(await page.evaluate(() => window.motionProbe.transitions), 2, "Actual CSS transitions run for both heads");
+        const moved = await page.evaluate(() => {
+            const host = document.querySelector('[data-absolute-bar="0"] .notation-score');
+            const hat = host.querySelector('[data-note-id="hi_hat_closed:0"]');
+            const kick = host.querySelector('[data-note-id="kick:0"]');
+            return { hat: hat.getBoundingClientRect().x - window.motionProbe.hatX,
+                kick: kick.getBoundingClientRect().x - window.motionProbe.kickX,
+                hatTarget: Number(hat.parentElement.dataset.shift), kickTarget: Number(kick.parentElement.dataset.shift),
+                fixed: JSON.stringify([...host.querySelectorAll(".vf-stem path, .vf-beam path")].map(path => path.getAttribute("d")))
+                    === JSON.stringify(window.motionProbe.paths), count: host.querySelectorAll("[data-note-id]").length,
+                future: Number(document.querySelector('[data-absolute-bar="1"] [data-note-id="hi_hat_closed:0"]').parentElement.dataset.shift) };
+        });
+        assert.ok(moved.hat < 0 && moved.kick > 0);
+        assert.ok(Math.abs(moved.hat - moved.hatTarget) < 0.02 && Math.abs(moved.kick - moved.kickTarget) < 0.02);
+        assert.ok(Math.abs(moved.hat) <= 18 && moved.kick <= 18);
+        assert.equal(moved.fixed, true, "Shared stems and beams never move");
+        assert.equal(moved.future, 0, "A future loop copy never inherits a played offset");
+        assert.equal(moved.count, await page.evaluate(() => window.motionProbe.count), "No duplicate glyphs or extra markers");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        assert.equal(await page.locator('[data-absolute-bar="0"] .notation-notehead-motion').first()
+            .evaluate(node => getComputedStyle(node).transitionDuration), "0s");
+        assert.equal(await page.evaluate(() => {
+            window.midiTest.sendData("kit", [0x99, 38, 85], window.smoke.stamp(1, 0));
+            return window.smoke.assessment.hits.at(-1).status;
+        }), "on_time");
+        await page.waitForFunction(() => document.querySelector('[data-absolute-bar="0"] [data-note-id="snare:96"]').dataset.timing === "on_time");
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="snare:96"]').evaluate(node => Number(node.parentElement.dataset.shift)), 0);
+        assert.equal(await page.evaluate(() => {
+            window.midiTest.sendData("kit", [0x99, 42, 85], window.smoke.stamp(1, 80));
+            return window.smoke.assessment.hits.at(-1).status;
+        }), "late");
+        await page.waitForFunction(() => Number(document.querySelector('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:96"]').parentElement.dataset.shift) > 0);
+        assert.equal(await page.evaluate(() => {
+            window.midiTest.sendData("kit", [0x99, 42, 85], window.smoke.stamp(4, -140));
+            return window.smoke.assessment.hits.at(-1).status;
+        }), "early");
+        await page.waitForFunction(() => Number(document.querySelector('[data-absolute-bar="1"] [data-note-id="hi_hat_closed:0"]').parentElement.dataset.shift) < 0);
+        assert.equal(await page.locator('[data-absolute-bar="1"] [data-note-id="hi_hat_closed:0"]').evaluate(head => {
+            const svg = head.closest("svg").getBoundingClientRect(), glyph = head.getBoundingClientRect();
+            return glyph.left >= svg.left + 1.9 && glyph.right <= svg.right - 1.9;
+        }), true, "Early hits at continuation bars remain inside the SVG");
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-notehead-motion.png", fullPage: true });
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
+        await page.waitForFunction(() => Number(document.querySelector('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:0"]').parentElement.dataset.shift) < 0);
+        await page.setViewportSize({ width: 390, height: 844 });
+        await oneScoreColumn(page);
+        assert.ok(await page.locator('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:0"]').evaluate(node => Number(node.parentElement.dataset.shift)) < 0);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:0"]').evaluate(node => Number(node.parentElement.dataset.shift)), 0);
+        await page.locator("#start-stop").click();
+        await page.getByRole("button", { name: "Disable Hi-hat closed in notation", exact: true }).click();
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:0"]').evaluate(node => Number(node.parentElement.dataset.shift)), 0);
+        assert.deepEqual(errors, []);
+        console.log(`PASS independent animated noteheads, fixed beams, keyboard/MIDI, reduced motion, loop copies and reset: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 async function notationCoverageFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     await mockMidi(context);
@@ -1381,6 +1487,10 @@ try {
     for (const mount of ["/", "/rhythm-trainer/"]) {
         const server = await serve(mount);
         try {
+            if (process.argv.includes("--notehead-motion-only")) {
+                await noteheadMotionFlow(browser, server.url);
+                continue;
+            }
             if (process.argv.includes("--lesson-menu-only")) {
                 await catalogFlow(browser, server.url);
                 await lessonMenuFlow(browser, server.url);
@@ -1400,6 +1510,7 @@ try {
             await notationFlow(browser, server.url);
             await scoreFollowingFlow(browser, server.url);
             await notationFeedbackFlow(browser, server.url);
+            await noteheadMotionFlow(browser, server.url);
             await notationCoverageFlow(browser, server.url);
             await cacheFlow(browser, server.url);
             await renderUpdatesFlow(browser, server.url);

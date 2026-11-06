@@ -72,6 +72,29 @@ Only changed results refresh noteheads/summaries.
 Animation moves the marker/score and expires extra-hit overlays. Session history
 remains in memory until reset; the bounded sheet does not bound assessment history.
 
+## Notehead timing feedback
+
+This is display-only feedback, independent of the layout policy below.
+`noteheadShift()` in [feedback.js](../src/notation/feedback.js) reads the existing
+matched result: early is negative X, late positive X, on time zero. It magnifies
+signed error at 0.35 px/ms, capped at 18 px and 40% of the nearest static
+engraving-anchor gap, also bounded by the glyph's SVG edges. The displacement is a visual cue, not a new time axis or
+assessment tolerance. Missed/unplayed/disabled notes remain at zero.
+
+[bar.js](../src/notation/bar.js) wraps each cloned notehead in an SVG group and
+translates only that wrapper. VexFlow transforms, stems, beams, original marker
+anchors and cached templates stay unchanged. Each hit/loop copy keeps its own
+offset. Only changed feedback writes the transform; CSS animates it for 180 ms
+and holds the final position. No new JS timers or animation-driven assessment.
+Waiting/disabled resets snap to zero; reduced-motion preferences disable the
+transition while retaining the spatial feedback. Existing colors and tooltips
+remain, with no new visible labels or markers.
+
+[Notation feedback tests](../test/notation-feedback.test.js) cover sign, scale,
+caps, independent hits/loops, correction and read-only projection. Browser checks
+measure actual SVG displacement, fixed shared stems/beams, future copies,
+keyboard/MIDI, resize/view changes, stop/restart and reduced motion.
+
 ## Notation layout
 
 **One policy, one entry point:** `lessonNotation()` in

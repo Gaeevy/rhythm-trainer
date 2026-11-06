@@ -106,7 +106,15 @@ staff positions: open hi-hat has a circle, closed has + at bar start/after openi
 and pedal uses X below the staff. Other closed hits keep plain X heads.
 Unsupported notation or renderer errors leave Lanes usable with an explanation.
 
-Noteheads show on time (green), early (blue), late (amber) or missed (red).
+Matched early noteheads slide left; late noteheads slide right. Larger timing
+errors move them farther, with travel capped for dense patterns. Stems and beams
+stay fixed; on-time heads stay attached. The shifted heads remain while that bar
+copy is displayed, including after Stop. Start resets them. Reduced-motion
+preferences keep the same offsets without animation. Simultaneous hits move
+independently, even when their notes share a stem.
+
+Colors remain: on time (green), early (blue), late (amber) or missed (red).
+Missed, unplayed and disabled heads do not shift; extras retain their + overlay.
 Notehead tooltips and screen-reader feedback show the instrument and matched
 error to 0.1 ms; stored error keeps full precision. Routine prompts below the
 score are hidden, while actionable playback errors remain visible. Extras appear briefly as purple + marks, not printed notes.

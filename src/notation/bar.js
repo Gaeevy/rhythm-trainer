@@ -1,6 +1,7 @@
+import { TICKS_PER_BAR } from "../music-time.js";
 import { renderScoreBar, scoreWidth } from "./renderer.js";
 import { markerX } from "./position.js";
-import { noteAppearance, NOTATION_COLORS } from "./feedback.js";
+import { noteAppearance, noteheadShift, NOTATION_COLORS } from "./feedback.js";
 
 /** Clone cached engraving into a bar with independent noteheads and overlays. */
 export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
@@ -52,7 +53,22 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
     svg.append(extraLayer);
     const noteheads = template.noteheads.map(head => {
         const node = svg.querySelector(`[data-note-id="${head.ref.id}"]`);
-        return { ref: head.ref, node, title: node.querySelector("title"), appearance: null };
+        // Wrap the glyph, preserving VexFlow's transforms and fixed stems/beams.
+        // Cached templates and later loop copies must never inherit a played offset.
+        const bounds = node.getBBox();
+        const motion = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        motion.classList.add("notation-notehead-motion");
+        node.before(motion);
+        motion.append(node);
+        const tick = head.ref.performanceTick % TICKS_PER_BAR;
+        const targetX = markerX(tick, template.anchors);
+        // Bound motion inside neighboring time columns, including dense subdivisions.
+        const gap = Math.min(...template.anchors.filter(anchor => anchor.tick !== tick)
+            .map(anchor => Math.abs(anchor.x - targetX)).filter(distance => distance > 0));
+        const availableTravel = Math.max(0, Math.min(gap * 0.4,
+            bounds.x - 2, template.width - bounds.x - bounds.width - 2));
+        return { ref: head.ref, node, motion, availableTravel,
+            title: node.querySelector("title"), appearance: null };
     });
     return { node, host, barIndex, iteration, svg, marker, extraLayer, noteheads,
         anchors: template.anchors, height: template.height, extraSignature: "", feedbackRevision: -1,
@@ -67,6 +83,10 @@ export function updateScoreFeedback(bar, assessment, disabled) {
         head.appearance = signature;
         head.node.dataset.timing = appearance.status;
         head.node.dataset.iteration = String(bar.iteration);
+        const shift = noteheadShift(appearance, head.availableTravel);
+        head.motion.dataset.timing = appearance.status;
+        head.motion.dataset.shift = String(shift);
+        head.motion.style.transform = `translateX(${shift}px)`;
         head.node.setAttribute("aria-label", appearance.text);
         head.title.textContent = appearance.text;
         for (const glyph of head.node.querySelectorAll("text, path")) {
