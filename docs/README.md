@@ -2,6 +2,8 @@
 
 These guides describe the current app. Use the history summaries only for context.
 
+Active work: [practice accuracy analytics](plans/practice-analytics.md).
+
 Completed plan: [practice code cleanup](plans/practice-code-cleanup.md).
 
 | Guide | Use it to |

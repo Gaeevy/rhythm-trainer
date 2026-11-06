@@ -67,6 +67,7 @@ several loops, count-in, stop/restart, view switching, latency and reconnect.
 | App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
 | Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
+| Analytics calculations (not yet connected to the UI) | [analytics.js](../src/analytics.js) |
 | Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
 | Dynamic lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
 | Lesson validation / notation model | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
@@ -97,6 +98,35 @@ Its request counter guards late successes, errors and cleanup; a failed load
 keeps the previous lesson available. `bindSliderKeys()` shares only keyboard
 stepping in displayed units (arrows ±1, Page ±10, Home/End limits). BPM and volume
 retain their own scale conversions, persistence and playback behavior.
+
+## Analytics foundation
+
+The approved [analytics plan](plans/practice-analytics.md) is being implemented
+in stages. Only the calculation foundation currently exists; the app does not
+import it, and the practice screen/scoring feedback remains unchanged.
+
+`scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
+returns raw 0–100 overall/per-pad/consistency scores plus historical references,
+changes and trends. It reads enabled tracks, canonical expected-note results
+and extras from Assessment. Gaussian quality uses fixed widths of 50 ms for
+timing and 25 ms for simultaneous-hit spread. Weighted opportunities include
+misses and extras; the blend is 70% pads/30% consistency, or 100% pads when the
+enabled lesson has no simultaneous groups. Missing samples are `null`, not zero.
+
+The half-life is 8 bars; trends compare with all completed bars except the last
+8, require at least 16 completed bars and use a ±3-point neutral band. All math
+keeps full precision. See [deterministic examples](../test/analytics.test.js).
+
+The caller supplies the number of completed bars after all their expected late
+windows have closed and Assessment has advanced. The projection rejects absent
+expected results; it never advances the clock, matches input or finalizes misses.
+Recomputing incorporates a delayed timestamped miss correction. Completion-clock,
+Stop/reset and rendering integration belong to the next milestones.
+
+This is a read-only full-history snapshot, with work proportional to completed
+bars/expected notes and recorded hits. Do not call it on every animation frame.
+Before UI integration, gate work on result/completed-bar changes and measure
+whether per-bar aggregation is needed. No parallel matcher or hit recorder.
 
 ## Notehead timing feedback
 
