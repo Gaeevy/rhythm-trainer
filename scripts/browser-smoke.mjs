@@ -1126,7 +1126,7 @@ async function noteheadMotionFlow(browser, url) {
         });
         assert.ok(moved.hat < 0 && moved.kick > 0);
         assert.ok(Math.abs(moved.hat - moved.hatTarget) < 0.02 && Math.abs(moved.kick - moved.kickTarget) < 0.02);
-        assert.ok(Math.abs(moved.hat) <= 18 && moved.kick <= 18);
+        assert.ok(Math.abs(moved.hat) <= 9 && moved.kick <= 9);
         assert.equal(moved.fixed, true, "Shared stems and beams never move");
         assert.equal(moved.future, 0, "A future loop copy never inherits a played offset");
         assert.equal(moved.count, await page.evaluate(() => window.motionProbe.count), "No duplicate glyphs or extra markers");
@@ -1170,6 +1170,96 @@ async function noteheadMotionFlow(browser, url) {
         assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="hi_hat_closed:0"]').evaluate(node => Number(node.parentElement.dataset.shift)), 0);
         assert.deepEqual(errors, []);
         console.log(`PASS independent animated noteheads, fixed beams, keyboard/MIDI, reduced motion, loop copies and reset: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
+async function missedNoteFlow(browser, url) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: "no-preference" });
+    await mockMidi(context, { ports: ["kit"] });
+    await mockFixtureLessons(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await selectLesson(page, "basic-straight");
+        await waitForLesson(page, "basic-straight");
+        await page.locator("#notation-score svg").waitFor();
+        await setBpm(page, 120);
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").check();
+        await page.locator("#tolerance").fill("10");
+        await page.locator("#practice-panel > summary").click();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
+        await page.evaluate(() => {
+            window.missProbe = { starts: [], ends: [], y: [] };
+            for (const id of ["kick:0", "snare:96"]) {
+                const motion = document.querySelector(`[data-absolute-bar="0"] [data-note-id="${id}"]`).parentElement;
+                motion.addEventListener("animationstart", event => {
+                    if (event.animationName !== "notation-missed-shake") return;
+                    window.missProbe.starts.push(id);
+                    if (id === "snare:96") {
+                        // Deliver an originally late hit while its miss animation is active.
+                        window.midiTest.sendData("kit", [0x99, 38, 90], window.smoke.stamp(1, 40));
+                    } else {
+                        const sample = () => {
+                            window.missProbe.y.push(new DOMMatrixReadOnly(getComputedStyle(motion).transform).m42);
+                            if (motion.getAnimations().some(animation => animation.animationName === "notation-missed-shake")) requestAnimationFrame(sample);
+                        };
+                        requestAnimationFrame(sample);
+                    }
+                });
+                motion.addEventListener("animationend", event => {
+                    if (event.animationName === "notation-missed-shake") window.missProbe.ends.push(id);
+                });
+            }
+        });
+        await page.waitForFunction(() => window.missProbe.ends.includes("kick:0"));
+        assert.equal(await page.evaluate(() => window.missProbe.y.some(y => Math.abs(y) > 0.25)), true, "Missed head visibly shakes vertically");
+        const dimmed = await page.locator('[data-absolute-bar="0"] [data-note-id="kick:0"]').evaluate(head => {
+            const style = getComputedStyle(head.parentElement), matrix = new DOMMatrixReadOnly(style.transform);
+            return { opacity: Number(style.opacity), x: matrix.m41, y: matrix.m42 };
+        });
+        assert.deepEqual(dimmed, { opacity: 0.55, x: 0, y: 0 });
+        await page.waitForFunction(() => document.querySelector('[data-absolute-bar="0"] [data-note-id="snare:96"]').dataset.timing === "late");
+        const corrected = await page.locator('[data-absolute-bar="0"] [data-note-id="snare:96"]').evaluate(head => ({
+            opacity: getComputedStyle(head.parentElement).opacity,
+            shake: head.parentElement.classList.contains("is-new-miss"),
+            animation: getComputedStyle(head.parentElement).animationName,
+            shift: Number(head.parentElement.dataset.shift),
+        }));
+        assert.equal(corrected.opacity, "1");
+        assert.equal(corrected.shake, false);
+        assert.equal(corrected.animation, "none");
+        assert.ok(corrected.shift > 0 && corrected.shift <= 9);
+        assert.equal(await page.evaluate(() => window.missProbe.starts.filter(id => id === "kick:0").length), 1);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-missed-feedback.png", fullPage: true });
+        await selectView(page, "lanes");
+        await selectView(page, "notation");
+        await page.locator("#notation-score svg").waitFor();
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="kick:0"]').evaluate(head =>
+            !head.parentElement.classList.contains("is-new-miss") && getComputedStyle(head.parentElement).animationName === "none"
+                && Number(getComputedStyle(head.parentElement).opacity) === 0.55), true, "Historical misses stay dim without shaking again");
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => document.querySelector('[data-absolute-bar="0"] [data-note-id="kick:0"]').dataset.timing === "missed");
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="kick:0"]').evaluate(head =>
+            getComputedStyle(head.parentElement).animationName === "none" && Number(getComputedStyle(head.parentElement).opacity) === 0.55), true);
+        await page.locator("#start-stop").click();
+        await page.getByRole("button", { name: "Disable Kick in notation", exact: true }).click();
+        assert.equal(await page.locator('[data-absolute-bar="0"] [data-note-id="kick:0"]').evaluate(head =>
+            !head.parentElement.classList.contains("is-new-miss") && getComputedStyle(head.parentElement).opacity === "1"), true);
+        assert.deepEqual(errors, []);
+        console.log(`PASS missed shake/dimming, live correction, no replay, reduced motion and reset: ${new URL(url).pathname}`);
     } finally { await context.close(); }
 }
 
@@ -1489,6 +1579,7 @@ try {
         try {
             if (process.argv.includes("--notehead-motion-only")) {
                 await noteheadMotionFlow(browser, server.url);
+                await missedNoteFlow(browser, server.url);
                 continue;
             }
             if (process.argv.includes("--lesson-menu-only")) {
@@ -1511,6 +1602,7 @@ try {
             await scoreFollowingFlow(browser, server.url);
             await notationFeedbackFlow(browser, server.url);
             await noteheadMotionFlow(browser, server.url);
+            await missedNoteFlow(browser, server.url);
             await notationCoverageFlow(browser, server.url);
             await cacheFlow(browser, server.url);
             await renderUpdatesFlow(browser, server.url);

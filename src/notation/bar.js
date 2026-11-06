@@ -65,8 +65,9 @@ export function createScoreBar(sheet, model, { absoluteBar, columns, cache }) {
         // Bound motion inside neighboring time columns, including dense subdivisions.
         const gap = Math.min(...template.anchors.filter(anchor => anchor.tick !== tick)
             .map(anchor => Math.abs(anchor.x - targetX)).filter(distance => distance > 0));
+        // Halve the full geometry budget too, so capped offsets also move half as far.
         const availableTravel = Math.max(0, Math.min(gap * 0.4,
-            bounds.x - 2, template.width - bounds.x - bounds.width - 2));
+            bounds.x - 2, template.width - bounds.x - bounds.width - 2)) * 0.5;
         return { ref: head.ref, node, motion, availableTravel,
             title: node.querySelector("title"), appearance: null };
     });
@@ -80,6 +81,10 @@ export function updateScoreFeedback(bar, assessment, disabled) {
         const appearance = noteAppearance(assessment, head.ref, bar.iteration, disabled);
         const signature = `${bar.iteration}:${appearance.status}:${appearance.errorMs}`;
         if (head.appearance === signature) continue;
+        // Shake only a newly missed displayed head, never a replayed historical miss
+        // after resize/view changes. Correction/reset removes the class immediately.
+        const newMiss = head.appearance !== null && head.node.dataset.timing !== "missed" && appearance.status === "missed";
+        head.motion.classList.toggle("is-new-miss", newMiss);
         head.appearance = signature;
         head.node.dataset.timing = appearance.status;
         head.node.dataset.iteration = String(bar.iteration);

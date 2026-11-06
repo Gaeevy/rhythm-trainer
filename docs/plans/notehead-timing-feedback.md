@@ -1,6 +1,8 @@
 # Spatial notehead timing feedback
 
-Scope agreed 2026-11-06. Branch: `codex/notehead-timing-feedback`. Approved for commit.
+Scope agreed 2026-11-06. Branch: `codex/notehead-timing-feedback`.
+
+## Initial preview (committed as `09f139d`)
 
 - Move the matched notehead itself: early left, late right, on time attached.
   Keep stems, beams, score anchors, lesson ticks and assessment unchanged.
@@ -24,3 +26,25 @@ and performance checks also pass. Desktop preview inspected; docs/links updated.
 
 Status: user review passed; approved for commit. No push or deployment requested.
 Physical kit feedback still needs manual practice.
+
+## Missed feedback and gentler timing movement
+
+First preview committed as `09f139d`. Follow-up scope:
+
+- Halve horizontal sensitivity and every cap: 0.175 px/ms, maximum 9 px,
+  20% of adjacent anchor spacing and half the previous SVG edge allowance.
+- Newly missed displayed notes shake vertically ±2 px for 280 ms, return to
+  their original position and remain at 55% opacity. No horizontal miss offset.
+- Do not replay the shake for historical misses on resize/view reconstruction.
+  Correction cancels shake/dimming and applies normal matched feedback. Reset
+  clears the effect. Reduced motion uses static dimming, without shaking.
+- Reuse existing assessment statuses; CSS handles animation with no new timers,
+  controls, labels or lesson fields.
+
+Verification: 140 Node tests and 32 browser scenarios pass at `/` and
+`/rhythm-trainer/`, including actual vertical motion, dimming, live correction,
+historical misses, reduced motion and reset. Updated docs and local links checked.
+One full run returned an empty computed bar-line style; the isolated coverage
+checks and a complete rerun passed without an app change.
+
+Status: user review passed; approved for commit. No push or deployment requested.

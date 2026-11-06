@@ -177,7 +177,20 @@ output { font-variant-numeric: tabular-nums; }
 /* Keep noteheads/feedback and bar lines dark; soften only the combined voice's stems and beams. */
 .notation-score svg[data-layout="combined"] :is(.vf-stem, .vf-beam) :is(path, text) { fill: #777b73; stroke: #777b73; }
 
-/* Only played noteheads move; stems, beams and playhead anchors remain fixed. */
+/* Only noteheads move; stems, beams and playhead anchors remain fixed. */
 .notation-notehead-motion { transform: translateX(0); transition: transform 180ms ease-out; }
 .notation-notehead-motion[data-timing="waiting"], .notation-notehead-motion[data-timing="disabled"] { transition: none; }
-@media (prefers-reduced-motion: reduce) { .notation-notehead-motion { transition: none; } }
+/* A miss uses vertical motion, reserving horizontal displacement for timing error. */
+.notation-notehead-motion[data-timing="missed"] { opacity: .55; }
+.notation-notehead-motion.is-new-miss { animation: notation-missed-shake 280ms ease-out; }
+@keyframes notation-missed-shake {
+  0%, 100% { transform: translateY(0); }
+  20%, 60% { transform: translateY(-2px); }
+  40%, 80% { transform: translateY(2px); }
+  0%, 60% { opacity: 1; }
+  100% { opacity: .55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notation-notehead-motion { transition: none; }
+  .notation-notehead-motion.is-new-miss { animation: none; }
+}

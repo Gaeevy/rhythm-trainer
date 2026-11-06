@@ -114,7 +114,11 @@ preferences keep the same offsets without animation. Simultaneous hits move
 independently, even when their notes share a stem.
 
 Colors remain: on time (green), early (blue), late (amber) or missed (red).
-Missed, unplayed and disabled heads do not shift; extras retain their + overlay.
+A missed note gives a brief vertical shake, returns to its printed position,
+and remains dimmed. Reduced motion uses dimming alone. If a delayed hit corrects
+the miss, the shake/dimming is cancelled and its matched timing offset is shown.
+Historical misses do not shake again when switching views or resizing.
+Unplayed and disabled heads stay in place; extras retain their + overlay.
 Notehead tooltips and screen-reader feedback show the instrument and matched
 error to 0.1 ms; stored error keeps full precision. Routine prompts below the
 score are hidden, while actionable playback errors remain visible. Extras appear briefly as purple + marks, not printed notes.

@@ -9,8 +9,8 @@ export const NOTATION_COLORS = Object.freeze({
 });
 
 // Visual magnification only: never feed these pixels back into clocks or assessment.
-const NOTEHEAD_PIXELS_PER_MS = 0.35;
-const MAX_NOTEHEAD_SHIFT_PX = 18;
+const NOTEHEAD_PIXELS_PER_MS = 0.175;
+const MAX_NOTEHEAD_SHIFT_PX = 9;
 
 /** On-time/unplayed notes stay attached; early/late heads show their signed error. */
 export function noteheadShift(appearance, availableTravel = MAX_NOTEHEAD_SHIFT_PX) {

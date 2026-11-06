@@ -94,12 +94,12 @@ test("an eligible early hit for the next loop is already assigned to that iterat
 });
 
 test("notehead movement shows signed error, grows with error and respects visual bounds", () => {
-    assert.equal(noteheadShift({ status: "early", errorMs: -20 }), -7);
-    assert.equal(noteheadShift({ status: "early", errorMs: -40 }), -14);
-    assert.equal(noteheadShift({ status: "late", errorMs: 20 }), 7);
-    assert.equal(noteheadShift({ status: "late", errorMs: 40 }), 14);
-    assert.equal(noteheadShift({ status: "early", errorMs: -150 }), -18);
-    assert.equal(noteheadShift({ status: "late", errorMs: 150 }), 18);
+    assert.equal(noteheadShift({ status: "early", errorMs: -20 }), -3.5);
+    assert.equal(noteheadShift({ status: "early", errorMs: -40 }), -7);
+    assert.equal(noteheadShift({ status: "late", errorMs: 20 }), 3.5);
+    assert.equal(noteheadShift({ status: "late", errorMs: 40 }), 7);
+    assert.equal(noteheadShift({ status: "early", errorMs: -150 }), -9);
+    assert.equal(noteheadShift({ status: "late", errorMs: 150 }), 9);
     assert.equal(noteheadShift({ status: "late", errorMs: 80 }, 6), 6);
     assert.equal(noteheadShift({ status: "early", errorMs: -80 }, 6), -6);
     for (const status of ["on_time", "waiting", "disabled", "missed", "extra"]) {

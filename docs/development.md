@@ -77,9 +77,12 @@ remains in memory until reset; the bounded sheet does not bound assessment histo
 This is display-only feedback, independent of the layout policy below.
 `noteheadShift()` in [feedback.js](../src/notation/feedback.js) reads the existing
 matched result: early is negative X, late positive X, on time zero. It magnifies
-signed error at 0.35 px/ms, capped at 18 px and 40% of the nearest static
-engraving-anchor gap, also bounded by the glyph's SVG edges. The displacement is a visual cue, not a new time axis or
-assessment tolerance. Missed/unplayed/disabled notes remain at zero.
+signed error at 0.175 px/ms, capped at 9 px and 20% of the nearest static
+engraving-anchor gap, also bounded by half the clearance to the glyph's SVG
+edges. The displacement is a visual cue, not a new time axis or assessment
+tolerance. These values halve both the earlier sensitivity and its
+spacing/edge caps. Unplayed/disabled notes remain at zero; misses have no
+horizontal displacement.
 
 [bar.js](../src/notation/bar.js) wraps each cloned notehead in an SVG group and
 translates only that wrapper. VexFlow transforms, stems, beams, original marker
@@ -89,6 +92,13 @@ and holds the final position. No new JS timers or animation-driven assessment.
 Waiting/disabled resets snap to zero; reduced-motion preferences disable the
 transition while retaining the spatial feedback. Existing colors and tooltips
 remain, with no new visible labels or markers.
+
+A newly missed displayed head gets one 280 ms vertical shake (±2 px), then
+stays at its original position at 55% opacity. `bar.js` adds the `is-new-miss`
+class only when an existing displayed head becomes missed; restored historical
+misses are dim without replaying the shake. The CSS animation runs once, without
+JS timers. A corrected miss removes the class, restores full opacity and uses
+the matched horizontal offset. Reduced motion keeps static dimming only.
 
 [Notation feedback tests](../test/notation-feedback.test.js) cover sign, scale,
 caps, independent hits/loops, correction and read-only projection. Browser checks
