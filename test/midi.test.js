@@ -130,6 +130,21 @@ test("the observed pedal burst produces one chick hit", async () => {
 });
 
 
+test("both snare notes create Snare hits with their original velocity and timestamp", async () => {
+    const h = harness();
+    await h.midi.connect();
+    for (const [note, velocity, stamp] of [[38, 58, 1234], [40, 90, 1500]]) {
+        h.ports[0].onmidimessage(message(note, 10, velocity, stamp));
+        assert.equal(h.hits.at(-1).instrument, "snare");
+        assert.equal(h.hits.at(-1).velocity, velocity);
+        assert.equal(h.hits.at(-1).originalTimeStamp, stamp);
+    }
+    assert.equal(h.hits.length, 2);
+    h.ports[0].onmidimessage(message(40, 1));
+    h.ports[0].onmidimessage(message(40, 10, 0));
+    assert.equal(h.hits.length, 2);
+});
+
 test("normal ride and edge both create Ride hits with their original velocity and timestamp", async () => {
     const h = harness();
     await h.midi.connect();
