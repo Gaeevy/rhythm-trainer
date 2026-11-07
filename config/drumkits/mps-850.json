@@ -3,7 +3,7 @@
   "id": "mps-850",
   "name": "Millenium MPS-850",
   "verification": "verified",
-  "notes": "Pad mappings observed on this user\u2019s MPS-850 on 2026-10-24/25, all channel 10. Normal ride D\u266f2 (51) and ride edge B2 (59) both count as Ride. Rims and separately scored cymbal articulations are excluded. This verifies note assignments on this kit, not end-to-end latency or universal factory defaults.",
+  "notes": "Pad mappings observed on this user\u2019s MPS-850 on 2026-10-24/25, all channel 10. Snare D1 (38) and E1 (40) both count as Snare (updated 2026-11-07). Normal ride D\u266f2 (51) and ride edge B2 (59) both count as Ride. Separately scored rim and cymbal articulations are excluded. This verifies note assignments on this kit, not end-to-end latency or universal factory defaults.",
   "mappings": {
     "kick": [
       {
@@ -14,6 +14,10 @@
     "snare": [
       {
         "note": 38,
+        "channel": 10
+      },
+      {
+        "note": 40,
         "channel": 10
       }
     ],

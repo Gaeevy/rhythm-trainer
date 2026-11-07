@@ -91,7 +91,8 @@ Mappings observed on this user's kit, all on channel 10:
 
 | Instrument | MIDI note |
 | --- | --- |
-| Kick / snare | 36 / 38 |
+| Kick | 36 |
+| Snare | 38 (D1) / 40 (E1), both count as Snare |
 | Hi-hat closed / open / pedal chick | 42 / 46 / 44 |
 | Tom 1 / 2 / 3 / 4 | 48 / 45 / 43 / 41 |
 | Crash 1 / 2 | 49 / 57 |
