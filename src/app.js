@@ -78,6 +78,9 @@ try { browserStorage = window.localStorage; } catch { /* Storage can be disabled
 const restoredPractice = loadPracticeSettings(browserStorage);
 const preferences = restoredPractice.settings;
 const lessonPicker = new LessonPicker(lessonSelect, element("lesson-menu"), BUNDLED_LESSONS, id => loadLesson(id));
+for (const id of ["lesson-previous", "lesson-next"]) {
+    element(id).addEventListener("click", () => loadLesson(element(id).value));
+}
 const midi = new MidiInput({
     requestAccess: window.isSecureContext && typeof navigator.requestMIDIAccess === "function"
         ? options => navigator.requestMIDIAccess(options) : undefined,
@@ -109,6 +112,13 @@ function updateKeyHints() {
 
 function updateLessonPicker() {
     lessonPicker.select(activeLessonId ?? preferences.lastBundledLessonId);
+    const siblings = BUNDLED_LESSONS.filter(entry => entry.group === lessonSelect.dataset.group);
+    const index = siblings.findIndex(entry => entry.id === lessonSelect.value);
+    for (const [id, offset] of [["lesson-previous", -1], ["lesson-next", 1]]) {
+        const target = siblings[index + offset];
+        element(id).value = target?.id ?? "";
+        element(id).disabled = loading || !target;
+    }
 }
 
 function setTempo(value) {
@@ -232,7 +242,9 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     const request = ++lessonRequest;
     stop("Loading lesson…");
     loading = true;
+    updateLessonPicker();
     startButton.disabled = true;
+    startButton.setAttribute("aria-busy", "true");
     element("lesson-error").hidden = true;
     try {
         const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
@@ -276,8 +288,10 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     } finally {
         if (request === lessonRequest) {
             loading = false;
+            updateLessonPicker();
             lessonSelect.disabled = false;
             startButton.disabled = !lesson;
+            startButton.removeAttribute("aria-busy");
         }
     }
 }

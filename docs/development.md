@@ -295,6 +295,9 @@ folder group names. IDs must be unique across folders; moving a file keeps
 saved preferences. A small [LessonPicker](../src/lesson-picker.js) uses a native popover with
 folder flyouts, keyboard navigation and touch controls. Browsing does not
 change playback; choosing a lesson uses the existing loading/reset path.
+The adjacent previous/next buttons use the same path and catalog order within
+the selected folder. `updateLessonPicker()` updates their targets and disables
+them during loading or at a folder boundary.
 
 The generated index points to `runtime/<content-hash>/` through a relative base
 URL. CSS, modules, lessons/catalog, config, recordings and notation assets share

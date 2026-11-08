@@ -8,6 +8,11 @@ localhost. Open the app through HTTP, not by opening `index.html` directly.
 Open **Lesson**, hover over or tap a folder (Songs, Swing or Swing [YouTube]),
 then choose a lesson from its side menu. Folder browsing leaves playback alone;
 choosing a lesson stops and resets practice. Reloading restores the last lesson.
+The small **‹ / ›** buttons beside Lesson select the previous/next lesson in the
+same folder, in menu order. They stop and reset practice too. They are disabled
+at the folder boundaries and while a lesson loads; navigation does not wrap.
+Start stays visually steady during lesson loading but cannot start playback
+until loading finishes.
 Set BPM and press **Start loop** or **Space**. The toolbar also
 has metronome and guide volume sliders with speaker icons for mute.
 Metronome spans 0–300% gain; guide drums span 0–100%. Both use logarithmic
