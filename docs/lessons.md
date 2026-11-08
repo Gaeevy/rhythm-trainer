@@ -2,30 +2,22 @@
 
 ## Add a lesson
 
-Save one JSON file in a lesson folder, then refresh the local app:
+Add one JSON file under `lessons/`, then refresh the local app:
 
-- `lessons/Songs/`: song excerpts.
-- `lessons/Swing/`: sheet swing exercises 7–20.
-- `lessons/Swing [YouTube]/`: existing swing lessons from the earlier videos.
+- `Songs/`: song excerpts.
+- `Swing/`: sheet exercises.
+- `Swing [YouTube]/`: video exercises.
 
-Folders appear in the Lesson menu; hovering over or tapping one reveals its
-lesson flyout, in filename order. Browsing folders does not change practice.
-A new folder automatically appears; nested folders use their full relative path
-as one folder label. Root-level JSON files are still supported under Other.
-The filename without `.json` is the lesson ID; `title` is the option text.
-Use lowercase hyphenated filenames, unique across all folders. Moving a file
-between groups preserves its ID, saved selection and tempo. Renaming the file
-changes its ID. No registry, importer or editor is needed. Run the
-[checks](development.md#checks), try the lesson, then commit/deploy when approved.
+Folders become menu groups; lessons follow filename order. Nested folders use
+their full relative path as a label; root files appear under Other. Use unique,
+lowercase hyphenated filenames across all folders. The filename without `.json`
+is the stable lesson ID; moving a file preserves saved selection/tempo, while
+renaming changes its ID. `title` supplies the displayed name.
 
 The server discovers additions/deletions without restart. The generated catalog
-and Pages artifact are ignored by Git; never edit or commit them. Existing
-[lesson JSON files](../lessons/) are the source of truth for the current catalog.
-Song lessons are excerpt-based practice patterns, not full arrangements or backing
-tracks. Ghost notes and accent marks currently have the same guide volume and scoring
-as other hits. Sheet exercises 7–20 use fixed 2:1 swing, ride and hi-hat
-pedal on 2/4, with no added bass drum. Exercise 7 has snare on 1 and the swung
-and of 3; exercise 8 has snare on 2 and its swung and. All start at 80 BPM.
+and Pages artifact are ignored outputs. Run the [checks](development.md#checks),
+try the lesson, then commit/deploy with approval. Existing [lessons](../lessons/)
+provide complete examples. Accents and ghost notes use ordinary hit sound/scoring.
 
 ## JSON schema
 
@@ -46,28 +38,24 @@ Use version 2 for new lessons:
 }
 ```
 
-All shown top-level fields are required. Title must be nonempty; BPM is a finite
-positive number (practice controls round to whole BPM and limit playback to 20–300). Meter is `[4, 4]`;
-a lesson spans 1–16 bars. Each track has only `instrument` and `notes`, with a
-unique instrument ID. Notes are sorted, unique integer ticks from zero through
-`bars * 384 - 1`. At least one note is required across the lesson; other tracks
-may be empty. Simultaneous notes on different instruments are allowed.
-Unknown fields/instruments are rejected.
+All shown top-level fields are required. Title is nonempty; BPM is finite and
+positive (practice rounds/clamps to 20–300). Meter is `[4, 4]`; length is 1–16 bars.
+Each track has a unique `instrument` and sorted, unique integer `notes` from 0
+through `bars * 384 - 1`. At least one note is required across all tracks; empty
+tracks and simultaneous notes on different instruments are allowed. Unknown
+fields/instruments are rejected.
 
 Supported instruments: `kick`, `snare`, `hi_hat_closed`, `hi_hat_open`,
-`hi_hat_pedal`, `tom_1`–`tom_4`, `crash_1`, `crash_2`, `ride`.
-There is no generic hi-hat. See [instrument definitions](../src/instruments.js)
-and [staff positions](../src/notation/drum-key.js). MIDI zones are configured
-separately; ride normal/edge map to the same `ride` track.
-
-Version 1 remains supported with the same base fields but **without** `notation`.
-It displays literal rhythms; titles never imply Swing.
+`hi_hat_pedal`, `tom_1`–`tom_4`, `crash_1`, `crash_2`, `ride`. Labels live in
+[instruments.js](../src/instruments.js); staff positions in
+[drum-key.js](../src/notation/drum-key.js). MIDI mapping is independent of lesson data.
+Version 1 uses the same base fields without `notation` and displays literal rhythms.
 
 ## Ticks and feel
 
-One beat is a quarter note: **96 ticks per beat, 384 per bar**. Stored ticks are
-performance positions from the lesson start, across all bars. Add 384 for each
-following bar. Playback/assessment always use these exact positions.
+One quarter-note beat is **96 ticks**; one bar is **384 ticks**. Notes store
+performance positions across the entire lesson. Add 384 for each following bar.
+Playback/assessment use these exact positions.
 
 | Subdivision | Tick spacing |
 | --- | ---: |
@@ -78,22 +66,19 @@ following bar. Playback/assessment always use these exact positions.
 | Eighth-note triplet | 32 |
 | Sixteenth-note triplet | 16 |
 
-`notation` accepts required `feel` (`straight` or `swing`) and optional `triplets`.
-Straight keeps literal written/performance positions. Swing writes ordinary
-eighths at beat offsets 0/48 but plays them at 0/64, a fixed 2:1 ratio. Store 64,
-not 48, for that swung offbeat. The renderer adds the Swing marking; it never
-moves notes or applies swing twice. Explicit triplets and finer binary subdivisions
-stay literal; there is no sixteenth-note swing. Ambiguous mixed grids may fall
-back to independent voices or Lanes rather than being rounded.
+`notation` requires `feel` (`straight` or `swing`) and accepts optional `triplets`.
+Straight uses literal positions. Swing writes beat offsets 0/64 as ordinary
+0/48 eighths with a fixed 2:1 feel. **Store 64 for the swung offbeat.** Conversion
+affects written notation only, so playback never applies swing twice. Explicit
+triplets and finer binary subdivisions stay literal; sixteenth-note swing is
+unsupported.
 
 ## Explicit triplets
 
-A hint references an existing note using `instrument`, `tick` and optional `unit`
-(8 or 16, default 8). One hint identifies a three-slot group. Duplicate/overlapping
-groups on an instrument, missing references, unsupported fields/units or notes
-outside the group's slots are rejected.
-
-For Swing 03, the `notation` value is:
+A hint references an existing note with `instrument`, `tick` and optional `unit`
+(8 or 16, default 8). It identifies a three-slot group, including any rests.
+Duplicate/overlapping groups on an instrument, missing references, unsupported
+fields/units and notes outside the group's slots are rejected.
 
 ```json
 {
@@ -102,44 +87,20 @@ For Swing 03, the `notation` value is:
 }
 ```
 
-Unit 8 uses the containing quarter-note beat: slots 576/608/640. Snare is silent
-at 576, then plays the other slots. Another drum can fill the first slot on the
-combined staff, so it does not require a separate printed snare rest.
-
-Come Undone uses sixteenth triplets inside the second eighth of beats 2 and 4:
-
-```json
-{
-  "feel": "straight",
-  "triplets": [
-    {"instrument": "ride", "tick": 144, "unit": 16},
-    {"instrument": "ride", "tick": 336, "unit": 16}
-  ]
-}
-```
-
-Unit 16 uses the containing half-beat: slots 144/160/176 (note/rest/note) and
-336/352/368 (three notes). Adjacent half-beat groups are allowed. Hints make the
-intended written groups explicit, including necessary rests.
+Unit 8 uses the containing quarter beat: slots 576/608/640. Another instrument
+can fill a silent slot in combined notation. Unit 16 uses the containing half-beat:
+`{"instrument":"ride","tick":144,"unit":16}` identifies slots 144/160/176.
+Adjacent half-beat groups are allowed. See [Come Undone](../lessons/Songs/come-undone.json)
+for sixteenth triplets with rests.
 
 ## Notation limits
 
-Quarter-note cymbal rhythms stay separate from drums/pedal. Dense eighth-note
-or finer grooves may share downward stems if that adds no rests. This keeps swing ride
-patterns independent and dense song grooves compact. The rule applies to the
-whole lesson; there are no layout fields to add to JSON. The complete decision
-and fallback order is documented in
-[Development: Notation layout](development.md#notation-layout).
+Layout is automatic; [Development](development.md#notation-layout) defines
+voice selection, quarter-ride protection, duration spelling and grid fallbacks.
+Written durations describe rhythm rather than recording sustain. Unsupported
+notation leaves the lesson playable in Lanes with an explanation; conversion
+preserves every hit and its original tick.
 
-Beams group by beat/tuplet and may mix eighths, sixteenths and thirty-seconds.
-Aligned binary values expand up to the next hit within that beat, removing
-artificial subdivision rests. Leading rests and explicit triplet rests remain;
-no hit ticks change. Aligned quarter rests combine into half/bar rests.
-Every head retains its instrument, original note index and performance
-tick; nearby heads can be displaced to avoid collisions. No hits are merged.
-Written durations describe rhythm, not recording sustain.
-
-Unsupported notation leaves the lesson playable in Lanes with an explanation.
 General ties/dotted durations, arbitrary tuplets/meters, custom voices, dynamics,
-separately scored rims/bells/edges, variable swing, editing and printing are outside
-the current scope. Do not approximate unsupported notes silently.
+separately scored rims/bells/edges, variable swing, editing and printing are
+outside the supported format.

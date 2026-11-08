@@ -35,18 +35,5 @@ The original current/upcoming bar swap was replaced after user review: bars now
 stay in rows, with new loops below. Six rows are retained for indefinite practice.
 Compatible rhythms share stems; independent voices remain for conflicting grids.
 
-## Acceptance
-
-As of 2026-11-05, the user has accepted the local notation implementation,
-readability improvements and refactor. The last code checkpoint passed 127
-JavaScript tests, six Python tests and 22 isolated browser scenarios, including
-root/subpath deployment paths, rendering, simulated MIDI, failure/retry and
-bounded following beyond 100 loops.
-
-These checkpoints record local acceptance, not deployment. A release requires
-the approved commit's Actions/Pages checks and a live app check; merged PRs and
-workflow runs record subsequent releases. Real MPS-850 input/audio alignment, latency, reconnect and
-reading comfort require a practice session; CI does not establish those results.
-
 Printing, editing, variable swing, arbitrary tuplets/meters and dynamics remain
 outside this iteration. Use current guides for the supported format and behavior.

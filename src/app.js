@@ -272,8 +272,6 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
         lessonSelect.dataset.loadedId = id;
         const requestedTempo = Object.hasOwn(preferences.tempos, id) ? preferences.tempos[id] : lesson.bpm;
         setTempo(requestedTempo);
-        updateLessonPicker();
-        updateTempoReset();
         if (!initial) persistPractice();
         showStatus(currentBpm === requestedTempo ? "Ready"
             : `Tempo set to ${currentBpm} BPM (integer range ${MIN_BPM}–${MAX_BPM})`);
@@ -283,7 +281,6 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
         const message = `${error.message}${lesson ? " Previous lesson kept; press Start to resume." : " Choose a lesson again to retry."}`;
         element("lesson-error").textContent = message;
         element("lesson-error").hidden = false;
-        updateLessonPicker();
         showStatus(message, true);
     } finally {
         if (request === lessonRequest) {

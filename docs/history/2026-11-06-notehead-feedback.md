@@ -17,6 +17,5 @@ Current behavior is in [Practice](../practice.md#views-and-feedback) and
 - Reduced motion retained static feedback. CSS handled effects without new JS
   timers, markers, scoring categories or input quantization.
 
-Checkpoints included 140 Node tests and 32 browser scenarios; the user reviewed
-the local result. [Analytics](2026-11-06-practice-analytics.md) later added a
+[Analytics](2026-11-06-practice-analytics.md) later added a
 second horizontal animation level without changing matching or movement caps.

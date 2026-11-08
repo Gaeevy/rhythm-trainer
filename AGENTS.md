@@ -10,6 +10,10 @@
 - Keep current guides accurate in the same change. History under `docs/history/`
   is context, not an active plan; do not append routine per-turn logs. For a new
   multi-step feature, track the agreed plan and checks separately while active.
+- Document durable facts and non-obvious reasons, especially past failure modes.
+  Omit dated check notes, routine change narration and redundant contrasts such
+  as "now A, not B". Keep each explanation in one guide and link to it elsewhere;
+  record routine verification in the PR or handoff.
 - Use `docs/plans/` for active agreed work only. On completion, compact the plan
   into a dated `docs/history/` summary, update its index and fix incoming links.
   Keep current behavior in the guides; historical approval notes are not active

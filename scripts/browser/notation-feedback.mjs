@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
-import { mockMidi, mockFixtureLessons, selectLesson, waitForLesson, setBpm, selectView, oneScoreColumn, ready, playing, stopped, observePlayback, timedKey } from "./helpers.mjs";
+import { mockMidi, mockFixtureLessons, selectLesson, setBpm, selectView, oneScoreColumn, ready, playing, stopped, observePlayback, timedKey, prepareNotationPractice, startPlayback } from "./helpers.mjs";
 
 export async function notationFeedbackFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
@@ -11,18 +11,8 @@ export async function notationFeedbackFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
-        await selectLesson(page, "swing-01");
-        await waitForLesson(page, "swing-01");
-        await selectView(page, "notation");
-        await page.locator("#notation-score svg").waitFor();
-        await page.locator("#practice-panel > summary").click();
-        await page.locator("#count-in").uncheck();
-        await page.locator("#tolerance").fill("10");
-        await setBpm(page, 60);
-        await observePlayback(page);
-        await page.locator("#start-stop").click();
-        await playing(page);
-        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        await prepareNotationPractice(page, "swing-01");
+        await startPlayback(page);
         const headsBefore = await page.locator("#notation-score [data-note-id]").count();
         const stemBefore = await page.locator("#notation-score .vf-stem path").first().evaluate(node => getComputedStyle(node).stroke);
         assert.equal((await timedKey(page, "KeyK", 0, -20)).status, "early");
@@ -104,6 +94,7 @@ export async function notationFeedbackFlow(browser, url) {
         await page.locator("#notation-score svg").waitFor();
         assert.equal(await page.locator(".session-summary").textContent(), summary);
         assert.equal(await page.locator('#notation-score [data-note-id="ride:0"]').getAttribute("data-timing"), state);
+        await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").check();
         await page.locator("#start-stop").click();
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
@@ -130,18 +121,8 @@ export async function noteheadMotionFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
-        await selectLesson(page, "californication");
-        await waitForLesson(page, "californication");
-        await page.locator("#notation-score svg").waitFor();
-        await page.locator("#practice-panel > summary").click();
-        await page.locator("#count-in").uncheck();
-        await page.locator("#tolerance").fill("10");
-        await page.locator("#practice-panel > summary").click();
-        await setBpm(page, 60);
-        await observePlayback(page);
-        await page.locator("#start-stop").click();
-        await playing(page);
-        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        await prepareNotationPractice(page, "californication");
+        await startPlayback(page);
         await page.evaluate(() => {
             const host = document.querySelector('[data-absolute-bar="0"] .notation-score');
             const hat = host.querySelector('[data-note-id="hi_hat_closed:0"]');
@@ -237,15 +218,7 @@ export async function missedNoteFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
-        await selectLesson(page, "basic-straight");
-        await waitForLesson(page, "basic-straight");
-        await page.locator("#notation-score svg").waitFor();
-        await setBpm(page, 120);
-        await page.locator("#practice-panel > summary").click();
-        await page.locator("#count-in").check();
-        await page.locator("#tolerance").fill("10");
-        await page.locator("#practice-panel > summary").click();
-        await observePlayback(page);
+        await prepareNotationPractice(page, "basic-straight", { bpm: 120, countIn: true });
         await page.locator("#start-stop").click();
         await page.waitForFunction(() => document.querySelector("#status").textContent.startsWith("Count-in"));
         await page.evaluate(() => {
@@ -327,16 +300,8 @@ export async function severityMotionFlow(browser, url) {
         page.on("pageerror", error => errors.push(error.message));
         await page.goto(url);
         await ready(page);
-        await selectLesson(page, "basic-straight");
-        await waitForLesson(page, "basic-straight");
-        await setBpm(page, 60);
-        await page.locator("#practice-panel > summary").click();
-        await page.locator("#count-in").uncheck();
-        await page.locator("#practice-panel > summary").click();
-        await observePlayback(page);
-        await page.locator("#start-stop").click();
-        await playing(page);
-        await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+        await prepareNotationPractice(page, "basic-straight", { toleranceMs: 30 });
+        await startPlayback(page);
         await page.evaluate(() => {
             window.severityProbe = { ended: [], samples: [], paths: [...document.querySelectorAll('[data-absolute-bar="0"] .vf-stem path, [data-absolute-bar="0"] .vf-beam path')].map(path => path.getAttribute("d")) };
             for (const id of ["hi_hat_closed:0", "kick:0"]) {

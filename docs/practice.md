@@ -1,196 +1,104 @@
 # Practice guide
 
-Start the server as shown in the [README](../README.md), then use Chrome on
-localhost. Open the app through HTTP, not by opening `index.html` directly.
+[Run locally](../README.md#run-locally), or open the
+[live app](https://gaeevy.github.io/rhythm-trainer/) in Chrome.
 
 ## Controls
 
-Open **Lesson**, hover over or tap a folder (Songs, Swing or Swing [YouTube]),
-then choose a lesson from its side menu. Folder browsing leaves playback alone;
-choosing a lesson stops and resets practice. Reloading restores the last lesson.
-The small **‹ / ›** buttons beside Lesson select the previous/next lesson in the
-same folder, in menu order. They stop and reset practice too. They are disabled
-at the folder boundaries and while a lesson loads; navigation does not wrap.
-Start stays visually steady during lesson loading but cannot start playback
-until loading finishes.
-Set BPM and press **Start loop** or **Space**. The toolbar also
-has metronome and guide volume sliders with speaker icons for mute.
-Metronome spans 0–300% gain; guide drums span 0–100%. Both use logarithmic
-travel for finer control at low levels, with exact silence at the left endpoint.
-Arrow keys adjust by 1%, Page Up/Down by 10%, and Home/End select the limits.
-The metronome's 300% endpoint is three times its normal 100% signal gain; its
-click sound and timing are unchanged. There is no master volume or shared boost.
-Old master preferences are discarded; separate levels and mute states are kept.
-Volume/mute and view changes keep playback running.
+Choose **Lesson → folder → lesson**, or use **‹ / ›** to move within the current
+folder in menu order. The buttons stop at folder boundaries. Browsing the menu
+preserves playback; selecting a lesson stops and resets practice. Failed loads
+keep the previous lesson available. Reloading restores the last selected lesson.
 
-The lesson menu supports arrow keys, Home/End, typing the first letter, and
-Enter/Space to choose. Right opens a folder; Left returns to folders. Escape
-closes the menu and returns focus to Lesson. Click outside to dismiss it. Long
-lesson lists scroll within the flyout; touch and narrow screens are supported.
+Set **BPM** (20–300) and press **Start loop** or **Space**. The reset icon restores
+that lesson's tempo. BPM and volume sliders use logarithmic travel for finer
+control at low values. Arrow keys change the displayed value by 1; Page Up/Down
+by 10; Home/End select the limits. Metronome volume spans 0–300%, guide drums
+0–100%; speaker icons toggle mute. Mixer and view changes preserve playback.
 
-BPM uses whole numbers from 20 to 300. Its logarithmic slider gives more precision
-around slower practice tempos and advances faster at high tempos. Arrow keys
-adjust by 1 BPM, Page Up/Down by 10, and Home/End select the limits. The small
-reset icon beside BPM restores the lesson tempo and clears its saved override.
-Fractional lesson tempos and old saved overrides are rounded for practice.
+**Practice settings** contains Lanes/Notation, count-in, on-time tolerance,
+latency offset and the Drum key. **Keyboard setup** changes keys; **MIDI setup**
+shows connection/activity and retry. Notation is the default view.
 
-Practice settings contains Lanes/Notation selection, count-in, on-time tolerance
-and latency offset. Notation is the default; a valid saved view is preserved.
-Keyboard setup changes keys; MIDI setup shows connection/activity and retry.
-Changing lesson, BPM, count-in, timing settings or keys stops playback. Start
-begins a new session; Stop freezes totals. A failed lesson load keeps the prior
-lesson available. Hiding the tab, interrupted audio or MIDI input loss stops the
-loop; reconnection does not restart it.
+Changing lesson, BPM, count-in, timing settings, keys or enabled tracks stops
+playback. Start resets the session; Stop freezes results. Track buttons disable
+that instrument's guide sound and assessment and dim its notes. Disabling all
+tracks permits metronome-only practice. Hiding the tab, interrupted audio or
+MIDI input loss stops playback; reconnecting leaves it stopped.
 
-Track controls disable an instrument's guide notes and assessment. Its lane or
-noteheads stay dimmed. Changing enabled tracks stops/resets the session;
-all-disabled tracks permit metronome-only practice.
+The lesson menu supports Up/Down, Home/End, first-letter search and Enter/Space.
+Right opens a folder, Left returns to folders, and Escape closes the menu.
 
 ## Scores and trends
 
-The minimal analytics panel shows **Score** out of 100, individual
-scores for enabled lesson pads, and **Consistency** for simultaneous notes.
-Overall combines 70% pad scores with 30% consistency. Pads share their weight by
-expected notes plus extras, including misses. If no enabled instruments have
-notes scheduled together, the score uses pads only and hides consistency.
-Large numbers emphasize Score and Consistency; a divider separates individual
-pad scores. Formula, group counts and completed-bar explanations are not printed
-in the panel. Trend arrows retain their hover/screen-reader descriptions.
-Open **Session totals** beneath the scores for session counts and timing error.
-On wide screens (1600 px or more), analytics sits to the right of the practice
-view. On smaller screens it stays below, preserving score space. The toolbar
-stays at the top; setup sections remain folded below the practice area.
+**Score**, enabled pad scores and **Consistency** range from 0 to 100.
+Closer timing earns more points, including inside the on-time band. Missed notes
+earn zero; extras add zero-point opportunities. Results eight bars older have
+half the weight. Scores update after completed bars' late-hit windows close.
+“—” means insufficient results; delayed timestamped hits can correct earlier scores.
 
-Closer to the expected time earns more points, even inside the visual on-time
-band. A missed note earns zero; an extra adds a zero-point opportunity. Recent
-results count more: results eight bars older have half the weight. Scores use
-completed bars after their late-hit windows close; “—” means no scored notes yet,
-not zero accuracy. A delayed timestamped hit can correct a previous miss/score.
+Consistency measures the spread of hits scheduled together. Tight groups earn
+more points even when the whole group is early or late; an incomplete group
+earns zero. Score combines 70% pad scores and 30% consistency, weighting pads by
+expected notes plus extras. Lessons without simultaneous groups use pads only.
+If the first group occurs later, Score and Consistency wait for its bar to close.
 
-Consistency measures how tightly notes scheduled together land: closer together
-earns more points even if all are early or late. Missing any member gives that
-group zero points; the score favors recent bars. If the first simultaneous group
-is in a later bar, overall and consistency wait for it rather than assuming
-perfect results.
-
-For overall, each pad and consistency, after 16 completed bars and sufficient
-earlier samples, ↑ means at least 3 points
-better than the same weighted score ending eight bars ago; ↓ means at least 3
-points worse; ~ means a smaller change. Hover the symbol for the numeric change;
-screen readers receive the description too. Until then, the arrow is blank and
-its description is “Building trend”. Silent pads keep “—” until they have scoring
-opportunities.
-
-Stop freezes the panel. Start, lesson changes and enabling/disabling pads reset
-practice; mixer and view changes preserve the results. Scores last for this
-session only. There are no extra analytics settings.
+After 16 completed bars with sufficient earlier samples, arrows compare against
+the weighted score ending eight bars ago: **↑ / ↓** means at least 3 points
+better/worse; **~** means a smaller change. Hover for the numeric change.
+**Session totals** shows hit counts and mean absolute timing error.
+[Development](development.md#practice-analytics) defines the calculations.
 
 ## Input and sound
 
-Connect the module's **USB MIDI** port to the Mac. Chrome may ask permission.
-The app connects all available inputs as MPS-850 inputs, including newly attached
-ports. Use **Enable / retry MIDI** after permission, config or busy-port errors.
-MIDI needs localhost or HTTPS. Keyboard input remains available after MIDI errors.
-
-Mappings observed on this user's kit, all on channel 10:
-
-| Instrument | MIDI note |
-| --- | --- |
-| Kick | 36 |
-| Snare | 38 (D1) / 40 (E1), both count as Snare |
-| Hi-hat closed / open / pedal chick | 42 / 46 / 44 |
-| Tom 1 / 2 / 3 / 4 | 48 / 45 / 43 / 41 |
-| Crash 1 / 2 | 49 / 57 |
-| Ride normal / edge | 51 / 59, both count as Ride |
-
-The [repository config](../config/drumkits/mps-850.json) is the sole mapping
-source. There is no MIDI Learn, device selector or browser mapping override.
-Only nonzero-velocity Note On creates hits; controllers, aftertouch, Note Off
-and unmapped notes do not. Open, closed and pedal hi-hat actions are distinct.
-These observed note assignments do not verify physical latency or factory defaults.
+Connect the module's **USB MIDI** port to the Mac and allow Chrome's MIDI
+permission. MIDI requires localhost or HTTPS. All connected inputs use the
+[MPS-850 mapping](../config/drumkits/mps-850.json), on channel 10. Multiple mapped
+notes can count as the same instrument, including both snare and ride zones.
+Only nonzero-velocity Note On messages create hits. Open, closed and pedal
+hi-hat actions are distinct. Use **Enable / retry MIDI** after permission,
+configuration or busy-port errors; keyboard input remains available.
 
 Default keys: **D/F/J/K** kick/snare/closed hi-hat/ride, **U/H** open hi-hat/pedal,
 **Q/W/E/R** Tom 1–4, **A/S** Crash 1–2. Remapping swaps occupied letters/digits.
-Space is reserved for transport. Held keys, shortcuts and typing in controls
-are ignored.
+Space controls playback. Held keys, shortcuts and typing in controls are ignored.
 
-USB MIDI carries events, not drum audio. Your playing sounds through the module;
-the app plays expected guide notes, not a second sound for your hits. Use an
-audio setup that lets you hear both. Guide drums use local acoustic recordings;
-the metronome is synthesized. Closing the guide hi-hat chokes its open recording.
-If a recording fails to load/decode, playback stays stopped: fix the connection
-and press Start to retry. Stopping during loading cannot start a delayed loop.
+USB MIDI carries events; hear your playing through the module and the app's
+guide/metronome through your computer's audio setup. Guide drums use acoustic
+recordings; the metronome is synthesized. Closing the guide hi-hat chokes its
+open sound. If recordings fail to load, fix the connection and press Start to retry.
 
 ## Views and feedback
 
-Quarter-note ride patterns keep upward cymbal stems and downward drum/pedal
-stems, so ride and snare rhythms stay separate. Dense eighth/sixteenth-note
-grooves can share stems and beams to avoid redundant rests. This is automatic;
-notes, playback and scoring stay the same. Shared notation uses downward stems
-and lighter stems/beams below the staff; noteheads and bar lines stay dark.
-Separate swing voices keep their independent rhythms. Beams are 3 px thick.
-Eighths and sixteenths can share a beat-local beam, avoiding artificial rests
-from uniform subdivisions. Necessary leading and triplet rests remain visible.
+**Lanes** shows an eight-beat window. **Notation** repeats the score down a
+continuous sheet with one to three bars per row, depending on width and density.
+It follows playback and retains six rows. Browse with the score arrows while
+stopped. Stop preserves the score; Start returns to loop 1/bar 1. The Drum key
+explains staff positions. Unsupported notation leaves Lanes available.
 
-The lesson dropdown identifies the selected pattern; the practice surface does
-not repeat its title/details. Change the view in **Practice settings**.
+Early noteheads move left, late heads right; larger errors move farther, within
+spacing limits. Stems and beams stay fixed. Severe errors (above the larger of
+60 ms or twice the on-time tolerance) settle horizontally; mild errors slide.
+Missed heads shake vertically once and remain dimmed. Delayed corrections
+replace the missed appearance. Resizing or switching views preserves feedback
+without replaying animations. Reduced motion keeps static offsets and dimming.
+Extra hits appear as hollow heads at their staff position and actual hit time,
+then disappear after 900 ms. Tooltips expose timing error; colors supplement the
+movement and shapes. Each repeated bar shows its own results.
 
-**Lanes** shows the lesson's instruments in track order with an eight-beat window.
-**Notation** repeats the score down one continuous sheet, with connected staff
-lines and thin standard bar lines. It fits up to three bars per row when width
-and note density allow; dense patterns use two, and narrow screens use one.
-Small bar numbers replace separate card labels. Bars stay in place as playback
-advances. The display retains six rows (up to 18 copies) and recycles older rows
-without growing indefinitely.
-Arrows browse while stopped. Count-in hides the marker; Stop preserves the score;
-Start returns to loop 1/bar 1. Narrow scores scroll horizontally to retain note size.
-
-Compatible drums share stems; snare/bass heads align and redundant rests disappear.
-Incompatible grids keep independent voices. The foldable **Drum key** in Practice settings explains
-staff positions: open hi-hat has a circle, closed has + at bar start/after opening,
-and pedal uses X below the staff. Other closed hits keep plain X heads.
-Unsupported notation or renderer errors leave Lanes usable with an explanation.
-
-Matched early noteheads slide left; late noteheads slide right. Larger timing
-errors move them farther, with travel capped for dense patterns. Stems and beams
-stay fixed; on-time heads stay attached. The shifted heads remain while that bar
-copy is displayed, including after Stop. Start resets them. Reduced-motion
-preferences keep the same offsets without animation. Simultaneous hits move
-independently, even when their notes share a stem.
-
-Mild errors use a smooth slide. Severe errors (more than 60 ms, or twice your
-on-time tolerance if larger) use a brief horizontal settling motion within the
-same travel limit. This visual distinction does not change the continuous score.
-Reopening/resizing a score does not replay the severe effect.
-
-Colors remain: on time (green), early (blue), late (amber) or missed (red).
-A missed note gives a brief vertical shake, returns to its printed position,
-and remains dimmed. Reduced motion uses dimming alone. If a delayed hit corrects
-the miss, the shake/dimming is cancelled and its matched timing offset is shown.
-Historical misses do not shake again when switching views or resizing.
-Unplayed and disabled heads stay in place.
-Notehead tooltips and screen-reader feedback show the instrument and matched
-error to 0.1 ms; stored error keeps full precision. Routine prompts below the
-score are hidden, while actionable playback errors remain visible. Extra hits
-appear as hollow noteheads at their instrument's staff position and actual hit
-time, without stems or beams. They fade over 900 ms, then disappear. Reduced
-motion keeps them static until removal. Their hollow shape distinguishes them
-without relying on color; they do not change the printed lesson.
-Each repeated bar has its own feedback; earlier rows retain results while new
-loops start fresh. Totals accumulate across loops.
+## Timing and saved settings
 
 Tolerance defaults to ±30 ms. Matching allows at most ±150 ms, bounded by
 neighboring-note midpoints on the same instrument, including loop edges. Ties
-belong to the earlier note. A note matches once; duplicates are extra. Misses
-finalize after their late window; delayed events can correct them using their
-original timestamp. Hits are never snapped to ticks. Mean absolute error uses
-matched hits only; elapsed time excludes count-in.
+belong to the earlier note. Each note matches once; duplicates are extra. Misses
+finalize after their late window; original input timestamps allow corrections.
+Hits retain their exact timing. Mean absolute error uses matched hits only;
+elapsed time excludes count-in. Positive latency offset subtracts milliseconds
+from hit times; negative adds them.
 
-Positive latency offset subtracts milliseconds from hit times; negative adds them.
-Preferences save locally: view, keys, disabled tracks, count-in, timing, mixer,
-last lesson and per-lesson tempo. Localhost and the live site use separate storage.
-Storage failure does not block practice. Session activity is not saved or uploaded.
-
-For a real-kit check, practice simultaneous hits and several loops, compare
-marker/audio alignment, test unplug/reconnect and adjust latency. Automated MIDI
-simulation cannot verify audible timing, sound balance or reading comfort.
+View, keys, disabled tracks, count-in, timing, mixer, last lesson and per-lesson
+tempo save locally. Localhost and the live site have separate storage. Storage
+failure leaves practice usable. Session activity stays in memory until reset.
+For a kit check, compare marker/audio alignment, practice simultaneous hits and
+several loops, test unplug/reconnect and adjust latency. Automated checks cannot
+verify physical latency, listening balance or reading comfort.

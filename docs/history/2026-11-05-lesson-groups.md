@@ -13,7 +13,3 @@ and [Practice](../practice.md); full planning detail remains in Git history.
 - End-of-bar lines became opaque at 1.8 px. A beam-angle experiment was removed;
   independent cymbal/drum voices preserved the quarter-ride rhythm. The later
   [density policy](2026-11-05-notation-density.md) refined this for dense songs.
-
-At the final checkpoint, all 23 lessons rendered; 134 Node tests, 7 tools tests
-and 28 browser scenarios passed at root/subpath. The user reviewed the exercises
-and menu. Current guides own the supported format, not this historical summary.
