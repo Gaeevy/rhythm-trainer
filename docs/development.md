@@ -1,16 +1,12 @@
 # Development
 
-The app is static HTML/CSS and small JavaScript ES modules. Python's standard
-library serves files, discovers lesson JSON recursively and packages the site; no Python
-virtual environment or external service is needed. Audio scheduling, timestamps,
-assessment and animation stay in the browser. Keep this architecture unless a
-new requirement needs something else.
+Static HTML/CSS and JavaScript ES modules run the app. Python's standard library
+serves files, discovers lessons and packages GitHub Pages assets.
 
 ## Setup
 
-Run `python3 scripts/site.py` and open localhost in Chrome. Use Ctrl+C to stop.
-For development checks, install/initialize [fnm](https://github.com/Schniz/fnm)
-and use the Node version in [`.node-version`](../.node-version):
+Run `python3 scripts/site.py` and open localhost in Chrome. Stop with Ctrl+C.
+For checks, initialize [fnm](https://github.com/Schniz/fnm) and use the pinned Node:
 
 ```sh
 fnm install
@@ -18,8 +14,7 @@ fnm use
 npm ci
 ```
 
-Chrome must be installed for browser checks. Playwright is a development dependency;
-the app has no npm runtime dependencies and uses no CDN.
+Chrome is required for Playwright browser checks. npm dependencies are development tools.
 
 ## Checks
 
@@ -29,108 +24,56 @@ npm run test:tools
 npm run test:browser
 ```
 
-- Node tests cover validation, clocks, matching, loop boundaries, playback,
-  notation conversion, settings, MIDI and recorded audio behavior.
-- Python tests cover discovery, live catalog refresh, errors and packaging.
-- Browser checks build/serve the actual Pages artifact at `/` and
-  `/rhythm-trainer/`. They use disposable Chrome profiles and simulated MIDI,
-  not the user's browser profile or physical kit. Native audio clocks/timers
-  remain active. Checks cover the catalog, subdivisions, full kit, feedback,
-  bounded score repetition, resize, cached assets and failure recovery.
+Node tests cover data, timing, assessment, audio, notation and settings. Python
+tests cover discovery/packaging. Browser checks serve the Pages artifact at `/`
+and `/rhythm-trainer/`, using disposable Chrome profiles and simulated MIDI.
+They retain native audio clocks/timers. Physical checks are listed in
+[Practice](practice.md#timing-and-saved-settings).
 
-[`scripts/browser-smoke.mjs`](../scripts/browser-smoke.mjs) is the browser runner.
-Scenarios live under [`scripts/browser/`](../scripts/browser/): `lessons.mjs`
-(catalog, menu and release cache), `transport.mjs` (practice, tracks and loading
-recovery), `midi.mjs`, `notation.mjs` (view, lifecycle, following and layout),
-`notation-feedback.mjs`, `toolbar.mjs` and `analytics.mjs`. Shared page/input/clock helpers are
-in `helpers.mjs`; `server.mjs` serves the packaged artifact. Keep test clocks
-and simulated MIDI there rather than duplicating setup in scenarios.
+The [browser runner](../scripts/browser-smoke.mjs) loads scenarios from
+[`scripts/browser/`](../scripts/browser/). Shared input/clock/setup helpers live
+in `helpers.mjs`; `server.mjs` serves the artifact. Focused checks append
+`-- --polish-only`, `-- --analytics-only`, `-- --cleanup-only`,
+`-- --notehead-motion-only`, `-- --notation-feedback-only`,
+`-- --lesson-menu-only` or `-- --notation-coverage` to `npm run test:browser`.
+All modes check both mounts; the full suite is the release check.
 
-For focused checks, append `-- --polish-only`, `-- --analytics-only`,
-`-- --cleanup-only`, `-- --notehead-motion-only`,
-`-- --notation-feedback-only`, `-- --lesson-menu-only` or
-`-- --notation-coverage` to `npm run test:browser`. Every mode runs at both
-mounts. The full command remains the release check.
-
-Browser timing assertions allow 0.25 ms between the separately sampled native
-output-clock anchors used to create and handle a simulated hit. Deterministic
-clock-conversion unit tests retain exact numeric checks. This sampling allowance
-is test-only; it does not change the app's on-time tolerance or hit timestamps.
-
-No automated check verifies physical latency or audible sound quality. Before
-release, check the kit/module and browser audio together, simultaneous hits,
-several loops, count-in, stop/restart, view switching, latency and reconnect.
+Browser assertions allow 0.25 ms for separately sampled native output-clock
+anchors. Clock-conversion unit tests use exact values. This allowance belongs
+only to the tests; assessment retains the original timestamps and tolerances.
 
 ## Code map
 
 | Area | Source |
 | --- | --- |
-| App controls and session coordination | [app.js](../src/app.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
-| Audio scheduling / recorded sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
-| Timestamp conversion / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
-| Analytics calculations / scores panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
-| Keyboard / fixed-kit MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
-| Dynamic lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
-| Lesson validation / notation model | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
+| Controls / session coordination | [app.js](../src/app.js), [lesson-picker.js](../src/lesson-picker.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
+| Audio scheduling / recordings | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
+| Input timestamps / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
+| Scores / panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
+| Keyboard / MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
+| Lanes / saved controls | [track.js](../src/track.js), [practice-settings.js](../src/practice-settings.js) |
+| Lesson validation / notation conversion | [lesson.js](../src/lesson.js), [model.js](../src/notation/model.js) |
 | Engraving / displayed bars / following | [renderer.js](../src/notation/renderer.js), [bar.js](../src/notation/bar.js), [view.js](../src/notation/view.js) |
-| Shared facts | [instruments.js](../src/instruments.js), [music-time.js](../src/music-time.js) |
-| Server, catalog and package | [site.py](../scripts/site.py) |
+| Labels / timing constants | [instruments.js](../src/instruments.js), [music-time.js](../src/music-time.js) |
+| Server / catalog / packaging | [site.py](../scripts/site.py) |
 
-The Web Audio clock schedules playback. Original event timestamps are converted
-to that time base for matching; animation never determines hit timing. Both
-views share the assessment. Notation follows the [layout policy below](#notation-layout).
-It caches engraving and keeps six rows of
-independent loop copies. Layout fits one to three bars per row from width and
-rhythmic density; each bar's staff reaches its SVG edges to join its neighbors.
-An opaque 1.8px end-of-bar line makes each boundary clear.
-Only changed results refresh noteheads/summaries.
-Animation moves the marker/score and expires extra-hit overlays. Session history
-remains in memory until reset; the bounded sheet does not bound assessment history.
+The Web Audio clock schedules playback. Original input timestamps convert to
+that clock for assessment. Both views and analytics consume the same results.
+`loadLesson()` guards asynchronous success, failure and cleanup with a request
+counter, so stale requests cannot replace the active lesson or its controls.
+Its `finally` block refreshes lesson navigation after loading succeeds or fails.
 
-`NotationView.resetSession()` clears session feedback and displayed bars while
-retaining cached engraving. `clearBars()` only clears displayed geometry; lesson
-and viewport changes invalidate engraving explicitly. Instrument toggles refresh
-feedback without invalidating engraving. The folded drum key is rendered by
-`showDrumKey()` only when open, reused across view/open-close changes and rebuilt
-when the lesson changes. Failed key loading can be retried by closing/reopening.
-
-`app.js` uses one `loadLesson()` path for fetching, validation and installation.
-Its request counter guards late successes, errors and cleanup; a failed load
-keeps the previous lesson available. `bindSliderKeys()` shares only keyboard
-stepping in displayed units (arrows ±1, Page ±10, Home/End limits). BPM and volume
-retain their own scale conversions, persistence and playback behavior.
+`NotationView` caches engraving and retains six rows of independent bar copies.
+`resetSession()` clears feedback/displayed bars while retaining templates;
+`clearBars()` clears displayed geometry. Lesson/viewport changes invalidate
+engraving; instrument toggles refresh feedback. The Drum key loads when opened
+and is reused until the lesson changes; closing/reopening retries a failed load.
+Session history remains in memory even as older displayed rows are recycled.
 
 ## Practice analytics
 
-The analytics feature ([history](history/2026-11-06-practice-analytics.md)) shows
-overall, per-pad and consistency scores/trends.
-Overall uses the 70/30 blend; when the enabled lesson has no simultaneous groups
-it uses pads only and hides consistency. Session totals are folded below it.
-The minimal UI labels overall as “Score”, uses large numeric outputs and separates
-pad rows with a divider. Formula, complete-group counts and bar-progress text
-are omitted from the DOM, not merely hidden. Trend descriptions remain available
-on hover and to screen readers; calculations and no-data rules are unchanged.
-
-At viewport widths of at least 1600 px, `.practice-body` uses a score/Lanes column
-and a 300 px analytics sidebar. The page maximum width expands to 1840 px, leaving
-over 1100 px for the practice view at the breakpoint. Below it, the same analytics
-DOM stays below the full-width view. The top toolbar and folded setup sections
-remain outside the columns. CSS controls placement; no reparenting or saved layout
-setting. The existing notation ResizeObserver handles column/width changes and
-`sheetColumns()` still fits bars according to rhythmic density.
-
-`scorePractice(assessment, completedBars)` in [analytics.js](../src/analytics.js)
-returns raw 0–100 overall/per-pad/consistency scores plus historical references,
-changes and trends. It reads enabled tracks, canonical expected-note results
-and extras from Assessment. Gaussian quality uses fixed widths of 50 ms for
-timing and 25 ms for simultaneous-hit spread. Weighted opportunities include
-misses and extras; the blend is 70% pads/30% consistency, or 100% pads when the
-enabled lesson has no simultaneous groups. Missing samples are `null`, not zero.
-
-The half-life is 8 bars; trends compare with all completed bars except the last
-8 and require at least 16 completed bars. Changes of at least 3 points are up/down;
-smaller changes are neutral. All math keeps full precision. See
-[deterministic examples](../test/analytics.test.js).
+[Scoring](../src/analytics.js) projects canonical assessment results using full
+precision; [Practice](practice.md#scores-and-trends) explains the displayed scores.
 
 ```text
 quality = exp(-0.5 * (errorMs / widthMs)**2)
@@ -139,185 +82,99 @@ pad score = 100 * sum(weight * quality) / sum(weight * opportunities)
 overall = 0.70 * pooled pad score + 0.30 * consistency score
 ```
 
-Consistency applies the same quality function to simultaneous-hit spread, one
-opportunity per group. Missing members receive zero group quality. Pad pooling
-uses weighted opportunities, not an equal average of rounded pad scores. No
-simultaneous groups means 100% pads. The visual on-time category is independent
-of continuous quality; a near-center on-time hit need not receive exactly 100.
+Timing width is 50 ms; consistency uses simultaneous-hit spread with width 25 ms.
+Misses/extras contribute zero quality; an incomplete group contributes zero
+consistency. Pads pool by weighted opportunities. Without simultaneous groups,
+overall uses pads only. Missing samples are `null`; overall waits for the first
+eligible group to finalize. The visual on-time band is independent of quality.
+Trends compare against the history excluding the last eight bars, require 16
+completed bars and use a ±3-point threshold.
 
-`barClosingDelay()` caches a conservative lesson-wide delay for late windows that
-cross a bar end (zero when none do). `completedBarCount()` uses elapsed audio
-time, this delay and the assessment's latency offset; it preserves the inclusive
-late-window boundary. Assessment advances before rendering scores. The projection
-rejects absent expected results; it never advances time, matches input or finalizes
-misses. Recomputing incorporates delayed timestamped miss corrections.
-
-`app.js` sends each assessment result through one `showFeedback()` helper to
-Lanes, Notation and analytics. `resultBar()` assigns matched/missed results to
-their expected bar and extras to corrected input time, shared with score assembly.
-`AnalyticsView.onResult()` marks a snapshot dirty only for a result in an already
-completed bar. New/unfinished-bar hits and misses wait for bar completion.
-Assessment identity and completed-bar changes also refresh the snapshot.
-Unchanged frames and unfinished-bar input do no history projection or analytics
-DOM writes; delayed corrections/extras in completed bars update immediately.
-Work still scales with session length at refresh points. No parallel matcher,
-hit recorder or per-bar cache was introduced.
-Stop freezes the elapsed time/results; Start and lesson/track changes reset.
-Volume/mute/view changes preserve the same assessment. The panel shows enabled
-lesson instruments only. No stored analytics or new settings.
-
-The report exposes only overall, individual pads and consistency. Pooled pad
-quality stays internal to the blend; unused group-count and repeated bar-count
-outputs were removed. A missing member makes group quality zero, while a delayed
-correction can complete it. An eligible group scheduled in a later bar does not
-earn invented credit: consistency and overall stay empty until a group has been
-finalized.
+`completedBarCount()` uses elapsed audio time, latency offset and a cached
+`barClosingDelay()` for late windows crossing bar ends, with an inclusive late
+boundary. Advance assessment before computing scores. `resultBar()` assigns
+matched/missed results to their expected bar and extras to corrected input time.
+`AnalyticsView` refreshes on assessment/bar changes or corrections in completed
+bars. Unfinished-bar input waits for completion. Projection work scales with
+session length at refresh points. [Tests](../test/analytics.test.js) cover these
+boundaries and weighted examples.
 
 ## Notehead timing feedback
 
-This is display-only feedback, independent of the layout policy below.
-`noteheadShift()` in [feedback.js](../src/notation/feedback.js) reads the existing
-matched result: early is negative X, late positive X, on time zero. It magnifies
-signed error at 0.175 px/ms, capped at 9 px and 20% of the nearest static
-engraving-anchor gap, also bounded by half the clearance to the glyph's SVG
-edges. The displacement is a visual cue, not a new time axis or assessment
-tolerance. These values halve both the earlier sensitivity and its
-spacing/edge caps. Unplayed/disabled notes remain at zero; misses have no
-horizontal displacement.
+[bar.js](../src/notation/bar.js) translates an SVG wrapper around each cloned
+notehead, preserving VexFlow transforms, stems/beams, anchors and cached templates.
+Each displayed bar copy owns its feedback. Only changed results update the DOM.
+The visual offset is bounded by engraving gaps and SVG edges; it never feeds
+back into timing or scoring. Scale/caps live in [feedback.js](../src/notation/feedback.js)
+and `bar.js`; animation values live in [style.css](../style.css).
 
-[bar.js](../src/notation/bar.js) wraps each cloned notehead in an SVG group and
-translates only that wrapper. VexFlow transforms, stems, beams, original marker
-anchors and cached templates stay unchanged. Each hit/loop copy keeps its own
-offset. Only changed feedback writes the transform. Mild timing errors slide for
-180 ms. `timingSeverity()` selects severe errors above max(60 ms, twice the
-on-time tolerance), only for matched early/late hits. A newly displayed severe
-result gets one 320 ms horizontal settling animation, staying between zero and
-the existing capped final shift, then holding that shift. CSS reads the same
-shift from `--notehead-shift`; no overshoot, extra wrappers or JS timers.
-This presentation rule never changes Gaussian scoring or input assessment.
-Waiting/disabled resets snap to zero; reduced-motion preferences disable the
-transition/settling while retaining the spatial feedback. Historical severe
-results reconstructed on resize/view changes keep their offset without replay.
-Existing colors and tooltips
-remain, with no new visible labels or markers.
-
-A newly missed displayed head gets one 280 ms vertical shake (±2 px), then
-stays at its original position at 55% opacity. `bar.js` adds the `is-new-miss`
-class only when an existing displayed head becomes missed; restored historical
-misses are dim without replaying the shake. The CSS animation runs once, without
-JS timers. A corrected miss removes the class, restores full opacity and uses
-the matched horizontal offset. Reduced motion keeps static dimming only.
-
-[Notation feedback tests](../test/notation-feedback.test.js) cover sign, scale,
-caps, independent hits/loops, correction and read-only projection. Browser checks
-measure actual SVG displacement, fixed shared stems/beams, future copies,
-keyboard/MIDI, resize/view changes, stop/restart and reduced motion.
-
-Extra hits use hollow SVG ellipses in each bar's overlay, without stems or beams.
-`extraPosition()` retains the corrected input time; `markerX()` maps its precise
-tick to the engraving anchors. The renderer exposes `staffYs` for all
-instruments, resolved through VexFlow on the same stave using `DRUM_KEY`, so
-extras share printed note positions even when that instrument has no notes in
-the bar. This does not add notes to the engraving model or affect assessment.
-The existing bounded overlay lifetime remains 900 ms (six recent extras total,
-three per bar); CSS fades each head until removal by the existing update loop.
-Live overlay nodes are retained when another extra arrives, preserving their
-fade. Reconstruction uses the remaining lifetime. Reduced motion disables the
-fade, while Stop/reset removes overlays as before.
+Severe and missed animations run once for newly displayed results. Reconstructed
+historical feedback retains its final appearance without replay. A delayed
+correction cancels missed styling. Reduced motion preserves static feedback.
+Extras map corrected hit times through `markerX()` and use VexFlow-derived
+`staffYs`, including instruments silent in that bar. Retain live overlay nodes
+when adding extras so their fades continue; reconstruction uses remaining lifetime.
+The update loop bounds overlays to six recent extras total, three per bar.
+[Feedback tests](../test/notation-feedback.test.js) and browser scenarios cover
+independent offsets, fixed stems, corrections, reconstruction and reduced motion.
 
 ## Notation layout
 
-**One policy, one entry point:** `lessonNotation()` in
-[model.js](../src/notation/model.js) selects the layout for the entire lesson.
-A notation *voice* groups notes/rests with shared stems and beams; it is not an
-audio channel or a lesson track. [renderer.js](../src/notation/renderer.js)
-engraves the selected model and does not choose a layout.
+`lessonNotation()` in [model.js](../src/notation/model.js) selects one layout for
+the whole lesson. A *voice* groups notes/rests with shared stems and beams.
+The renderer engraves the selected model.
 
-`convertLesson()` has three internal strategies, not public lesson settings:
-
-| Internal options | Result | Used when |
+| `convertLesson()` strategy | Result | Selection |
 | --- | --- | --- |
-| Default `{}` | Cymbals up; drums/pedal down | Always tried first |
-| `{separateTuplets: true}` | Hinted instruments get independent voices | Default conversion has incompatible grids; return this result directly |
-| `{combine: true}` | One downward-stem voice with shared beams | Default succeeds and every played cymbal note is an eighth note or shorter |
+| Default `{}` | Cymbals up; drums/pedal down | Try first |
+| `{separateTuplets: true}` | Hinted instruments use independent voices | Default grids conflict; return this result directly |
+| `{combine: true}` | One downward-stem voice | Default succeeds and all played cymbal notes are eighths or shorter |
 
-Keep the combined candidate only if it converts successfully and its total rest
-count is no greater than the separate model. Otherwise retain the separate
-model. A played quarter-note cymbal anywhere protects the whole lesson from
-combining. Silent rests do not count as played cymbal notes. The flags are
-alternative strategies; never enable both together.
+Keep a combined candidate only if it converts and adds no rests. A played
+quarter-note cymbal anywhere protects the entire lesson from combining, keeping
+ride and offbeat snare rhythms independent. Silent rests do not trigger that
+protection. The flags are alternatives. Layout depends on rhythm; keep policy
+in `lessonNotation()` and avoid per-song or renderer-level decisions.
 
-The combined voice uses downward stems and lighter stems/beams, leaving
-noteheads and bar lines dark. The renderer marks the already selected layout
-on the SVG; CSS styles it. Separate voices keep upward cymbal and downward
-drum stems; the 3 px beam thickness applies to both layouts.
-This adds no new selection rule or lesson option.
-
-This deliberately keeps Fascination Street compact (zero rests instead of 35)
-and swing exercise 7's ride quarter separate from its offbeat snare. The same
-quarter-ride protection applies to Straight lessons. Folder, title and feel do
-not select layouts; feel only determines written/performed rhythm conversion.
-There are no per-song exceptions, layout options in JSON, or saved voice-grouping
-preferences. Keep future changes here rather than adding decisions to the
-renderer, UI or individual lesson files.
-
-Every strategy preserves original performance ticks and each note identity.
-Only `NotationError` permits a fallback; other errors propagate. If no valid
-notation can be produced, the existing Lanes fallback remains available.
-Regression cases live in [notation.test.js](../test/notation.test.js): dense
-songs/rest counts, Swing and Straight quarter-ride protection, incompatible
-grids, tuplets and identity preservation. Browser coverage checks rendering,
-feedback and score-following across the catalog at both site mounts.
+Every strategy preserves original performance ticks and note identities.
+Only `NotationError` permits fallback; other errors propagate. Unsupported
+notation leaves Lanes available. [Regression tests](../test/notation.test.js)
+cover dense grooves, quarter-ride protection in both feels, incompatible grids,
+tuplets and identity preservation.
 
 ### Durations and beams
 
-After choosing the subdivision grid, `convertLesson()` emits the longest aligned
-binary note/rest value that fits before the next hit, within the current beat
-or half-beat section. For example, onsets at ticks 0/48/72 become an eighth and
-two sixteenths in one beam group, rather than four sixteenth slots with a rest.
-No event is skipped. Leading gaps remain rests; there are no dotted values,
-ties or extensions across a beat. Explicit triplet slots are never compacted.
-This is duration spelling inside the converter, not another layout strategy.
-
-Beam groups still follow beats/tuplets. The renderer uses VexFlow's existing
-`beamWidth` setting at 3 px for both shared and separate voices; no library
-patch or new render option is exposed to lessons/users.
+`convertLesson()` emits the longest aligned binary value before the next hit,
+within the current beat/half-beat section. Onsets at 0/48/72 become an eighth and
+two sixteenths in one beam group. Leading gaps remain rests; explicit triplet
+slots stay literal. Aligned quarter rests compact to half/bar rests. Durations
+never extend across a beat. This spelling keeps mixed rhythms readable without
+artificial subdivision rests or altered hits. Beams group by beat/tuplet; shared
+voices use lighter downward stems/beams. VexFlow's `beamWidth` sets thickness.
 
 ## Packaging and release
 
-`npm run build` validates lessons and recreates `_site/`. The ignored
-`generated/lesson-catalog.js` and `_site/` are outputs, never hand-edited sources.
-Only runtime files and asset notices are packaged; project docs/tools/tests are
-excluded. There is no JavaScript compilation step.
+`npm run build` validates lessons and recreates `_site/`. It packages runtime
+assets and notices. `generated/lesson-catalog.js` and `_site/` are ignored outputs.
+Catalog IDs, folder order and JSON authoring are defined in [Lessons](lessons.md).
 
-The generated catalog records stable filename IDs, relative JSON paths and
-folder group names. IDs must be unique across folders; moving a file keeps
-saved preferences. A small [LessonPicker](../src/lesson-picker.js) uses a native popover with
-folder flyouts, keyboard navigation and touch controls. Browsing does not
-change playback; choosing a lesson uses the existing loading/reset path.
+The generated index uses a relative base URL to `runtime/<content-hash>/`.
+All runtime assets share that path, preventing new HTML from mixing cached
+assets from another release. Local serving disables caching; cached HTML still
+requires normal revalidation.
 
-The generated index points to `runtime/<content-hash>/` through a relative base
-URL. CSS, modules, lessons/catalog, config, recordings and notation assets share
-one release path. New HTML cannot mix old cached runtime assets. Local serving
-disables caching; a cached HTML document still needs normal revalidation.
-
-The [Pages workflow](../.github/workflows/pages.yml) checks pull requests and
-pushes to `main`. Successful `main` runs deploy `_site/` to
-[GitHub Pages](https://gaeevy.github.io/rhythm-trainer/). After release approval,
-commit/open a PR, wait for checks, merge, wait for Pages, then verify the live
-lesson list, notation assets, keyboard/MIDI flow, mixer and console. Local checks
-alone do not verify the live release. Merged PRs and Actions runs record release
-checks; [dated history](history/README.md) records the major delivery decisions.
-
-README screenshots live in `docs/images/` and are excluded from the runtime
-package with the other docs. They show the actual app with simulated demo input,
-captured through a disposable browser profile. Refresh them after major UI changes.
+The [Pages workflow](../.github/workflows/pages.yml) checks PRs and deploys
+successful `main` builds. After release approval: commit/push, open a PR, wait
+for checks, merge, wait for Pages, then verify the live lesson list, notation,
+keyboard/MIDI, mixer and console. Record verification in the PR or handoff.
+README screenshots in `docs/images/` show simulated input in the actual app;
+refresh them after major UI changes.
 
 ## Asset sources
 
-Preserve [recording credits/licenses](../assets/drums/README.md) and
-[VexFlow/font source records](../assets/vendor/vexflow/README.md) beside the assets.
-Recordings load before scheduling; failure stops Start with a retry message.
-The synthesized metronome is retained; guide drums have no synthesized fallback.
-Optional recording regeneration is `python3 scripts/prepare_samples.py`, using
-Python's standard library and macOS `afconvert`. Neither is needed at app runtime.
+Keep [recording credits/licenses](../assets/drums/README.md) and
+[VexFlow/font sources](../assets/vendor/vexflow/README.md) beside their assets.
+Guide recordings load/decode before scheduling; failure leaves Start stopped
+with a retryable error. Preserve metronome synthesis, hi-hat choking and cancellation.
+Optional regeneration uses `python3 scripts/prepare_samples.py`, Python's standard
+library and macOS `afconvert`.

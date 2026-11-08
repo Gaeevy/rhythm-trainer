@@ -13,7 +13,3 @@ Current architecture and checks are in [Development](../development.md).
   conversions, saved values and playback behavior.
 - Browser scenarios moved into feature modules with shared helpers and one
   runner. Existing targeted commands and disposable-profile checks remained.
-
-140 Node tests, 7 tools tests and 34 browser scenarios passed. Added checks covered
-engraving reuse, key loading/retry, stale lesson success/failure and slider limits.
-Both views, saved controls and timing behavior were preserved.

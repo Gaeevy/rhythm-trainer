@@ -33,6 +33,11 @@ a:hover { color: #fff; }
 .lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(200px, 1.7fr) minmax(230px, 1.7fr) repeat(2, minmax(95px, .7fr)) auto; align-items: end; gap: 16px; background: #243027; border-bottom: 1px solid var(--border); }
 .lesson-picker { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; }
 .lesson-picker { min-width: 0; }
+.lesson-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.lesson-row .lesson-trigger { flex: 1; min-width: 0; }
+.lesson-step { flex: 0 0 24px; width: 24px; height: 32px; padding: 0; background: transparent; font-size: 22px; line-height: 1; }
+.lesson-step:hover { background: #344133; }
+.lesson-step:disabled { cursor: default; opacity: .3; }
 select, input[type="number"] { padding: 11px 12px; background: #1b261e; color: #f2f0e7; font-size: 14px; letter-spacing: 0; height: 43px; }
 select { width: 100%; min-width: 0; max-width: 100%; }
 input[type="number"] { width: 82px; font-variant-numeric: tabular-nums; }
@@ -41,6 +46,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px;
 .start-button { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 43px; min-width: 136px; padding: 0 17px; background: var(--accent); color: #20301b; border-color: var(--accent); font-weight: 650; font-size: 13px; }
 .start-button:hover { background: #ebf6b9; }
 .start-button[data-running="true"] { background: #f0d5b2; border-color: #f0d5b2; }
+.start-button[aria-busy="true"] { opacity: 1; }
 #reset-keys { background: #34432d; color: #e0e8ce; padding: 9px 12px; font-size: 11px; }
 .lesson-error { color: #ffc0b0; font-size: 12px; line-height: 1.6; margin: 16px 26px 0; overflow-wrap: anywhere; }
 .timeline { margin: 16px 20px 0; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: #18231c; }

@@ -13,7 +13,3 @@ The original plan and intermediate reviews remain in Git history.
   cards. Accessible feedback and visible errors remained.
 - A master-volume experiment was later removed. The final mixer used separate
   logarithmic sliders, with metronome gain up to 300% and no master control.
-
-At the initial checkpoint, 132 Node tests and 26 browser scenarios passed at
-both deployment paths. Later mixer and analytics changes superseded parts of
-that checkpoint; use the current guide and Actions runs for present behavior.

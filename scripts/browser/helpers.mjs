@@ -88,6 +88,27 @@ export async function stopped(page) {
     assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "false");
 }
 
+export async function prepareNotationPractice(page, lesson, { bpm = 60, toleranceMs = 10, countIn = false } = {}) {
+    await selectLesson(page, lesson);
+    await waitForLesson(page, lesson);
+    await selectView(page, "notation");
+    await page.locator("#notation-score svg").waitFor();
+    await setBpm(page, bpm);
+    if (await page.locator("#practice-panel").getAttribute("open") === null) {
+        await page.locator("#practice-panel > summary").click();
+    }
+    await page.locator("#count-in").setChecked(countIn);
+    await page.locator("#tolerance").fill(String(toleranceMs));
+    await page.locator("#practice-panel > summary").click();
+    await observePlayback(page);
+}
+
+export async function startPlayback(page) {
+    await page.locator("#start-stop").click();
+    await playing(page);
+    await page.waitForFunction(() => window.smoke.audio.context.getOutputTimestamp().performanceTime > 0);
+}
+
 // Observe the real audio and assessment calls; keep native timers and audio running.
 
 export async function observePlayback(page) {

@@ -16,7 +16,3 @@ in [Development: Notation layout](../development.md#notation-layout).
   explicit triplet rest. These were general conversion rules, not song settings.
 - Native-clock browser assertions gained a test-only 0.25 ms anchor-sampling
   allowance. Production timestamps, tolerances and exact unit checks were unchanged.
-
-The final checkpoint passed 138 Node tests and 28 browser scenarios at both
-mounts. Song screenshots were reviewed. Git retains the detailed implementation
-and intermediate visual experiments.

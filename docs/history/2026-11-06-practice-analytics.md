@@ -35,9 +35,5 @@ Current formulas, integration boundaries and controls are in
 | Responsive layout and severity motion | `c308a1e` |
 | Minimal presentation | `624a21a` |
 
-The feature passed local user review, 157 Node tests and the full 38-scenario
-browser suite, followed by PR/Pages checks. Release and live checks record
-deployment separately; CI cannot establish physical-kit latency or reading feel.
-
 Streaks and extra charts were deferred to keep the UI/code simple. No account,
 database, persistent activity history or additional runtime service was added.

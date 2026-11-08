@@ -17,7 +17,11 @@
       <div class="lesson-controls">
         <div class="lesson-picker">
           <label id="lesson-label" for="lesson">LESSON</label>
-          <button id="lesson" type="button" class="lesson-trigger" aria-labelledby="lesson-label lesson-selected" aria-haspopup="menu" aria-expanded="false" aria-controls="lesson-menu" disabled><span id="lesson-selected">Loading lessons…</span><span aria-hidden="true">⌄</span></button>
+          <div class="lesson-row">
+            <button id="lesson" type="button" class="lesson-trigger" aria-labelledby="lesson-label lesson-selected" aria-haspopup="menu" aria-expanded="false" aria-controls="lesson-menu" disabled><span id="lesson-selected">Loading lessons…</span><span aria-hidden="true">⌄</span></button>
+            <button id="lesson-previous" type="button" class="lesson-step" aria-label="Previous lesson" title="Previous lesson" disabled><span aria-hidden="true">‹</span></button>
+            <button id="lesson-next" type="button" class="lesson-step" aria-label="Next lesson" title="Next lesson" disabled><span aria-hidden="true">›</span></button>
+          </div>
           <div id="lesson-menu" class="lesson-menu" popover="auto" role="menu" aria-label="Lesson folders"></div>
         </div>
         <div class="tempo-control">

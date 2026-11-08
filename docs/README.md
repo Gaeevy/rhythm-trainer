@@ -10,11 +10,6 @@ These guides describe the current app. Use the history summaries only for contex
 | [History](history/README.md) | Understand completed work and past decisions |
 
 [AGENTS.md](../AGENTS.md) contains working instructions for coding agents.
-Update the relevant current guide when behavior changes; keep history compact.
-Use `docs/plans/` only for active, agreed work. When it finishes, compact the plan
-into a dated history summary and retain current behavior in the guides above.
-There are no active implementation plans at present. Git retains the detailed
-development record; do not append routine per-turn logs.
 
 Source data stays authoritative: [lessons](../lessons/),
 [MPS-850 mappings](../config/drumkits/mps-850.json),
