@@ -241,3 +241,64 @@ test("mixed durations never absorb a triplet rest or cross beat boundaries", () 
     }
     assert.deepEqual(references(model).map(ref => ref.performanceTick), [72, 96, 144, 168]);
 });
+
+test("Swing splits mixed-pad beams while keeping same-pad beams and simultaneous chords", () => {
+    const lesson = example([0, 96, 160], { feel: "swing" });
+    lesson.tracks.push({ instrument: "kick", notes: [64, 192, 256] });
+    const original = structuredClone(lesson);
+    const voice = lessonNotation(lesson).bars[0].voices[0];
+    assert.deepEqual(voice.beams.map(group => group.map(index => voice.notes[index].writtenTick)), [[96, 144], [192, 240]]);
+    assert.equal(voice.notes.reduce((sum, note) => sum + note.durationTicks, 0), 384);
+    assert.deepEqual(lesson, original);
+
+    const straight = structuredClone(lesson);
+    straight.notation.feel = "straight";
+    for (const track of straight.tracks) track.notes = track.notes.map(tick => tick % 96 === 64 ? tick - 16 : tick);
+    assert.equal(lessonNotation(straight).bars[0].voices[0].beams.length, 3);
+
+    const chords = example([0, 64], { feel: "swing" });
+    chords.tracks.push({ instrument: "kick", notes: [0, 64] });
+    assert.equal(lessonNotation(chords).bars[0].voices[0].beams.length, 1);
+    chords.tracks[1].notes = [0];
+    assert.equal(lessonNotation(chords).bars[0].voices[0].beams.length, 0);
+});
+
+test("Swing beam splitting preserves explicit triplet groups, rests and hit identities", () => {
+    const lesson = example([0, 64], { feel: "swing", triplets: [{ instrument: "snare", tick: 0 }] });
+    let voice = lessonNotation(lesson).bars[0].voices[0];
+    assert.deepEqual(voice.beams, [[0, 1, 2]]);
+    assert.equal(voice.notes[1].rest, true);
+    assert.ok(!voice.notes[1].hidden);
+    lesson.tracks.push({ instrument: "kick", notes: [32] });
+    voice = lessonNotation(lesson).bars[0].voices[0];
+    assert.deepEqual(voice.beams, []);
+    assert.deepEqual(voice.tuplets, [[0, 1, 2]]);
+    assert.deepEqual(voice.notes.flatMap(note => note.refs.map(ref => ref.performanceTick)), [0, 32, 64]);
+});
+
+test("inactive voice rests hide only after its last hit while another voice plays", () => {
+    const lesson = example([48, 192]);
+    lesson.bars = 3;
+    lesson.tracks.push({ instrument: "ride", notes: [0, 96, 384] });
+    const original = structuredClone(lesson);
+    const model = lessonNotation(lesson);
+    const ride = model.bars[0].voices.find(voice => voice.id === "cymbals");
+    assert.equal(ride.notes.find(note => note.writtenTick === 192).hidden, true, "Trailing half rest is redundant beside snare");
+    const drums = model.bars[0].voices.find(voice => voice.id === "drums");
+    assert.ok(drums.notes.filter(note => note.rest).every(note => !note.hidden), "Leading/internal rests and shared silence stay visible");
+    assert.equal(model.bars[1].voices.find(voice => voice.id === "drums").notes[0].hidden, true, "A silent voice's full bar rest hides");
+    assert.ok(model.bars[2].voices.every(voice => voice.notes.every(note => !note.hidden)), "An entirely silent bar stays readable");
+    for (const bar of model.bars) for (const voice of bar.voices) {
+        assert.equal(voice.notes.reduce((sum, note) => sum + note.durationTicks, 0), 384);
+    }
+    assert.deepEqual(references(model).map(ref => ref.id).sort(), lesson.tracks.flatMap(track => track.notes.map(tick => `${track.instrument}:${tick}`)).sort());
+    assert.deepEqual(lesson, original);
+});
+
+test("trailing explicit triplet rests remain visible beside another active voice", () => {
+    const lesson = example([0], { feel: "swing", triplets: [{ instrument: "snare", tick: 0 }] });
+    lesson.tracks.push({ instrument: "ride", notes: [0, 96, 192, 288] });
+    const voice = lessonNotation(lesson).bars[0].voices.find(voice => voice.id === "drums");
+    assert.ok(voice.notes.filter(note => note.triplet && note.rest).every(note => !note.hidden));
+    assert.ok(voice.notes.some(note => note.hidden));
+});

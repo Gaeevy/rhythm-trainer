@@ -75,6 +75,9 @@ continuous sheet with one to three bars per row, depending on width and density.
 It follows playback and retains six rows. Browse with the score arrows while
 stopped. Stop preserves the score; Start returns to loop 1/bar 1. The Drum key
 explains staff positions. Unsupported notation leaves Lanes available.
+Swing beams connect matching pad groups; changing pads starts a new beam or flag.
+Inactive voices omit trailing/full-bar rests while another voice plays.
+Leading/internal rests and triplet rests remain visible to locate the next hit.
 
 Early noteheads move left, late heads right; larger errors move farther, within
 spacing limits. Stems and beams stay fixed. Severe errors (above the larger of

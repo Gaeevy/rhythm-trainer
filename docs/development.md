@@ -152,6 +152,14 @@ never extend across a beat. This spelling keeps mixed rhythms readable without
 artificial subdivision rests or altered hits. Beams group by beat/tuplet; shared
 voices use lighter downward stems/beams. VexFlow's `beamWidth` sets thickness.
 
+After layout selection, Swing beam groups split when the set of played pads
+changes; simultaneous notes still share stems. Trailing quarter-or-longer rests
+and full-bar rests in an inactive voice are hidden when another voice plays
+during that interval. Leading/internal rests, explicit triplet slots and silent
+staff bars remain visible. Hidden rests retain their model duration and engraving
+anchors; the renderer hides their SVG group after formatting. This preserves bar
+totals, note placement and marker timing. Selection compares rests before hiding.
+
 ## Packaging and release
 
 `npm run build` validates lessons and recreates `_site/`. It packages runtime
