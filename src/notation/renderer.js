@@ -65,6 +65,11 @@ export function renderScoreBar(host, example, width = scoreWidth(host, example))
     });
     new Formatter().joinVoices(voices).formatToStave(voices, stave);
     for (const voice of voices) voice.draw(context, stave);
+    for (const { part, notes } of engravedParts) {
+        for (const [index, note] of part.notes.entries()) {
+            if (note.hidden) notes[index].getSVGElement().setAttribute("visibility", "hidden");
+        }
+    }
     for (const beam of beams) beam.setContext(context).draw();
     for (const tuplet of tuplets) tuplet.setContext(context).draw();
     const svg = host.querySelector("svg");

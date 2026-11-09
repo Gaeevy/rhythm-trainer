@@ -9,6 +9,41 @@ export class NotationError extends Error {}
 
 const onGrid = (offsets, spacing) => offsets.every(offset => offset % spacing === 0);
 
+function splitPadBeams(notes, beams) {
+    return beams.flatMap(indices => {
+        const groups = [];
+        let group = [], pads;
+        const flush = () => { if (group.filter(index => !notes[index].rest).length >= 2) groups.push(group); };
+        for (const index of indices) {
+            const next = notes[index].refs.map(ref => ref.instrument).sort().join("|");
+            if (next && pads && next !== pads) { flush(); group = []; }
+            if (next) pads = next;
+            group.push(index);
+        }
+        flush();
+        return groups;
+    });
+}
+
+// Presentation follows layout selection so hidden rests cannot bias the rest-count
+// comparison. Keep their durations/anchors, and all explicit tuplet slots, intact.
+function applyEngravingRules(model) {
+    for (const bar of model.bars) for (const voice of bar.voices) {
+        if (model.feel === "swing") voice.beams = splitPadBeams(voice.notes, voice.beams);
+        const lastHit = voice.notes.findLastIndex(note => !note.rest);
+        for (const [index, note] of voice.notes.entries()) {
+            if (!note.rest || note.triplet || index <= lastHit || note.durationTicks < TICKS_PER_BEAT) continue;
+            // Another voice must carry the rhythm during this trailing/full-bar
+            // silence. Leading/internal gaps and a silent staff stay readable.
+            if (bar.voices.some(other => other !== voice && other.notes.some(hit => !hit.rest
+                && hit.writtenTick >= note.writtenTick && hit.writtenTick < note.writtenTick + note.durationTicks))) {
+                note.hidden = true;
+            }
+        }
+    }
+    return model;
+}
+
 // Combine only aligned quarter rests; never merge through a note or tuplet.
 function compactRests(notes, beams, tuplets) {
     const compact = [], indices = new Map();
@@ -142,26 +177,26 @@ function convertLesson(lesson, { combine = false, separateTuplets = false } = {}
  * Otherwise protect quarter-note cymbal rhythms. Only dense eighth-or-shorter
  * cymbals may share a voice, and only if that model adds no rests.
  * This avoids 35 redundant rests in Fascination Street while keeping the ride
- * quarter independent of offbeat snare in the swing exercises. No song-name,
- * folder or feel-based layout exceptions; feel still controls written timing.
+ * quarter independent of offbeat snare in the swing exercises. Titles/folders
+ * never select layouts; feel controls written timing and beam grouping.
  */
 export function lessonNotation(lesson) {
     let separate;
     try { separate = convertLesson(lesson); }
     catch (error) {
         if (!(error instanceof NotationError)) throw error;
-        return convertLesson(lesson, { separateTuplets: true });
+        return applyEngravingRules(convertLesson(lesson, { separateTuplets: true }));
     }
     const cymbals = separate.bars.flatMap(bar => bar.voices.filter(voice => voice.id === "cymbals")
         .flatMap(voice => voice.notes.filter(note => !note.rest)));
-    if (!cymbals.length || cymbals.some(note => note.durationTicks > TICKS_PER_EIGHTH)) return separate;
+    if (!cymbals.length || cymbals.some(note => note.durationTicks > TICKS_PER_EIGHTH)) return applyEngravingRules(separate);
     try {
         const combined = convertLesson(lesson, { combine: true });
         const restCount = model => model.bars.reduce((count, bar) => count
             + bar.voices.reduce((sum, voice) => sum + voice.notes.filter(note => note.rest).length, 0), 0);
-        return restCount(combined) <= restCount(separate) ? combined : separate;
+        return applyEngravingRules(restCount(combined) <= restCount(separate) ? combined : separate);
     } catch (error) {
         if (!(error instanceof NotationError)) throw error;
-        return separate;
+        return applyEngravingRules(separate);
     }
 }

@@ -51,6 +51,7 @@ export async function catalogFlow(browser, url) {
 }
 
 export async function lessonMenuFlow(browser, url) {
+    const songs = BUNDLED_LESSONS.filter(entry => entry.group === "Songs");
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, hasTouch: true });
     await mockMidi(context);
     try {
@@ -65,7 +66,7 @@ export async function lessonMenuFlow(browser, url) {
         assert.equal(await page.getByRole("menuitemradio").count(), 14);
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-nested-desktop.png" });
         await page.getByRole("menuitem", { name: "Songs", exact: true }).hover();
-        assert.equal(await page.getByRole("menuitemradio").count(), 4);
+        assert.equal(await page.getByRole("menuitemradio").count(), songs.length);
         await page.keyboard.press("Escape");
         await selectLesson(page, "swing-exercise-20");
         await waitForLesson(page, "swing-exercise-20");
@@ -83,9 +84,9 @@ export async function lessonMenuFlow(browser, url) {
         await page.keyboard.press("ArrowDown");
         assert.equal(await page.evaluate(() => document.activeElement.dataset.folder), "Songs");
         await page.keyboard.press("ArrowRight");
-        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "californication");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), songs[0].id);
         await page.keyboard.press("End");
-        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "fascination-street");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), songs.at(-1).id);
         await page.keyboard.press("ArrowLeft");
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("ArrowRight");
@@ -129,11 +130,11 @@ export async function lessonMenuFlow(browser, url) {
         await waitForLesson(page, "swing-exercise-07");
         await page.reload();
         await waitForLesson(page, "swing-exercise-07");
-        await selectLesson(page, "californication");
+        await selectLesson(page, songs[0].id);
         assert.equal(await page.locator("#lesson-previous").isDisabled(), true);
         await page.locator("#lesson-next").click();
-        await waitForLesson(page, "chop-suey");
-        await selectLesson(page, "fascination-street");
+        await waitForLesson(page, songs[1].id);
+        await selectLesson(page, songs.at(-1).id);
         assert.equal(await page.locator("#lesson-next").isDisabled(), true);
         await page.setViewportSize({ width: 390, height: 844 });
         await page.locator("#lesson").tap();

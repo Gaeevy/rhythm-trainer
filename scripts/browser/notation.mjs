@@ -420,6 +420,13 @@ export async function notationCoverageFlow(browser, url) {
                 const actual = await page.locator("#notation-score [data-note-id]").evaluateAll(nodes => nodes.map(node => node.dataset.noteId).sort());
                 assert.equal(await page.locator("#notation-score .vf-tuplet").count(),
                     model.bars[bar].voices.reduce((sum, voice) => sum + voice.tuplets.length, 0), `${id}: explicit triplet brackets are present`);
+                assert.equal(await page.locator("#notation-score .vf-beam").count(),
+                    model.bars[bar].voices.reduce((sum, voice) => sum + voice.beams.length, 0), `${id}: model beam groups are engraved`);
+                const hiddenRests = model.bars[bar].voices.flatMap(voice => voice.notes).filter(note => note.hidden).length;
+                assert.equal(await page.locator('#notation-score .vf-stavenote[visibility="hidden"]').count(), hiddenRests,
+                    `${id}: inactive rests remain formatted but invisible`);
+                assert.equal(await page.locator('#notation-score [visibility="hidden"] [data-note-id]').count(), 0,
+                    `${id}: every played head remains visible`);
                 if (id === "swing-01" && bar === 0) {
                     const aligned = await page.locator("#notation-score").evaluate(host => {
                         const snare = host.querySelector('[data-note-id="snare:0"]').getBoundingClientRect();
