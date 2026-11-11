@@ -302,3 +302,14 @@ test("trailing explicit triplet rests remain visible beside another active voice
     assert.ok(voice.notes.filter(note => note.triplet && note.rest).every(note => !note.hidden));
     assert.ok(voice.notes.some(note => note.hidden));
 });
+
+test("rests before a crash clear the lower voice while retaining their duration", () => {
+    const lesson = example([64, 256], { feel: "swing" });
+    lesson.tracks.push({ instrument: "ride", notes: [96] }, { instrument: "crash_1", notes: [352] });
+    const cymbals = lessonNotation(lesson).bars[0].voices.find(voice => voice.id === "cymbals");
+    assert.deepEqual(cymbals.notes.filter(note => note.hidden).map(note => note.writtenTick), [192]);
+    const eighthRest = cymbals.notes.find(note => note.writtenTick === 288);
+    assert.equal(eighthRest.duration, "8r");
+    assert.deepEqual(eighthRest.keys, ["g/5"]);
+    assert.equal(cymbals.notes.reduce((sum, note) => sum + note.durationTicks, 0), 384);
+});

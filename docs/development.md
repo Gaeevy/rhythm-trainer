@@ -158,8 +158,10 @@ voices use lighter downward stems/beams. VexFlow's `beamWidth` sets thickness.
 After layout selection, Swing beam groups split when the set of played pads
 changes; simultaneous notes still share stems. Trailing quarter-or-longer rests
 and full-bar rests in an inactive voice are hidden when another voice plays
-during that interval. Leading/internal rests, explicit triplet slots and silent
-staff bars remain visible. Hidden rests retain their model duration and engraving
+during that interval. The same rule hides quarter rests before a crash in an
+upper voice. Eighth rests before a crash sit higher to clear the lower voice.
+Explicit triplet rests and silent staff bars remain visible. Hidden rests retain
+their model duration and engraving
 anchors; the renderer hides their SVG group after formatting. This preserves bar
 totals, note placement and marker timing. Selection compares rests before hiding.
 
