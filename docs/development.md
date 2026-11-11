@@ -41,6 +41,9 @@ All modes check both mounts; the full suite is the release check.
 Browser assertions allow 0.25 ms for separately sampled native output-clock
 anchors. Clock-conversion unit tests use exact values. This allowance belongs
 only to the tests; assessment retains the original timestamps and tolerances.
+Assessment updates before the score's next animation frame. Before reading
+several noteheads in a browser test, wait for each expected feedback state;
+one updated head does not guarantee that a later hit has rendered.
 
 ## Code map
 

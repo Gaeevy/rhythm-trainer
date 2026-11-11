@@ -18,7 +18,9 @@ export async function notationFeedbackFlow(browser, url) {
         assert.equal((await timedKey(page, "KeyK", 0, -20)).status, "early");
         assert.equal((await timedKey(page, "KeyF", 0, 20)).status, "late");
         assert.equal((await timedKey(page, "KeyH", 1)).status, "on_time");
-        await page.waitForFunction(() => document.querySelector('[data-note-id="snare:0"]').dataset.timing === "late");
+        await page.waitForFunction(() => [
+            ["ride:0", "early"], ["snare:0", "late"], ["hi_hat_pedal:96", "on_time"],
+        ].every(([id, timing]) => document.querySelector(`#notation-score [data-note-id="${id}"]`)?.dataset.timing === timing));
         const shared = await page.evaluate(() => {
             const ride = document.querySelector('#notation-score [data-note-id="ride:0"]');
             const snare = document.querySelector('#notation-score [data-note-id="snare:0"]');
