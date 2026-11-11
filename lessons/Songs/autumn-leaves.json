@@ -9,6 +9,7 @@
     {"instrument": "ride", "notes": [0, 96, 160, 192, 288, 352, 384, 480, 544]},
     {"instrument": "hi_hat_pedal", "notes": [96, 288, 480]},
     {"instrument": "snare", "notes": [640, 672, 832, 864, 1024, 1056, 1216, 1248, 1408, 1440]},
-    {"instrument": "kick", "notes": [736, 928, 1120, 1312]}
+    {"instrument": "kick", "notes": [736, 928, 1120, 1312]},
+    {"instrument": "crash_1", "notes": [736, 928, 1120, 1312]}
   ]
 }

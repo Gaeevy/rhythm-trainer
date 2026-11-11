@@ -32,9 +32,15 @@ function applyEngravingRules(model) {
         if (model.feel === "swing") voice.beams = splitPadBeams(voice.notes, voice.beams);
         const lastHit = voice.notes.findLastIndex(note => !note.rest);
         for (const [index, note] of voice.notes.entries()) {
-            if (!note.rest || note.triplet || index <= lastHit || note.durationTicks < TICKS_PER_BEAT) continue;
-            // Another voice must carry the rhythm during this trailing/full-bar
-            // silence. Leading/internal gaps and a silent staff stay readable.
+            if (!note.rest || note.triplet) continue;
+            const nextHit = voice.stem > 0 && voice.notes.slice(index + 1).find(next => !next.rest);
+            const beforeCrash = nextHit && nextHit.refs.every(ref => ["crash_1", "crash_2"].includes(ref.instrument));
+            if (beforeCrash && note.durationTicks === TICKS_PER_EIGHTH) note.keys = ["g/5"];
+
+            const trailingRest = index > lastHit && note.durationTicks >= TICKS_PER_BEAT;
+            const crashQuarterRest = beforeCrash && note.durationTicks === TICKS_PER_BEAT;
+            if (!trailingRest && !crashQuarterRest) continue;
+            // Hide a redundant rest only where another voice carries the rhythm.
             if (bar.voices.some(other => other !== voice && other.notes.some(hit => !hit.rest
                 && hit.writtenTick >= note.writtenTick && hit.writtenTick < note.writtenTick + note.durationTicks))) {
                 note.hidden = true;
