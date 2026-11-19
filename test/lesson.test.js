@@ -18,7 +18,7 @@ test("all bundled lessons parse and validate", async () => {
     assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ path }) => path).sort(),
         "Each lesson JSON must have exactly one entry in the generated catalog");
     for (const file of files) {
-        parseLesson(await readFile(new URL(file, directory), "utf8"));
+        parseLesson(await readFile(new URL(`./${file}`, directory), "utf8"));
     }
 });
 

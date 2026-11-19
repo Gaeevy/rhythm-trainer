@@ -1,0 +1,49 @@
+{
+  "version": 2,
+  "title": "10. Beat 12",
+  "bpm": 60,
+  "time_signature": [
+    4,
+    4
+  ],
+  "bars": 1,
+  "notation": {
+    "feel": "straight"
+  },
+  "tracks": [
+    {
+      "instrument": "hi_hat_closed",
+      "notes": [
+        0,
+        48,
+        96,
+        144,
+        192,
+        240,
+        288,
+        336
+      ]
+    },
+    {
+      "instrument": "kick",
+      "notes": [
+        0,
+        48,
+        96,
+        144,
+        240
+      ]
+    },
+    {
+      "instrument": "snare",
+      "notes": [
+        24,
+        72,
+        120,
+        168,
+        216,
+        288
+      ]
+    }
+  ]
+}

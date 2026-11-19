@@ -5,6 +5,9 @@
 Add one JSON file under `lessons/`, then refresh the local app:
 
 - `Songs/`: song excerpts.
+- `Straight: Exercises/`: straight sixteenth-note snare exercises and grooves
+  from “Single 16th-Note Subdivisions on the Snare” in *The Breakbeat Bible*,
+  in practice order.
 - `Swing/`: sheet exercises.
 - `Swing [YouTube]/`: video exercises.
 
