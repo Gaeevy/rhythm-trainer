@@ -14,7 +14,7 @@ export async function catalogFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         assert.deepEqual(await page.locator("#lesson-menu > [data-folder]").evaluateAll(options => options.map(option => option.textContent)),
-            ["Songs", "Swing", "Swing [YouTube]"]);
+            ["Songs", "Straight: Exercises", "Swing", "Swing [YouTube]"]);
         for (const { id, title, group } of BUNDLED_LESSONS) {
             await selectLesson(page, id);
             await waitForLesson(page, id);
@@ -90,6 +90,10 @@ export async function lessonMenuFlow(browser, url) {
         await page.keyboard.press("ArrowLeft");
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("ArrowRight");
+        assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "straight-exercise-01");
+        await page.keyboard.press("ArrowLeft");
+        await page.keyboard.press("ArrowDown");
+        await page.keyboard.press("ArrowRight");
         assert.equal(await page.evaluate(() => document.activeElement.dataset.lessonId), "swing-exercise-07");
         await page.keyboard.press("End");
         await page.keyboard.press("Escape");
@@ -97,6 +101,7 @@ export async function lessonMenuFlow(browser, url) {
         assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin, "Browsing does not restart playback");
         assert.equal(await page.locator("#start-stop").getAttribute("data-running"), "true");
         await page.locator("#lesson").press("Enter");
+        await page.keyboard.press("ArrowDown");
         await page.keyboard.press("ArrowDown");
         await page.keyboard.press("ArrowRight");
         await page.keyboard.press("Enter");

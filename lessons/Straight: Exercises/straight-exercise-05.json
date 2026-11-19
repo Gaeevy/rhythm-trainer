@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "title": "05. Beat 1",
+  "bpm": 60,
+  "time_signature": [
+    4,
+    4
+  ],
+  "bars": 1,
+  "notation": {
+    "feel": "straight"
+  },
+  "tracks": [
+    {
+      "instrument": "hi_hat_closed",
+      "notes": [
+        0,
+        48,
+        96,
+        144,
+        192,
+        240,
+        288,
+        336
+      ]
+    },
+    {
+      "instrument": "kick",
+      "notes": [
+        0,
+        192
+      ]
+    },
+    {
+      "instrument": "snare",
+      "notes": [
+        96,
+        168,
+        288
+      ]
+    }
+  ]
+}

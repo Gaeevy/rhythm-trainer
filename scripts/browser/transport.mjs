@@ -21,7 +21,7 @@ export async function practiceFlow(browser, url) {
         await page.goto(url);
         await ready(page);
         await selectView(page, "lanes");
-        assert.equal(await page.locator("#lesson-menu > [data-folder]").count(), 4);
+        assert.equal(await page.locator("#lesson-menu > [data-folder]").count(), 5);
         for (const { id } of BUNDLED_LESSONS) {
             const lesson = JSON.parse(await readFile(resolve(runtimeRoot, "lessons", BUNDLED_LESSONS.find(lesson => lesson.id === id).path), "utf8"));
             await selectLesson(page, id);
