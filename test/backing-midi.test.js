@@ -36,6 +36,21 @@ test("separate MIDI notes with different durations or dynamics stay independent"
     ]);
 });
 
+test("MIDI programs and bend sensitivity apply to notes on the matching channel", () => {
+    const file = midiFile([
+        "00 c01b 00 902474 60 802400 00 ff2f00",
+        "00 c122 00 b16500 00 b16400 00 b1060c 00 912474 30 e10060 30 812400 00 e10040 00 912774 30 812700 00 ff2f00",
+    ]);
+    assert.deepEqual(parseBackingMidi(file, 1).events, [
+        { tick: 0, durationTicks: 96, velocity: 116 / 127, pitches: [36], program: 27 },
+        {
+            tick: 0, durationTicks: 96, velocity: 116 / 127, pitches: [36], program: 34,
+            bends: [{ offsetTicks: 48, cents: 600 }],
+        },
+        { tick: 96, durationTicks: 48, velocity: 116 / 127, pitches: [39], program: 34 },
+    ]);
+});
+
 test("invalid or out-of-loop MIDI fails before playback", () => {
     const track = "00 903c64 8360 803c00 00 ff2f00";
     assert.throws(() => parseBackingMidi(midiFile([track], { format: 2 }), 1), /format 0 or 1/);

@@ -52,9 +52,18 @@ export class Playback {
             const ppq = track.ppq ?? TICKS_PER_BEAT;
             this.backing = {
                 loopSeconds: track.bars * BEATS_PER_BAR * secondsPerBeat,
-                events: track.events.map(({ durationTicks, ...event }) => ({
-                    ...event, offset: (event.tick / ppq) * secondsPerBeat, duration: (durationTicks / ppq) * secondsPerBeat,
-                })),
+                events: track.events.map(({ durationTicks, bends, ...event }) => {
+                    const timed = {
+                        ...event, offset: (event.tick / ppq) * secondsPerBeat,
+                        duration: (durationTicks / ppq) * secondsPerBeat,
+                    };
+                    if (bends) {
+                        timed.bends = bends.map(({ offsetTicks, cents }) => ({
+                            offset: (offsetTicks / ppq) * secondsPerBeat, cents,
+                        }));
+                    }
+                    return timed;
+                }),
             };
         }
         this.startTime = this.clock() + 0.08;

@@ -67,10 +67,18 @@ test("a MIDI backing uses file ticks and the selected BPM on the lesson clock", 
     const h = harness();
     const song = { ...lesson, backing: { midi: "phrase.mid", bars: 2 } };
     assert.throws(() => h.playback.start(song, { backing: true }), /not loaded/);
-    const track = { ppq: 480, bars: 2, events: [{ tick: 1, durationTicks: 240, pitches: [62], velocity: 0.5 }] };
+    const track = {
+        ppq: 480, bars: 2,
+        events: [{
+            tick: 1, durationTicks: 240, pitches: [62], velocity: 0.5, program: 34,
+            bends: [{ offsetTicks: 120, cents: 300 }],
+        }],
+    };
     h.playback.start(song, { backing: true, midiBacking: track, bpm: 120, countIn: false });
     assert.equal(h.chords[0].time, h.playback.origin + 1 / 960);
     assert.equal(h.chords[0].duration, 0.25);
+    assert.equal(h.chords[0].program, 34);
+    assert.deepEqual(h.chords[0].bends, [{ offset: 0.125, cents: 300 }]);
     assert.equal(h.playback.backing.loopSeconds, 4);
 });
 

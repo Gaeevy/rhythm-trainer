@@ -14,7 +14,7 @@ function harness() {
     });
     const node = () => ({ connections: [], connect(target) { this.connections.push(target); }, disconnect() {}, gain: parameter() });
     const source = kind => {
-        const result = { ...node(), kind, frequency: parameter(), starts: [], stops: [],
+        const result = { ...node(), kind, frequency: parameter(), detune: parameter(), starts: [], stops: [],
             start(time) { this.starts.push(time); }, stop(time) { this.stops.push(time); } };
         sources.push(result);
         return result;
@@ -150,4 +150,18 @@ test("short backing chords reach their peak before the release begins", () => {
     const envelope = h.sources[0].connections[0].gain.events;
     assert.equal(envelope[1][2], 3.001);
     assert.equal(envelope[2][2], 3.002);
+});
+
+test("backing guitar and bass use distinct timbres and apply pitch bends on the audio clock", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [60], duration: 0.25, velocity: 0.8, program: 27 }, 3);
+    const guitar = h.sources.slice();
+    h.audio.scheduleBacking({
+        pitches: [60], duration: 0.25, velocity: 0.8, program: 34,
+        bends: [{ offset: 0.125, cents: 300 }],
+    }, 3);
+    const bass = h.sources.slice(guitar.length);
+    assert.notDeepEqual(guitar.map(source => source.frequency.events), bass.map(source => source.frequency.events));
+    assert.ok(guitar.every(source => source.detune.events.length === 0));
+    assert.ok(bass.every(source => source.detune.events[0][1] === 300 && source.detune.events[0][2] === 3.125));
 });

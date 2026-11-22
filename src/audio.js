@@ -4,8 +4,13 @@ import { DRUM_SAMPLES } from "./drum-samples.js";
 const PIANO_PARTIALS = [
     [1, 0.088, 1.1], [2.001, 0.035, 0.35], [3.004, 0.017, 0.21], [4.009, 0.009, 0.12],
 ];
+// General MIDI programs use zero-based values in Program Change messages.
+const BACKING_PARTIALS = {
+    27: [[1, 0.08, 0.68], [2, 0.066, 0.31], [3, 0.04, 0.19], [4, 0.02, 0.12], [5, 0.012, 0.07], [7, 0.008, 0.045]],
+    34: [[1, 0.15, 0.9], [2, 0.065, 0.48], [3, 0.036, 0.25], [4, 0.017, 0.15], [6, 0.014, 0.075], [9, 0.007, 0.045]],
+};
 
-/** Guide recordings, metronome and backing piano on the same audio clock. */
+/** Guide recordings, metronome and pitched backing on the same audio clock. */
 export class DrumAudio {
     constructor(context) {
         this.context = context;
@@ -117,14 +122,18 @@ export class DrumAudio {
         source.stop(time + 0.035 + 0.01);
     }
 
-    scheduleBacking({ pitches, duration, velocity }, time) {
+    scheduleBacking({ pitches, duration, velocity, program, bends }, time) {
         const release = time + duration;
         const attack = Math.min(0.004, duration / 2);
+        const partials = BACKING_PARTIALS[program] ?? PIANO_PARTIALS;
         for (const pitch of pitches) {
             const frequency = 440 * 2 ** ((pitch - 69) / 12);
-            for (const [ratio, level, decay] of PIANO_PARTIALS) {
+            for (const [ratio, level, decay] of partials) {
                 const source = this.context.createOscillator();
                 source.frequency.setValueAtTime(frequency * ratio, time);
+                if (bends) {
+                    for (const { offset, cents } of bends) source.detune.setValueAtTime(cents, time + offset);
+                }
                 const envelope = this.context.createGain();
                 const peak = level * velocity;
                 envelope.gain.setValueAtTime(0, time);

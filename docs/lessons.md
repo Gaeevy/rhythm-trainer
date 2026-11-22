@@ -86,7 +86,12 @@ filename uses lowercase letters, digits and hyphens. Set `bars` to 1–16 and
 keep all pitched note starts and ends inside that loop. The drum lesson and
 the backing clip can have different lengths. Export just the pitched parts
 you want to hear. Playback uses the file's notes, timing, duration and velocity
-with the app's piano sound and selected BPM. Channel 10 is reserved for drums.
+at the selected BPM. Use General MIDI Program Change 1 for piano, 28 for clean
+electric guitar or 35 for picked electric bass. These are the displayed General
+MIDI numbers. The corresponding bytes are 0, 27 and 34. Send Program Change
+on the same track and channel as its notes. Other programs use the piano sound.
+Pitch bend follows its channel and uses the MIDI pitch-bend sensitivity setting
+when present. Channel 10 is reserved for drums.
 If a phrase depends on pedal sustain, extend those notes before export.
 Run `npm test` to validate each referenced clip, then practice through at least
 two repeats to check the loop boundary.
@@ -140,7 +145,7 @@ lesson's `backing` object.
 
 ### Song backing sources
 
-The initial MIDI clips are piano practice arrangements based on these charts.
+The clips are practice arrangements based on these charts.
 
 | Lesson | Backing phrase | Source |
 | --- | --- | --- |
@@ -148,7 +153,7 @@ The initial MIDI clips are piano practice arrangements based on these charts.
 | Californication | Two-bar verse riff, Am – F | [Drum transcription](https://www.7drumcity.com/uploads/4/4/2/7/4427384/californication_v4.pdf), [guitar chart](https://themusicdept.com/wp-content/uploads/2016/08/Jam-RHCP-Californication.pdf) |
 | Chop Suey! | Instrumental bars 24–25, G5 – F♯5 / A5 – C5, with changes on beat three | [Drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [guitar chart](https://guitartuna.com/chords/chop-suey-system-of-a-down-original-guitar-chords-616681fc954419ddfca26f04) |
 | Come Undone | Four-bar main loop, Cm – B♭ – A♭ – B♭ | [Guitar chart with capo at fret 1](https://www.songsterr.com/a/wsa/duran-duran-come-undone-chords-s23869), [bass score](https://billwingfieldsbassvault.wordpress.com/wp-content/uploads/2018/02/come-undone.pdf) |
-| Fascination Street | Four opening bars, Cm – Cm – A♭ – Gm, reduced to one chord per bar from the repeating bass figure | [Bass transcription](https://karmaskinmusic.com/fascination-street-the-cure-bass-tab/), [arrangement analysis](https://songparts.com/songs/the-cure/fascination-street) |
+| Fascination Street | Electric guitar and picked bass for bars 9–12. Bass slides follow the supplied tab, with slide lengths set for practice. | Supplied guitar and bass tablature |
 
 ## Ticks and feel
 

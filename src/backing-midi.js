@@ -4,6 +4,45 @@ const CHUNK_HEADER = 0x4d546864; // MThd
 const CHUNK_TRACK = 0x4d54726b; // MTrk
 const DRUM_CHANNEL = 9; // Channel 10 in General MIDI.
 
+function channelState() {
+    return { pending: new Map(), program: 0, bend: 0, bendSemitones: 2, bendCents: 0, rpnMsb: 127, rpnLsb: 127 };
+}
+
+function detuneCents(channel) {
+    return channel.bend * (channel.bendSemitones * 100 + channel.bendCents) / 8192;
+}
+
+function recordBend(channel, tick) {
+    const cents = detuneCents(channel);
+    for (const notes of channel.pending.values()) {
+        for (const note of notes) {
+            const offsetTicks = tick - note.tick;
+            const previous = note.bends.at(-1);
+            if (previous?.offsetTicks === offsetTicks) previous.cents = cents;
+            else if (cents !== (previous?.cents ?? 0)) note.bends.push({ offsetTicks, cents });
+        }
+    }
+}
+
+function readController(channel, controller, value, tick) {
+    switch (controller) {
+        case 98:
+        case 99:
+            channel.rpnMsb = channel.rpnLsb = 127;
+            break;
+        case 100: channel.rpnLsb = value; break;
+        case 101: channel.rpnMsb = value; break;
+        case 6:
+        case 38:
+            if (channel.rpnMsb === 0 && channel.rpnLsb === 0) {
+                if (controller === 6) channel.bendSemitones = value;
+                else channel.bendCents = Math.min(value, 99);
+                recordBend(channel, tick);
+            }
+            break;
+    }
+}
+
 class MidiReader {
     constructor(bytes) {
         this.bytes = bytes;
@@ -40,7 +79,7 @@ class MidiReader {
 }
 
 function readNotes(track, endTick, chords) {
-    const pending = new Map();
+    const channels = Array.from({ length: 16 }, channelState);
     let tick = 0;
     let runningStatus = 0;
     while (!track.done) {
@@ -54,7 +93,7 @@ function readNotes(track, endTick, chords) {
                 const data = track.take(track.delta());
                 if (type === 0x2f) {
                     if (data.length || !track.done) throw new Error("invalid MIDI end of track");
-                    if (pending.size) throw new Error("MIDI note is missing its note-off");
+                    if (channels.some(channel => channel.pending.size)) throw new Error("MIDI note is missing its note-off");
                     return;
                 }
                 if (type === 0x58 && (data[0] !== BEATS_PER_BAR || data[1] !== 2)) {
@@ -70,28 +109,41 @@ function readNotes(track, endTick, chords) {
         if (!status) throw new Error("missing MIDI running status");
         runningStatus = status;
         const message = status >> 4;
-        const channel = status & 0x0f;
+        const channelIndex = status & 0x0f;
         const pitch = first < 0x80 ? first : track.number(1);
         const value = message === 0xc || message === 0xd ? 0 : track.number(1);
         if (pitch >= 0x80 || value >= 0x80) throw new Error("invalid MIDI channel data");
-        if (channel === DRUM_CHANNEL || (message !== 0x8 && message !== 0x9)) continue;
+        if (channelIndex === DRUM_CHANNEL) continue;
 
-        const noteId = channel * 128 + pitch;
-        const active = pending.get(noteId) ?? [];
+        const channel = channels[channelIndex];
+        if (message === 0xc) channel.program = pitch;
+        if (message === 0xb) readController(channel, pitch, value, tick);
+        if (message === 0xe) {
+            channel.bend = value * 128 + pitch - 8192;
+            recordBend(channel, tick);
+        }
+        if (message !== 0x8 && message !== 0x9) continue;
+        const active = channel.pending.get(pitch) ?? [];
         if (message === 0x9 && value > 0) {
             if (tick >= endTick) throw new Error("MIDI note starts outside the backing loop");
-            active.push({ tick, velocity: value });
-            pending.set(noteId, active);
+            const cents = detuneCents(channel);
+            const bends = cents === 0 ? [] : [{ offsetTicks: 0, cents }];
+            active.push({ tick, velocity: value, program: channel.program, bends });
+            channel.pending.set(pitch, active);
             continue;
         }
         const note = active.shift();
         if (!note) throw new Error("MIDI note-off has no matching note-on");
-        if (!active.length) pending.delete(noteId);
+        if (!active.length) channel.pending.delete(pitch);
         if (tick <= note.tick || tick > endTick) throw new Error("MIDI note duration exceeds the backing loop or is zero");
         const durationTicks = tick - note.tick;
-        const chordId = `${note.tick}:${durationTicks}:${note.velocity}`;
+        const bends = note.bends.filter(point => point.offsetTicks < durationTicks);
+        const chordId = JSON.stringify([note.tick, durationTicks, note.velocity, note.program, bends]);
         if (!chords.has(chordId)) {
-            chords.set(chordId, { tick: note.tick, durationTicks, velocity: note.velocity / 127, pitches: [] });
+            const event = { tick: note.tick, durationTicks, velocity: note.velocity / 127, pitches: [] };
+            if (note.program) event.program = note.program;
+            if (bends.length) event.bends = bends;
+            chords.set(chordId, event);
         }
         chords.get(chordId).pitches.push(pitch);
     }

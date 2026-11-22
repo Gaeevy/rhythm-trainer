@@ -8,8 +8,8 @@ Practice your timing. Read the groove. See your progress.
 
 A browser-based drum-practice app for the **Millenium MPS-850**, built for
 **Chrome on macOS**. Play with MIDI or a keyboard, loop custom JSON lessons,
-and follow your timing with recorded guide drums, a metronome or piano backing.
-Songs can use a prepared MIDI clip, and exercises can generate a backing track.
+and follow your timing with recorded guide drums, a metronome or a backing track.
+Songs can use a prepared MIDI clip, and exercises can generate piano backing.
 
 ![Notation practice with timing feedback and the score sidebar](docs/images/notation.png)
 

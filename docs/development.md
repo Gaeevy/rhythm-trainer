@@ -69,7 +69,10 @@ Its `finally` block refreshes lesson navigation after loading succeeds or fails.
 
 For a MIDI-backed lesson, Start in Backing track mode reads the file relative
 to the selected lesson JSON. It preserves the file's own ticks per quarter
-note. A missing or invalid file leaves transport stopped and retryable.
+note. Program Change selects the voice at each note start. The parser keeps
+channel pitch bends with the notes they affect, and playback schedules their
+offsets on the same clock as note onsets. A missing or invalid file leaves
+transport stopped and retryable.
 The generator builds deterministic piano events in lesson ticks. Playback
 converts either source at the selected BPM and schedules the piano and lesson
 loops from a shared origin. Assessment and the displayed position follow the
@@ -80,9 +83,9 @@ the next piano onset or bar boundary. If each repeat of the backing cycle
 starts at the same drum phase, the accent follows the last eligible offbeat kick
 in the second half of that drum bar, at least a sixteenth before its end.
 Otherwise, or with no eligible kick, it plays on the offbeat after beat three
-using the lesson's straight or swing feel. The piano and click use Web Audio
-oscillators with their own mixer gains and the same source cancellation as
-the guide drums.
+using the lesson's straight or swing feel. Backing instruments and click use
+Web Audio oscillators with separate backing and click mixer gains and the same
+source cancellation as the guide drums.
 
 `NotationView` caches engraving and retains six rows of independent bar copies.
 `resetSession()` clears feedback/displayed bars while retaining templates;

@@ -105,6 +105,27 @@ export async function backingFlow(browser, url) {
             [[0, [55, 62]], [192, [54, 61]], [264, [54, 61]], [384, [57, 64]], [576, [48, 55]], [624, [48, 55]]]);
         await page.locator("#start-stop").click();
         await stopped(page);
+
+        await selectLesson(page, "fascination-street");
+        await waitForLesson(page, "fascination-street");
+        await setBpm(page, 300);
+        await page.evaluate(() => { window.smoke.chords.length = 0; });
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.filter(note => note.tick === 0 && note.program === 34).length >= 2);
+        const fascination = await page.evaluate(() => ({
+            opening: window.smoke.chords.filter(note => note.tick === 0).slice(0, 2),
+            bassStarts: window.smoke.chords.filter(note => note.tick === 0 && note.program === 34),
+            slide: window.smoke.chords.find(note => note.program === 34 && note.bends),
+            origin: window.smoke.assessment.origin,
+        }));
+        assert.deepEqual(fascination.opening.map(note => [note.program, note.pitches]), [[27, [70]], [34, [36]]]);
+        assert.ok(fascination.opening.every(note => note.time === fascination.origin));
+        assert.equal(fascination.bassStarts[1].time, fascination.origin + 3.2);
+        assert.equal(fascination.slide.tick, 1200);
+        assert.ok(fascination.slide.bends.at(-1).cents > 290);
+        await page.locator("#start-stop").click();
+        await stopped(page);
         assert.deepEqual(errors, []);
         console.log(`PASS backing mode, count-in, shared clock, independent cycles, lesson harmony and persistence: ${new URL(url).pathname}`);
     } finally { await context.close(); }
