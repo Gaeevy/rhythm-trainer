@@ -20,7 +20,8 @@ function harness() {
         return result;
     };
     const context = {
-        currentTime: 0, sampleRate: 100, destination: {}, createGain: node,
+        currentTime: 0, sampleRate: 100, destination: {}, createGain: node, createWaveShaper: node,
+        createBiquadFilter: () => ({ ...node(), frequency: parameter(), Q: parameter() }),
         createBuffer: () => ({ getChannelData: () => new Float32Array(100) }),
         createBufferSource: () => source("sample"), createOscillator: () => source("oscillator"),
         decodeAudioData: async () => ({ duration: 4 }),
@@ -180,4 +181,21 @@ test("the entire General MIDI bass family shares the boosted backing voice", () 
     for (let program = 32; program <= 39; program++) assert.equal(peak(program), 0.15 * Math.SQRT2);
     assert.equal(peak(31), peak(0));
     assert.equal(peak(40), peak(0));
+});
+
+test("distorted sawtooth guitar chords share a soft clipper and cabinet filter", () => {
+    const h = harness();
+    const chord = { pitches: [44, 51], duration: 1, velocity: 0.8, program: 30 };
+    h.audio.scheduleBacking(chord, 3);
+    const clipper = h.sources[0].connections[0].connections[0];
+    h.audio.scheduleBacking(chord, 4);
+    assert.ok(h.sources.every(source => source.connections[0].connections[0] === clipper));
+    assert.equal(h.sources[0].type, "sawtooth");
+    const [cabinet] = clipper.connections;
+    assert.equal(cabinet.type, "bandpass");
+    assert.deepEqual(cabinet.connections, [h.audio.backing]);
+    assert.equal(clipper.curve[512], 0);
+    assert.ok(clipper.curve[1024] < 2 * clipper.curve[768]);
+    h.audio.scheduleBacking({ ...chord, program: 34 }, 4);
+    assert.equal(h.sources.at(-1).connections[0].connections[0], h.audio.backing);
 });

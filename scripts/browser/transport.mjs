@@ -98,13 +98,22 @@ export async function backingFlow(browser, url) {
         await waitForLesson(page, "chop-suey");
         await setBpm(page, 300);
         await page.evaluate(() => { window.smoke.chords.length = 0; });
+        await page.route("**/chop-suey.wav", route => route.fulfill({ body: "invalid WAV" }), { times: 1 });
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.includes("Could not load chop-suey.wav"));
+        await stopped(page);
         await page.locator("#start-stop").click();
         await playing(page);
-        await page.waitForFunction(() => window.smoke.chords.some(chord => chord.tick === 624));
-        assert.deepEqual(await page.evaluate(() => window.smoke.chords.slice(0, 6).map(chord => [chord.tick, chord.pitches])),
-            [[0, [55, 62]], [192, [54, 61]], [264, [54, 61]], [384, [57, 64]], [576, [48, 55]], [624, [48, 55]]]);
+        await page.waitForFunction(() => window.smoke.chords.length >= 2);
+        const recording = await page.evaluate(() => ({
+            origin: window.smoke.assessment.origin,
+            starts: window.smoke.chords.slice(0, 2).map(({ buffer, playbackRate, time }) =>
+                [buffer.duration, playbackRate, time]),
+        }));
+        assert.deepEqual(recording.starts, [[6, 3.75, recording.origin], [6, 3.75, recording.origin + 1.6]]);
         await page.locator("#start-stop").click();
         await stopped(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);
 
         await selectLesson(page, "fascination-street");
         await waitForLesson(page, "fascination-street");
@@ -120,6 +129,7 @@ export async function backingFlow(browser, url) {
             origin: window.smoke.assessment.origin,
         }));
         assert.deepEqual(fascination.opening.map(note => [note.program, note.pitches]), [[27, [70]], [34, [36]]]);
+        assert.ok(fascination.bassStarts.every(note => note.gain === undefined));
         assert.ok(fascination.opening.every(note => note.time === fascination.origin));
         assert.equal(fascination.bassStarts[1].time, fascination.origin + 3.2);
         assert.equal(fascination.slide.tick, 1200);

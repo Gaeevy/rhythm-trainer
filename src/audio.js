@@ -1,4 +1,5 @@
 import { DRUM_SAMPLES } from "./drum-samples.js";
+import { isBassProgram } from "./backing.js";
 
 // Higher piano harmonics are quieter and decay faster than the fundamental.
 const PIANO_PARTIALS = [
@@ -9,11 +10,18 @@ const BACKING_VOICES = {
     27: {
         partials: [[1, 0.08, 0.68], [2, 0.066, 0.31], [3, 0.04, 0.19], [4, 0.02, 0.12], [5, 0.012, 0.07], [7, 0.008, 0.045]],
     },
+    30: {
+        partials: [[1, 0.32, 1.15, "sawtooth"], [2, 0.075, 0.45]],
+        distorted: true,
+    },
     34: {
         gain: Math.SQRT2,
         partials: [[1, 0.15, 0.9], [2, 0.065, 0.48], [3, 0.036, 0.25], [4, 0.017, 0.15], [6, 0.014, 0.075], [9, 0.007, 0.045]],
     },
 };
+const DISTORTION_CURVE = Float32Array.from({ length: 1025 }, (_, index) =>
+    0.40 * Math.tanh(12 * (index / 512 - 1)),
+);
 
 /** Guide recordings, metronome and pitched backing on the same audio clock. */
 export class DrumAudio {
@@ -27,6 +35,7 @@ export class DrumAudio {
         this.guide = context.createGain();
         this.metronome = context.createGain();
         this.backing = context.createGain();
+        this.distortedGuitar = null;
         this.guide.gain.value = 0.55;
         this.metronome.gain.value = 0.35;
         this.backing.gain.value = 0.55;
@@ -127,18 +136,47 @@ export class DrumAudio {
         source.stop(time + 0.035 + 0.01);
     }
 
-    scheduleBacking({ pitches, duration, velocity, program, bends }, time) {
+    scheduleBacking({ buffer, playbackRate, pitches, duration, velocity, program, bends, gain = 1 }, time) {
+        if (buffer) {
+            const source = this.context.createBufferSource();
+            source.buffer = buffer;
+            source.playbackRate.value = playbackRate;
+            source.connect(this.backing);
+            this.sources.add(source);
+            source.onended = () => {
+                this.sources.delete(source);
+                source.disconnect();
+            };
+            source.start(time);
+            return;
+        }
         const release = time + duration;
         const attack = Math.min(0.004, duration / 2);
         // General MIDI bass programs share the picked bass sound and gain.
-        const isBass = program >= 32 && program <= 39;
-        const voice = BACKING_VOICES[isBass ? 34 : program];
+        const voice = BACKING_VOICES[isBassProgram(program) ? 34 : program];
         const partials = voice?.partials ?? PIANO_PARTIALS;
-        const amplitude = velocity * (voice?.gain ?? 1);
+        const amplitude = velocity * (voice?.gain ?? 1) * gain;
+        let output = this.backing;
+        if (voice?.distorted) {
+            if (!this.distortedGuitar) {
+                this.distortedGuitar = this.context.createWaveShaper();
+                this.distortedGuitar.curve = DISTORTION_CURVE;
+                this.distortedGuitar.oversample = "2x";
+                // Keep the driven guitar in the mids and leave room for the bass.
+                const cabinet = this.context.createBiquadFilter();
+                cabinet.type = "bandpass";
+                cabinet.frequency.value = 1100;
+                cabinet.Q.value = 0.65;
+                this.distortedGuitar.connect(cabinet);
+                cabinet.connect(this.backing);
+            }
+            output = this.distortedGuitar;
+        }
         for (const pitch of pitches) {
             const frequency = 440 * 2 ** ((pitch - 69) / 12);
-            for (const [ratio, level, decay] of partials) {
+            for (const [ratio, level, decay, waveform] of partials) {
                 const source = this.context.createOscillator();
+                if (waveform) source.type = waveform;
                 source.frequency.setValueAtTime(frequency * ratio, time);
                 if (bends) {
                     for (const { offset, cents } of bends) source.detune.setValueAtTime(cents, time + offset);
@@ -152,7 +190,7 @@ export class DrumAudio {
                 );
                 envelope.gain.exponentialRampToValueAtTime(0.00001, release + 0.035);
                 source.connect(envelope);
-                envelope.connect(this.backing);
+                envelope.connect(output);
                 this.sources.add(source);
                 source.onended = () => {
                     this.sources.delete(source);

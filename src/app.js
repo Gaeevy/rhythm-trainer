@@ -306,13 +306,16 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     }
 }
 
-async function loadBackingMidi({ midi, bars }, baseUrl) {
+async function loadBackingFile({ midi, audio: recording, bars }, baseUrl, context) {
+    const file = recording ?? midi;
     try {
-        const response = await fetch(new URL(midi, baseUrl));
+        const response = await fetch(new URL(file, baseUrl));
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return parseBackingMidi(new Uint8Array(await response.arrayBuffer()), bars);
+        const bytes = await response.arrayBuffer();
+        if (recording) return { audioBacking: await context.decodeAudioData(bytes) };
+        return { midiBacking: parseBackingMidi(new Uint8Array(bytes), bars) };
     } catch (error) {
-        throw new Error(`Could not load ${midi} (${error.message}). Press Start to retry.`);
+        throw new Error(`Could not load ${file} (${error.message}). Press Start to retry.`);
     }
 }
 
@@ -359,17 +362,17 @@ startButton.addEventListener("click", async () => {
             : "Could not load drum recordings. Check the connection, then press Start to retry.";
         if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
         const backing = preferences.accompaniment === "backing";
-        let midiBacking = null;
-        if (backing && lesson.backing?.midi) {
-            showStatus("Loading backing MIDI…");
-            midiBacking = await loadBackingMidi(lesson.backing, lessonUrl);
+        let loadedBacking = {};
+        if (backing && (lesson.backing?.midi || lesson.backing?.audio)) {
+            showStatus("Loading backing track…");
+            loadedBacking = await loadBackingFile(lesson.backing, lessonUrl, audio.context);
             if (request !== startRequest) return;
             if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
         }
         updateVolumes(false);
         playback.start(lesson, {
             bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments,
-            backing, midiBacking,
+            backing, ...loadedBacking,
         });
         assessment = new Assessment(lesson, {
             origin: playback.origin,

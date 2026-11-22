@@ -56,8 +56,8 @@ Version 1 uses the same base fields without `notation` and displays literal rhyt
 
 ## Backing track
 
-Either lesson version can include an optional `backing` object. Set `midi`
-for a prepared song clip. Exercises can use generated harmony.
+Either lesson version can include an optional `backing` object. Use `midi` or
+`audio` for a prepared song clip. Exercises can use generated harmony.
 
 ### Add a song excerpt
 
@@ -70,16 +70,23 @@ for a prepared song clip. Exercises can use generated harmony.
    riff, include its full staff or tab, clef or tuning, and measure numbers.
    If the phrase starts before the first downbeat, include the preceding bar
    or mark the exact entrance relative to the drum loop.
-3. Prepare a MIDI clip with its first bar aligned to the lesson's first bar.
+3. Prepare a MIDI clip or a WAV recording with its first bar aligned to the lesson's first bar.
    Save it next to the JSON and enter the clip length, including any trailing
    rests. Use the same stable filename stem for both files when practical.
 
 ```json
 {
-  "midi": "chop-suey.mid",
+  "audio": "chop-suey.wav",
   "bars": 2
 }
 ```
+
+For `audio`, use a PCM WAV with a lowercase, hyphenated filename and `bars`
+from 1 to 16. Trim the entire recording to exactly that many bars, including
+any trailing silence. The recording keeps its original pitch at its recorded
+tempo. Other practice tempos change playback speed and pitch together.
+
+### MIDI backing
 
 Use Standard MIDI File format 0 or 1, 4/4, and ticks per quarter note. The
 filename uses lowercase letters, digits and hyphens. Set `bars` to 1–16 and
@@ -87,10 +94,12 @@ keep all pitched note starts and ends inside that loop. The drum lesson and
 the backing clip can have different lengths. Export just the pitched parts
 you want to hear. Playback uses the file's notes, timing, duration and velocity
 at the selected BPM. Use General MIDI Program Change 1 for piano, 28 for clean
-electric guitar or 35 for picked electric bass. The entire General MIDI bass
-family (33–40) uses the picked bass sound in the trainer. Playback adds 3 dB
-to bass, so export new clips at their intended MIDI velocities. The displayed
-program numbers are one-based. The corresponding bytes are 0, 27 and 32–39.
+electric guitar, 31 for distortion guitar or 35 for picked electric bass. The
+entire General MIDI bass family (33–40) uses the picked bass sound in the
+trainer. Playback adds 3 dB to bass, so export new clips at their intended MIDI
+velocities. An optional `bassGainDb` from −12 to +12 adjusts the bass level for
+that lesson by the specified amount on top of the default boost. The displayed
+program numbers are one-based. The corresponding bytes are 0, 27, 30 and 32–39.
 Send Program Change on the same track and channel as its notes. Other programs
 use the piano sound.
 Pitch bend follows its channel and uses the MIDI pitch-bend sensitivity setting
@@ -160,7 +169,7 @@ The clips are practice arrangements based on these charts.
 | --- | --- | --- |
 | Autumn Leaves | Four bars in C minor around the closing vocal phrase. Cm7 enters on the first kick at tick 352 of bar 2. B7 and A7 enter on the kicks before beat three in bars 3 and 4. | [Jazz changes transposed to C minor for practice](https://spytunes.com/autumn-leaves-chords/) |
 | Californication | Four-bar verse clip. The Am – Fmaj7 guitar arpeggio repeats over the bass phrase, including its sixteenth-note triplets. | Supplied guitar and bass tablature, [drum transcription](https://www.7drumcity.com/uploads/4/4/2/7/4427384/californication_v4.pdf) |
-| Chop Suey! | Instrumental bars 24–25, G5 – F♯5 / A5 – C5, with changes on beat three | [Drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [guitar chart](https://guitartuna.com/chords/chop-suey-system-of-a-down-original-guitar-chords-616681fc954419ddfca26f04) |
+| Chop Suey! | Two bars at 80 BPM. Guitar and bass play sixteenths in Drop C. The WAV is a mix captured in Ableton Live with Shreddage 3 Stratus Free on guitar and Electric Bass Raw on bass. | Supplied guitar and bass tablature, [drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [Shreddage 3 Stratus Free](https://impactsoundworks.com/product/shreddage-3-stratus-free-kp/) |
 | Come Undone | Four-bar main loop, Cm – B♭ – A♭ – B♭ | [Guitar chart with capo at fret 1](https://www.songsterr.com/a/wsa/duran-duran-come-undone-chords-s23869), [bass score](https://billwingfieldsbassvault.wordpress.com/wp-content/uploads/2018/02/come-undone.pdf) |
 | Fascination Street | Electric guitar and picked bass for bars 9–12. Bass slides follow the supplied tab, with slide lengths set for practice. | Supplied guitar and bass tablature |
 

@@ -67,8 +67,10 @@ that clock for assessment. Both views and analytics consume the same results.
 counter, so stale requests cannot replace the active lesson or its controls.
 Its `finally` block refreshes lesson navigation after loading succeeds or fails.
 
-For a MIDI-backed lesson, Start in Backing track mode reads the file relative
-to the selected lesson JSON. It preserves the file's own ticks per quarter
+For a lesson with a backing file, Start in Backing track mode reads the file
+relative to the selected lesson JSON. WAV recordings decode before playback.
+Playback schedules one buffer per cycle from the shared origin and sets the
+playback rate to fit the selected tempo. MIDI preserves the file's own ticks per quarter
 note. Program Change selects the voice at each note start. The parser keeps
 channel pitch bends with the notes they affect, and playback schedules their
 offsets on the same clock as note onsets. A missing or invalid file leaves
@@ -77,7 +79,7 @@ The generator builds deterministic pitched events in lesson ticks. Straight
 exercises without an explicit progression use a ringing guitar arpeggio and an
 alternating picked bass rhythm. The last bass note approaches the next
 bar's root, including across the loop boundary. Playback
-converts either source at the selected BPM and schedules the piano and lesson
+converts backing events at the selected BPM and schedules the backing and lesson
 loops from a shared origin. Assessment and the displayed position follow the
 drum lesson. In generated piano backing, chords play at the start of each bar
 and at each chord change. A short accent uses the chord active at its tick. A
@@ -88,7 +90,9 @@ in the second half of that drum bar, at least a sixteenth before its end.
 Otherwise, or with no eligible kick, it plays on the offbeat after beat three
 using the lesson's straight or swing feel. Backing instruments and click use
 Web Audio oscillators with separate backing and click mixer gains and the same
-source cancellation as the guide drums.
+source cancellation as the guide drums. Distortion guitar sends its sawtooth
+and octave oscillators through a shared soft clipper and band-pass cabinet
+filter before the backing mixer gain.
 
 `NotationView` caches engraving and retains six rows of independent bar copies.
 `resetSession()` clears feedback/displayed bars while retaining templates;
