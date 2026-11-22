@@ -56,8 +56,10 @@ Version 1 uses the same base fields without `notation` and displays literal rhyt
 
 ## Backing track
 
-Either lesson version can include an optional `backing` object. Use `midi` or
-`audio` for a prepared song clip. Exercises can use generated harmony.
+Either lesson version can include an optional `backing` object. Prefer `midi`
+for a prepared song clip so it follows practice tempo at the original pitch.
+Use `audio` when the rendered instrument tone or mix matters. Exercises can
+use generated harmony.
 
 ### Add a song excerpt
 
@@ -171,6 +173,7 @@ The clips are practice arrangements based on these charts.
 | Californication | Four-bar verse clip. The Am – Fmaj7 guitar arpeggio repeats over the bass phrase, including its sixteenth-note triplets. | Supplied guitar and bass tablature, [drum transcription](https://www.7drumcity.com/uploads/4/4/2/7/4427384/californication_v4.pdf) |
 | Chop Suey! | Two bars at 80 BPM. Guitar and bass play sixteenths in Drop C. The WAV is a mix captured in Ableton Live with Shreddage 3 Stratus Free on guitar and Electric Bass Raw on bass. | Supplied guitar and bass tablature, [drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [Shreddage 3 Stratus Free](https://impactsoundworks.com/product/shreddage-3-stratus-free-kp/) |
 | Come Undone | Four-bar main loop, Cm – B♭ – A♭ – B♭ | [Guitar chart with capo at fret 1](https://www.songsterr.com/a/wsa/duran-duran-come-undone-chords-s23869), [bass score](https://billwingfieldsbassvault.wordpress.com/wp-content/uploads/2018/02/come-undone.pdf) |
+| Come Undone (Placebo) | Bars 2–5 at 85 BPM. The clean guitar plays C5 – C5 – B♭5 – B♭5 in eighths under a G–F–C lead figure. Both parts use the chart's F–B♭–E♭–A♭–C–C tuning. The drum chart's backbeat uses the trainer's snare track. | Supplied guitar and drum tablature, [Placebo recording](https://www.youtube.com/watch?v=FO2zaYPLUgE) |
 | Fascination Street | Electric guitar and picked bass for bars 9–12. Bass slides follow the supplied tab, with slide lengths set for practice. | Supplied guitar and bass tablature |
 
 ## Ticks and feel

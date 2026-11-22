@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "title": "Come Undone (Placebo)",
+  "bpm": 85,
+  "time_signature": [4, 4],
+  "bars": 4,
+  "notation": {
+    "feel": "straight",
+    "triplets": [
+      {"instrument": "hi_hat_pedal", "tick": 336, "unit": 16},
+      {"instrument": "hi_hat_pedal", "tick": 720, "unit": 16},
+      {"instrument": "hi_hat_pedal", "tick": 1104, "unit": 16},
+      {"instrument": "hi_hat_pedal", "tick": 1488, "unit": 16}
+    ]
+  },
+  "backing": {"midi": "placebo-come-undone.mid", "bars": 4},
+  "tracks": [
+    {"instrument": "hi_hat_pedal", "notes": [0, 48, 96, 144, 192, 240, 288, 336, 368, 384, 432, 480, 528, 576, 624, 672, 720, 736, 752, 768, 816, 864, 912, 960, 1008, 1056, 1104, 1136, 1152, 1200, 1248, 1296, 1344, 1392, 1440, 1488, 1504, 1520]},
+    {"instrument": "snare", "notes": [96, 288, 480, 672, 864, 1056, 1248, 1440]},
+    {"instrument": "kick", "notes": [0, 768]}
+  ]
+}
