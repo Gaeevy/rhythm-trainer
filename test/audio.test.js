@@ -162,6 +162,22 @@ test("backing guitar and bass use distinct timbres and apply pitch bends on the 
     }, 3);
     const bass = h.sources.slice(guitar.length);
     assert.notDeepEqual(guitar.map(source => source.frequency.events), bass.map(source => source.frequency.events));
+    const guitarPeak = guitar[0].connections[0].gain.events[1][1];
+    const bassPeak = bass[0].connections[0].gain.events[1][1];
+    assert.ok(Math.abs(guitarPeak - 0.08 * 0.8) < 1e-12);
+    assert.ok(Math.abs(bassPeak - 0.15 * 0.8 * Math.SQRT2) < 1e-12);
     assert.ok(guitar.every(source => source.detune.events.length === 0));
     assert.ok(bass.every(source => source.detune.events[0][1] === 300 && source.detune.events[0][2] === 3.125));
+});
+
+test("the entire General MIDI bass family shares the boosted backing voice", () => {
+    const h = harness();
+    const peak = program => {
+        const first = h.sources.length;
+        h.audio.scheduleBacking({ pitches: [45], duration: 0.25, velocity: 1, program }, 3);
+        return h.sources[first].connections[0].gain.events[1][1];
+    };
+    for (let program = 32; program <= 39; program++) assert.equal(peak(program), 0.15 * Math.SQRT2);
+    assert.equal(peak(31), peak(0));
+    assert.equal(peak(40), peak(0));
 });

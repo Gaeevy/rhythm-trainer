@@ -19,8 +19,9 @@ preserve playback.
 
 Choose **Metronome** or **Backing track** in **Accompaniment**. Backing track
 plays an accompaniment at your BPM. Song lessons use their prepared MIDI
-with piano, electric guitar or bass sounds. Exercises generate a piano part
-from their lesson data. The count-in uses the metronome's saved level and mute
+with piano, electric guitar or bass sounds. MIDI bass has a 3 dB boost
+within the backing mix. Exercises generate a piano part from their lesson
+data. The count-in uses the metronome's saved level and mute
 state. The backing takes over from the click after the count-in. Guide drums
 have their own volume and mute. The drum lesson and backing start together and
 repeat at their own lengths. Without backing metadata a one-bar lesson plays
