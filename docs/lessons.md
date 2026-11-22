@@ -149,7 +149,7 @@ The clips are practice arrangements based on these charts.
 
 | Lesson | Backing phrase | Source |
 | --- | --- | --- |
-| Autumn Leaves | Four bars in C minor around the closing vocal phrase. Cm7 enters on the first kick at tick 352 of bar 2. | [Jazz changes transposed to C minor for practice](https://spytunes.com/autumn-leaves-chords/) |
+| Autumn Leaves | Four bars in C minor around the closing vocal phrase. Cm7 enters on the first kick at tick 352 of bar 2. B7 and A7 enter on the kicks before beat three in bars 3 and 4. | [Jazz changes transposed to C minor for practice](https://spytunes.com/autumn-leaves-chords/) |
 | Californication | Two-bar verse riff, Am – F | [Drum transcription](https://www.7drumcity.com/uploads/4/4/2/7/4427384/californication_v4.pdf), [guitar chart](https://themusicdept.com/wp-content/uploads/2016/08/Jam-RHCP-Californication.pdf) |
 | Chop Suey! | Instrumental bars 24–25, G5 – F♯5 / A5 – C5, with changes on beat three | [Drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [guitar chart](https://guitartuna.com/chords/chop-suey-system-of-a-down-original-guitar-chords-616681fc954419ddfca26f04) |
 | Come Undone | Four-bar main loop, Cm – B♭ – A♭ – B♭ | [Guitar chart with capo at fret 1](https://www.songsterr.com/a/wsa/duran-duran-come-undone-chords-s23869), [bass score](https://billwingfieldsbassvault.wordpress.com/wp-content/uploads/2018/02/come-undone.pdf) |
