@@ -19,6 +19,34 @@ test("default harmony and swing accents repeat for four bars independently of th
     assert.equal(backingTrack({ ...oldLesson, version: 1 }).events[1].tick, 240);
 });
 
+test("straight exercises default to a four-bar clean guitar and picked bass groove", () => {
+    const lesson = validateLesson({ ...swing, notation: { feel: "straight" } });
+    const { bars, events } = backingTrack(lesson);
+    assert.equal(bars, 4);
+    assert.deepEqual(backingTrack(lesson), { bars, events });
+    const guitar = events.filter(note => note.program === 27);
+    const bass = events.filter(note => note.program === 34);
+    assert.deepEqual(guitar.slice(0, 4).map(note => [note.tick, note.pitches[0]]),
+        [[0, 52], [48, 59], [96, 55], [168, 62]]);
+    assert.deepEqual(bass.filter(note => note.tick % 384 === 0).map(note => note.pitches[0]), [28, 36, 31, 38]);
+    assert.equal(bass.at(-1).pitches[0], 29);
+    assert.equal(bass.at(-1).tick + bass.at(-1).durationTicks, 4 * 384);
+    assert.ok(guitar.every(note => (note.tick + note.durationTicks) % 384 === 0));
+    assert.ok(events.every((note, index) => index === 0 || note.tick >= events[index - 1].tick));
+});
+
+test("the straight default honors key and length, while explicit progressions keep the piano arrangement", () => {
+    const straight = { ...swing, notation: { feel: "straight" } };
+    const transposed = validateLesson({ ...straight, backing: { key: "C major", bars: 2 } });
+    const track = backingTrack(transposed);
+    assert.equal(track.bars, 2);
+    assert.deepEqual(track.events.filter(note => note.program === 34 && note.tick % 384 === 0)
+        .map(note => note.pitches[0]), [33, 29]);
+    const explicit = validateLesson({ ...straight, backing: { key: "C major", progression: ["Imaj7"] } });
+    assert.deepEqual(backingTrack(explicit).events.map(note => [note.tick, note.program, note.pitches]),
+        [[0, undefined, [48, 52, 55, 59]], [240, undefined, [48, 52, 55, 59]]]);
+});
+
 test("lesson progression sets the length and is resolved in the lesson key", () => {
     const lesson = validateLesson({ ...swing, backing: { key: "Bb major", progression: ["ii7", "V7", "Imaj7"] } });
     const track = backingTrack(lesson);

@@ -73,11 +73,14 @@ note. Program Change selects the voice at each note start. The parser keeps
 channel pitch bends with the notes they affect, and playback schedules their
 offsets on the same clock as note onsets. A missing or invalid file leaves
 transport stopped and retryable.
-The generator builds deterministic piano events in lesson ticks. Playback
+The generator builds deterministic pitched events in lesson ticks. Straight
+exercises without an explicit progression use a ringing guitar arpeggio and an
+alternating picked bass rhythm. The last bass note approaches the next
+bar's root, including across the loop boundary. Playback
 converts either source at the selected BPM and schedules the piano and lesson
 loops from a shared origin. Assessment and the displayed position follow the
-drum lesson. In generated backing, the piano plays at the start of each bar and
-at each chord change. A short accent uses the chord active at its tick. A
+drum lesson. In generated piano backing, chords play at the start of each bar
+and at each chord change. A short accent uses the chord active at its tick. A
 change on the accent tick plays once at chord-change strength. Note durations end by
 the next piano onset or bar boundary. If each repeat of the backing cycle
 starts at the same drum phase, the accent follows the last eligible offbeat kick

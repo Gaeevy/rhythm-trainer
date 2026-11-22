@@ -19,13 +19,13 @@ preserve playback.
 
 Choose **Metronome** or **Backing track** in **Accompaniment**. Backing track
 plays an accompaniment at your BPM. Song lessons use their prepared MIDI
-with piano, electric guitar or bass sounds. MIDI bass has a 3 dB boost
-within the backing mix. Exercises generate a piano part from their lesson
-data. The count-in uses the metronome's saved level and mute
-state. The backing takes over from the click after the count-in. Guide drums
+with piano, electric guitar or bass sounds. Bass has a 3 dB boost within the
+backing mix. Straight exercises default to clean guitar and picked bass.
+Swing exercises default to piano. The count-in uses the metronome's saved
+level and mute state. The backing takes over from the click after the count-in. Guide drums
 have their own volume and mute. The drum lesson and backing start together and
 repeat at their own lengths. Without backing metadata a one-bar lesson plays
-four times per four-bar piano cycle. If a MIDI file fails to load, the app shows
+four times per four-bar backing cycle. If a MIDI file fails to load, the app shows
 its filename. Press Start after fixing the file, or select Metronome to
 practice with the click. [Lesson backing](lessons.md#backing-track) defines the
 two sources.

@@ -113,7 +113,7 @@ For generated backing, every field below is optional. With an empty or absent
 
 | Field | Value |
 | --- | --- |
-| `key` | Tonic A–G with optional `b` or `#`, followed by `major` or `minor`. Defaults to `C minor`. |
+| `key` | Tonic A–G with optional `b` or `#`, followed by `major` or `minor`. Defaults to `E minor` for straight exercises without a progression, and `C minor` for generated piano. |
 | `progression` | One entry per backing bar. Use a scale degree for the whole bar or a list of chord changes within that bar. |
 | `bars` | Integer from 1 to 16. Defaults to the number of entries in `progression`, or 4 without a progression. If both fields are present, their lengths must agree. |
 
@@ -140,7 +140,13 @@ seventh. Use `ø7` for a half-diminished seventh, `°` for a diminished triad
 or `5` for a power chord with root and perfect fifth. In C minor, `V7` is
 G–B–D–F and `V5` is G–D.
 
-The default progression is `iiø7 → V7 → i7 → i7` in minor and
+Straight exercises without an explicit progression default to clean guitar and
+picked bass. The four-bar progression is `i7 → VImaj7 → III → VII` in minor
+(`Em7 → Cmaj7 → G → D` in the default key) and `vi7 → IVmaj7 → I → V` in
+major. With a custom length, repeat or trim that progression to fit.
+
+Swing exercises, version 1 lessons and exercises with an explicit progression
+use generated piano. Its default progression is `iiø7 → V7 → i7 → i7` in minor and
 `ii7 → V7 → Imaj7 → Imaj7` in major. With a custom length and no progression,
 the generator cycles through those degrees and uses the tonic chord in the
 final bar. Use either the prepared MIDI file or the generator settings in a

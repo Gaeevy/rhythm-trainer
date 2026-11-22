@@ -8,6 +8,15 @@ const keyPattern = /^([A-G])([b#]?) (major|minor)$/;
 const keyPitch = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const scales = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10] };
 const defaultProgression = ["iiø7", "V7", "i7", "i7"];
+const straightProgressions = {
+    minor: ["i7", "VImaj7", "III", "VII"],
+    major: ["vi7", "IVmaj7", "I", "V"],
+};
+const guitarSteps = [0, 2, 4, 7];
+const bassPatterns = [
+    { steps: [0, 3, 6, 8, 11, 13, 15], velocities: [0.78, 0.62, 0.67, 0.75, 0.64, 0.67, 0.62] },
+    { steps: [0, 4, 7, 8, 10, 13, 15], velocities: [0.78, 0.65, 0.60, 0.75, 0.64, 0.66, 0.62] },
+];
 const accidental = { "": 0, b: -1, "#": 1 };
 
 function validDegree(degree) {
@@ -88,12 +97,52 @@ function chordPitches(degree, tonic, scale) {
     return chord;
 }
 
-/** Generate piano chords and accents from an already validated lesson. */
+function straightBacking(bars, tonic, mode) {
+    const progression = straightProgressions[mode];
+    const chords = Array.from({ length: bars }, (_, bar) => chordPitches(
+        progression[bar % progression.length], tonic, scales[mode],
+    ));
+    const bassRoots = chords.map(([root]) => 28 + (root - 28) % 12);
+    const events = [];
+    for (const [bar, chord] of chords.entries()) {
+        const barTick = bar * TICKS_PER_BAR;
+        const [root, third, fifth, top = root + 12] = chord;
+        const guitarPitches = [root, fifth, third, top];
+        for (const [index, step] of guitarSteps.entries()) {
+            const offset = step * TICKS_PER_SIXTEENTH;
+            events.push({
+                tick: barTick + offset, pitches: [guitarPitches[index]], program: 27,
+                velocity: index === 0 ? 0.69 : 0.62, durationTicks: TICKS_PER_BAR - offset,
+            });
+        }
+        const low = bassRoots[bar];
+        const nextRoot = bassRoots[(bar + 1) % bars];
+        // Approach the next root from above when it is the bass's low E.
+        const approach = nextRoot === 28 ? nextRoot + 1 : nextRoot - 1;
+        const bassPitches = [low, low + 7, low + 12, low, low + third - root, low + 7, approach];
+        const { steps, velocities } = bassPatterns[bar % bassPatterns.length];
+        for (const [index, step] of steps.entries()) {
+            const offset = step * TICKS_PER_SIXTEENTH;
+            const end = (steps[index + 1] ?? 16) * TICKS_PER_SIXTEENTH;
+            events.push({
+                tick: barTick + offset, pitches: [bassPitches[index]], program: 34,
+                velocity: velocities[index], durationTicks: Math.min(3 * TICKS_PER_SIXTEENTH, end - offset),
+            });
+        }
+    }
+    events.sort((left, right) => left.tick - right.tick);
+    return { bars, events };
+}
+
+/** Generate accompaniment from an already validated lesson. */
 export function backingTrack(lesson) {
     const backing = lesson.backing ?? {};
-    const [, letter, alteration, mode] = (backing.key ?? "C minor").match(keyPattern);
+    const straightDefault = lesson.notation?.feel === "straight" && !backing.progression;
+    const defaultKey = straightDefault ? "E minor" : "C minor";
+    const [, letter, alteration, mode] = (backing.key ?? defaultKey).match(keyPattern);
     const tonic = keyPitch[letter] + accidental[alteration];
     const bars = backing.bars ?? backing.progression?.length ?? defaultProgression.length;
+    if (straightDefault) return straightBacking(bars, tonic, mode);
     const tonicDegree = mode === "minor" ? "i7" : "Imaj7";
     const defaults = mode === "minor" ? defaultProgression : ["ii7", "V7", "Imaj7", "Imaj7"];
     const kickTicks = lesson.tracks.find(track => track.instrument === "kick")?.notes ?? [];
