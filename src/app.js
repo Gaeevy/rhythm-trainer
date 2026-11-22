@@ -2,6 +2,7 @@ import { LessonPicker } from "./lesson-picker.js";
 import { VOLUME_MAX, volumeFromPosition, positionFromVolume } from "./volume.js";
 import { practiceBpm, bpmFromPosition, positionFromBpm, MIN_BPM, MAX_BPM } from "./tempo.js";
 import { parseLesson } from "./lesson.js";
+import { parseBackingMidi } from "./backing-midi.js";
 import { DrumAudio } from "./audio.js";
 import { Playback } from "./playback.js";
 import { NotationView } from "./notation/view.js";
@@ -31,6 +32,7 @@ const latencyInput = element("latency-offset");
 const status = element("status");
 const position = element("position");
 let lesson;
+let lessonUrl;
 let tracks = [];
 let audio;
 let playback;
@@ -259,11 +261,13 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
         const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
         if (!entry) throw new Error("Unknown bundled lesson");
         const path = entry.path.split("/").map(encodeURIComponent).join("/");
-        const response = await fetch(new URL(`../lessons/${path}`, import.meta.url));
+        const nextUrl = new URL(`../lessons/${path}`, import.meta.url);
+        const response = await fetch(nextUrl);
         if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
         const nextLesson = parseLesson(await response.text());
         if (request !== lessonRequest) return;
         lesson = nextLesson;
+        lessonUrl = nextUrl;
         activeLessonId = id;
         if (BUNDLED_LESSONS.some(entry => entry.id === id)) preferences.lastBundledLessonId = id;
         assessment = null;
@@ -299,6 +303,16 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
             startButton.disabled = !lesson;
             startButton.removeAttribute("aria-busy");
         }
+    }
+}
+
+async function loadBackingMidi({ midi, bars }, baseUrl) {
+    try {
+        const response = await fetch(new URL(midi, baseUrl));
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return parseBackingMidi(new Uint8Array(await response.arrayBuffer()), bars);
+    } catch (error) {
+        throw new Error(`Could not load ${midi} (${error.message}). Press Start to retry.`);
     }
 }
 
@@ -344,10 +358,18 @@ startButton.addEventListener("click", async () => {
         element("guide-sound-status").textContent = samplesReady ? "Guide drums: acoustic recordings."
             : "Could not load drum recordings. Check the connection, then press Start to retry.";
         if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
+        const backing = preferences.accompaniment === "backing";
+        let midiBacking = null;
+        if (backing && lesson.backing?.midi) {
+            showStatus("Loading backing MIDI…");
+            midiBacking = await loadBackingMidi(lesson.backing, lessonUrl);
+            if (request !== startRequest) return;
+            if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
+        }
         updateVolumes(false);
         playback.start(lesson, {
             bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments,
-            backing: preferences.accompaniment === "backing",
+            backing, midiBacking,
         });
         assessment = new Assessment(lesson, {
             origin: playback.origin,

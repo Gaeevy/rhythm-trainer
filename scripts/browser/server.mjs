@@ -8,7 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../_site");
 const artifactHtml = await readFile(resolve(root, "index.html"), "utf8");
 export const releasePath = artifactHtml.match(/<base href="\.\/(runtime\/[a-f0-9]{16}\/)"/)[1];
 export const runtimeRoot = resolve(root, releasePath);
-const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".wav": "audio/wav" };
+const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".wav": "audio/wav", ".mid": "audio/midi" };
 export async function serve(mount) {
     const server = createServer(async (request, response) => {
         try {

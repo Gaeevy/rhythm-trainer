@@ -16,3 +16,4 @@ Git and merged PRs retain detailed plans, intermediate reviews and release check
 | 2026-11-06 | [Code cleanup](2026-11-06-practice-code-cleanup.md) |
 | 2026-11-06 | [Accuracy analytics](2026-11-06-practice-analytics.md) |
 | 2026-11-22 | [Piano backing track](2026-11-22-backing-track.md) |
+| 2026-11-22 | [MIDI accompaniment for songs](2026-11-22-song-midi.md) |

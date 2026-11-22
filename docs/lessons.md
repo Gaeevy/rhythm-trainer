@@ -56,8 +56,45 @@ Version 1 uses the same base fields without `notation` and displays literal rhyt
 
 ## Backing track
 
-Either lesson version can include an optional `backing` object. Each field
-inside it is optional.
+Either lesson version can include an optional `backing` object. Set `midi`
+for a prepared song clip. Exercises can use generated harmony.
+
+### Add a song excerpt
+
+1. Identify the recording or arrangement and the exact excerpt. Record which
+   source measure starts the loop, the number of bars and any pickup. A timestamp
+   helps when the score and the recording number their bars differently.
+2. Transcribe the drum part to the lesson JSON. Match the same measures in a
+   pitched part for the backing. For chords, use chord symbols or enough
+   guitar, piano or bass notation to establish the harmony. For a melody or
+   riff, include its full staff or tab, clef or tuning, and measure numbers.
+   If the phrase starts before the first downbeat, include the preceding bar
+   or mark the exact entrance relative to the drum loop.
+3. Prepare a MIDI clip with its first bar aligned to the lesson's first bar.
+   Save it next to the JSON and enter the clip length, including any trailing
+   rests. Use the same stable filename stem for both files when practical.
+
+```json
+{
+  "midi": "chop-suey.mid",
+  "bars": 2
+}
+```
+
+Use Standard MIDI File format 0 or 1, 4/4, and ticks per quarter note. The
+filename uses lowercase letters, digits and hyphens. Set `bars` to 1–16 and
+keep all pitched note starts and ends inside that loop. The drum lesson and
+the backing clip can have different lengths. Export just the pitched parts
+you want to hear. Playback uses the file's notes, timing, duration and velocity
+with the app's piano sound and selected BPM. Channel 10 is reserved for drums.
+If a phrase depends on pedal sustain, extend those notes before export.
+Run `npm test` to validate each referenced clip, then practice through at least
+two repeats to check the loop boundary.
+
+### Generate a backing track
+
+For generated backing, every field below is optional. With an empty or absent
+`backing` object, the exercise uses the default progression.
 
 ```json
 {
@@ -69,21 +106,49 @@ inside it is optional.
 | Field | Value |
 | --- | --- |
 | `key` | Tonic A–G with optional `b` or `#`, followed by `major` or `minor`. Defaults to `C minor`. |
-| `progression` | One scale degree per backing bar. Repeat a degree to use the same chord in consecutive bars. |
-| `bars` | Integer from 1 to 16. Defaults to the number of chords in `progression`, or 4 without a progression. If both fields are present, their lengths must agree. |
+| `progression` | One entry per backing bar. Use a scale degree for the whole bar or a list of chord changes within that bar. |
+| `bars` | Integer from 1 to 16. Defaults to the number of entries in `progression`, or 4 without a progression. If both fields are present, their lengths must agree. |
+
+In a list of chord changes, each object contains `tick` and `degree`. Tick
+positions are relative to the start of the bar, from 0 to 383. Start with
+tick 0 and list each later tick once in ascending order. Tick 192 is beat
+three. Use the performed tick for a swung change, as with drum notes.
+
+```json
+{
+  "key": "G minor",
+  "progression": [
+    [{"tick": 0, "degree": "I5"}, {"tick": 192, "degree": "#VII5"}],
+    [{"tick": 0, "degree": "II5"}, {"tick": 192, "degree": "IV5"}]
+  ]
+}
+```
 
 Use Roman numerals I–VII for roots, with an optional `b` or `#` before the
 numeral to alter the scale degree. Roots follow the major or natural minor
 scale in the selected key. Uppercase gives a major triad and lowercase gives
-a minor triad. Append `7` for a minor seventh, `maj7` for a major seventh,
-`ø7` for a half-diminished seventh, or `°` for a diminished triad. For
-example, `V7` in C minor is G–B–D–F.
+a minor triad. The suffix `7` adds a minor seventh and `maj7` adds a major
+seventh. Use `ø7` for a half-diminished seventh, `°` for a diminished triad
+or `5` for a power chord with root and perfect fifth. In C minor, `V7` is
+G–B–D–F and `V5` is G–D.
 
 The default progression is `iiø7 → V7 → i7 → i7` in minor and
 `ii7 → V7 → Imaj7 → Imaj7` in major. With a custom length and no progression,
 the generator cycles through those degrees and uses the tonic chord in the
-final bar. The [Autumn Leaves practice excerpt](../lessons/Songs/autumn-leaves.json)
-has an example of a custom progression for practice.
+final bar. Use either the prepared MIDI file or the generator settings in a
+lesson's `backing` object.
+
+### Song backing sources
+
+The initial MIDI clips are piano practice arrangements based on these charts.
+
+| Lesson | Backing phrase | Source |
+| --- | --- | --- |
+| Autumn Leaves | Four bars in C minor around the closing vocal phrase. Cm7 enters on the first kick at tick 352 of bar 2. | [Jazz changes transposed to C minor for practice](https://spytunes.com/autumn-leaves-chords/) |
+| Californication | Two-bar verse riff, Am – F | [Drum transcription](https://www.7drumcity.com/uploads/4/4/2/7/4427384/californication_v4.pdf), [guitar chart](https://themusicdept.com/wp-content/uploads/2016/08/Jam-RHCP-Californication.pdf) |
+| Chop Suey! | Instrumental bars 24–25, G5 – F♯5 / A5 – C5, with changes on beat three | [Drum transcription](https://freemusicsheets.neocities.org/Drums_24/System%20of%20A%20Down/Chop%20Suey%21%20Drum%20Tab%20by%20System%20of%20a%20Down%20_%20Songsterr%20Tabs%20with%20Rhythm.pdf), [guitar chart](https://guitartuna.com/chords/chop-suey-system-of-a-down-original-guitar-chords-616681fc954419ddfca26f04) |
+| Come Undone | Four-bar main loop, Cm – B♭ – A♭ – B♭ | [Guitar chart with capo at fret 1](https://www.songsterr.com/a/wsa/duran-duran-come-undone-chords-s23869), [bass score](https://billwingfieldsbassvault.wordpress.com/wp-content/uploads/2018/02/come-undone.pdf) |
+| Fascination Street | Four opening bars, Cm – Cm – A♭ – Gm, reduced to one chord per bar from the repeating bass figure | [Bass transcription](https://karmaskinmusic.com/fascination-street-the-cure-bass-tab/), [arrangement analysis](https://songparts.com/songs/the-cure/fascination-street) |
 
 ## Ticks and feel
 

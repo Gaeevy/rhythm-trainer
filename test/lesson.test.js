@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { LessonValidationError, parseLesson, validateLesson } from "../src/lesson.js";
+import { parseBackingMidi } from "../src/backing-midi.js";
 
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
@@ -18,7 +19,12 @@ test("all bundled lessons parse and validate", async () => {
     assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ path }) => path).sort(),
         "Each lesson JSON must have exactly one entry in the generated catalog");
     for (const file of files) {
-        parseLesson(await readFile(new URL(`./${file}`, directory), "utf8"));
+        const url = new URL(`./${file}`, directory);
+        const lesson = parseLesson(await readFile(url, "utf8"));
+        if (lesson.backing?.midi) {
+            const bytes = await readFile(new URL(lesson.backing.midi, url));
+            parseBackingMidi(bytes, lesson.backing.bars);
+        }
     }
 });
 

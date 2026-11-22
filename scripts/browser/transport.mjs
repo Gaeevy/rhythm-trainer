@@ -56,13 +56,53 @@ export async function backingFlow(browser, url) {
 
         await selectLesson(page, "autumn-leaves");
         await waitForLesson(page, "autumn-leaves");
+        await setBpm(page, 300);
         await page.locator("#practice-panel > summary").click();
         await page.locator("#count-in").uncheck();
         await observePlayback(page);
+        let midiRequests = 0;
+        await page.route("**/autumn-leaves.mid", route => {
+            midiRequests++;
+            if (midiRequests === 1) return route.fulfill({ status: 404 });
+            if (midiRequests === 2) return route.fulfill({ body: "invalid MIDI" });
+            return route.continue();
+        });
+        await mode.selectOption("metronome");
         await page.locator("#start-stop").click();
         await playing(page);
-        assert.deepEqual(await page.evaluate(() => window.smoke.chords[0].pitches), [50, 53, 57, 60]);
+        assert.equal(midiRequests, 0);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        await page.evaluate(() => { window.smoke.scheduled.length = 0; });
+        await mode.selectOption("backing");
+        for (const error of ["HTTP 404", "not a Standard MIDI File"]) {
+            await page.locator("#start-stop").click();
+            await page.waitForFunction(message => document.querySelector("#status").textContent.includes(message), error);
+            await stopped(page);
+        }
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.some(chord => chord.tick > 736));
+        const autumn = await page.evaluate(() => ({
+            opening: window.smoke.chords[0].pitches,
+            resolution: window.smoke.chords.filter(chord => chord.tick === 736),
+            kick: window.smoke.scheduled.find(([instrument]) => instrument === "kick")[1],
+        }));
+        assert.deepEqual(autumn.opening, [50, 53, 56, 60]);
+        assert.deepEqual(autumn.resolution.map(chord => [chord.pitches, chord.time]), [[[48, 51, 55, 58], autumn.kick]]);
         assert.equal(await page.evaluate(() => window.smoke.scheduled.filter(([instrument]) => instrument === "metronome").length), 0);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+
+        await selectLesson(page, "chop-suey");
+        await waitForLesson(page, "chop-suey");
+        await setBpm(page, 300);
+        await page.evaluate(() => { window.smoke.chords.length = 0; });
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.some(chord => chord.tick === 624));
+        assert.deepEqual(await page.evaluate(() => window.smoke.chords.slice(0, 6).map(chord => [chord.tick, chord.pitches])),
+            [[0, [55, 62]], [192, [54, 61]], [264, [54, 61]], [384, [57, 64]], [576, [48, 55]], [624, [48, 55]]]);
         await page.locator("#start-stop").click();
         await stopped(page);
         assert.deepEqual(errors, []);

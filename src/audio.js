@@ -119,6 +119,7 @@ export class DrumAudio {
 
     scheduleBacking({ pitches, duration, velocity }, time) {
         const release = time + duration;
+        const attack = Math.min(0.004, duration / 2);
         for (const pitch of pitches) {
             const frequency = 440 * 2 ** ((pitch - 69) / 12);
             for (const [ratio, level, decay] of PIANO_PARTIALS) {
@@ -127,9 +128,9 @@ export class DrumAudio {
                 const envelope = this.context.createGain();
                 const peak = level * velocity;
                 envelope.gain.setValueAtTime(0, time);
-                envelope.gain.linearRampToValueAtTime(peak, time + 0.004);
+                envelope.gain.linearRampToValueAtTime(peak, time + attack);
                 envelope.gain.exponentialRampToValueAtTime(
-                    Math.max(0.0001, peak * Math.exp(-(duration - 0.004) / decay)), release,
+                    Math.max(0.0001, peak * Math.exp(-(duration - attack) / decay)), release,
                 );
                 envelope.gain.exponentialRampToValueAtTime(0.00001, release + 0.035);
                 source.connect(envelope);

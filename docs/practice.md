@@ -18,12 +18,15 @@ and guide drums span 0–100%. Speaker icons toggle mute. Mixer and view changes
 preserve playback.
 
 Choose **Metronome** or **Backing track** in **Accompaniment**. Backing track
-plays a synthesized piano part at your BPM. The count-in uses the metronome's
-saved level and mute state. After the count-in, piano replaces the click and
-guide drums retain their own volume and mute. The drum lesson and piano start
+plays a synthesized piano part at your BPM. Song lessons use their prepared
+MIDI, and exercises generate a part from their lesson data. The count-in uses
+the metronome's saved level and mute state. After the count-in, the piano takes
+over from the click. Guide drums have their own volume and mute. The drum lesson and piano start
 together and repeat at their own lengths. Without backing metadata a
-one-bar lesson plays four times per four-bar piano cycle.
-[Lesson backing metadata](lessons.md#backing-track) defines the harmony.
+one-bar lesson plays four times per four-bar piano cycle. If a MIDI file fails to
+load, the app shows its filename. Press Start after fixing the file, or select
+Metronome to practice with the click. [Lesson backing](lessons.md#backing-track)
+defines the two sources.
 
 **Practice settings** contains Lanes/Notation, count-in, on-time tolerance,
 latency offset and the Drum key. **Keyboard setup** changes keys; **MIDI setup**

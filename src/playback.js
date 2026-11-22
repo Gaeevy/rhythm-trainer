@@ -36,8 +36,9 @@ export class Playback {
         this.timer = null;
     }
 
-    start(lesson, { bpm = lesson.bpm, countIn = true, disabledInstruments = [], backing = false } = {}) {
+    start(lesson, { bpm = lesson.bpm, countIn = true, disabledInstruments = [], backing = false, midiBacking = null } = {}) {
         validateLesson(lesson);
+        if (backing && lesson.backing?.midi && !midiBacking) throw new Error("MIDI backing is not loaded");
         const secondsPerBeat = ticksToSeconds(TICKS_PER_BEAT, bpm);
         this.stop();
         this.secondsPerBeat = secondsPerBeat;
@@ -45,12 +46,16 @@ export class Playback {
         this.loopBeats = lesson.bars * BEATS_PER_BAR;
         this.loopSeconds = this.loopBeats * secondsPerBeat;
         this.events = lessonEvents(lesson, bpm, disabledInstruments, !backing);
-        this.backing = backing ? backingTrack(lesson) : null;
-        if (this.backing) {
-            this.backing.loopSeconds = this.backing.bars * BEATS_PER_BAR * secondsPerBeat;
-            this.backing.events = this.backing.events.map(({ durationTicks, ...event }) => ({
-                ...event, offset: ticksToSeconds(event.tick, bpm), duration: ticksToSeconds(durationTicks, bpm),
-            }));
+        const track = backing ? (midiBacking ?? backingTrack(lesson)) : null;
+        this.backing = null;
+        if (track) {
+            const ppq = track.ppq ?? TICKS_PER_BEAT;
+            this.backing = {
+                loopSeconds: track.bars * BEATS_PER_BAR * secondsPerBeat,
+                events: track.events.map(({ durationTicks, ...event }) => ({
+                    ...event, offset: (event.tick / ppq) * secondsPerBeat, duration: (durationTicks / ppq) * secondsPerBeat,
+                })),
+            };
         }
         this.startTime = this.clock() + 0.08;
         this.origin = this.startTime + this.countInBeats * secondsPerBeat;

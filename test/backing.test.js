@@ -40,12 +40,60 @@ test("a kick accent follows exact ticks when drum phase is stable and ends by th
     assert.equal(shifting[1].tick, 256);
 });
 
+test("timed changes keep the accent on the active chord and play once when they coincide", () => {
+    const lesson = validateLesson({
+        ...swing, bars: 2, tracks: [{ instrument: "kick", notes: [256, 640] }],
+        backing: {
+            key: "G minor", bars: 2,
+            progression: [
+                [{ tick: 0, degree: "I5" }, { tick: 192, degree: "#VII5" }, { tick: 280, degree: "IV5" }],
+                [{ tick: 0, degree: "II5" }, { tick: 256, degree: "IV5" }],
+            ],
+        },
+    });
+    assert.deepEqual(backingTrack(lesson), { bars: 2, events: [
+        { tick: 0, pitches: [55, 62], durationTicks: 192, velocity: 0.8 },
+        { tick: 192, pitches: [54, 61], durationTicks: 64, velocity: 0.8 },
+        { tick: 256, pitches: [54, 61], durationTicks: 24, velocity: 0.55 },
+        { tick: 280, pitches: [48, 55], durationTicks: 104, velocity: 0.8 },
+        { tick: 384, pitches: [57, 64], durationTicks: 192, velocity: 0.8 },
+        { tick: 640, pitches: [48, 55], durationTicks: 128, velocity: 0.8 },
+    ] });
+});
+
+test("adjacent ticks and the last tick in a bar keep positive chord durations", () => {
+    const lesson = validateLesson({ ...swing, backing: {
+        progression: [[{ tick: 0, degree: "i" }, { tick: 1, degree: "v" }, { tick: 383, degree: "V7" }]],
+    } });
+    const events = backingTrack(lesson).events;
+    assert.equal(events[0].durationTicks, 1);
+    assert.equal(events.at(-1).tick, 383);
+    assert.equal(events.at(-1).durationTicks, 1);
+});
+
 test("invalid backing metadata fails lesson validation with the field path", () => {
     for (const [backing, field] of [
         [null, ""], [[], ""], [{ feel: "swing" }, ".feel"], [{ bars: 0 }, ".bars"],
         [{ bars: 17 }, ".bars"], [{ key: "H minor" }, ".key"], [{ progression: [] }, ".progression"],
         [{ progression: ["VIII"] }, ".progression[0]"], [{ progression: [null] }, ".progression[0]"],
         [{ bars: 2, progression: ["i7"] }, ".progression"],
+        [{ midi: "../phrase.mid", bars: 2 }, ".midi"],
+        [{ midi: "https://example.com/phrase.mid", bars: 2 }, ".midi"],
+        [{ midi: "phrase.mid" }, ".bars"],
+        [{ midi: "phrase.mid", bars: 2, key: "C minor" }, ".key"],
+        [{ midi: "phrase.mid", bars: 2, progression: ["i7", "i7"] }, ".progression"],
+        ...[
+            [[], ""],
+            [[null], "[0]"],
+            [[{ tick: 1, degree: "i" }], "[0].tick"],
+            [[{ tick: 0, degree: "i", duration: 192 }], "[0].duration"],
+            [[{ tick: 0, degree: "H5" }], "[0].degree"],
+            [[{ tick: 0 }], "[0].degree"],
+            ...[0, 384, -1, 32.5, "192"].map(tick => [
+                [{ tick: 0, degree: "i" }, { tick, degree: "V" }], "[1].tick",
+            ]),
+            [[{ tick: 0, degree: "i" }, { tick: 192, degree: "iv" }, { tick: 96, degree: "V" }], "[2].tick"],
+        ].map(([bar, field]) => [{ progression: [bar] }, `.progression[0]${field}`]),
     ]) {
         assert.throws(() => validateLesson({ ...swing, backing }), { message: new RegExp(
             `^${RegExp.escape(`lesson.backing${field}`)}:`,

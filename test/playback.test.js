@@ -63,6 +63,17 @@ test("a four-bar backing track and three-bar lesson share an origin and keep ind
     assert.equal(h.chords.length, 0);
 });
 
+test("a MIDI backing uses file ticks and the selected BPM on the lesson clock", () => {
+    const h = harness();
+    const song = { ...lesson, backing: { midi: "phrase.mid", bars: 2 } };
+    assert.throws(() => h.playback.start(song, { backing: true }), /not loaded/);
+    const track = { ppq: 480, bars: 2, events: [{ tick: 1, durationTicks: 240, pitches: [62], velocity: 0.5 }] };
+    h.playback.start(song, { backing: true, midiBacking: track, bpm: 120, countIn: false });
+    assert.equal(h.chords[0].time, h.playback.origin + 1 / 960);
+    assert.equal(h.chords[0].duration, 0.25);
+    assert.equal(h.playback.backing.loopSeconds, 4);
+});
+
 test("repeating events retain triplets, simultaneous hits, and bar accents", () => {
     const events = lessonEvents(lesson, 120);
     assert.equal(events.length, 13);

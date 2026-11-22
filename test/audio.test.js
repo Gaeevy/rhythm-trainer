@@ -143,3 +143,11 @@ test("backing voices play on their own bus at the requested time and stop with t
     assert.equal(h.audio.sources.size, 0);
     assert.ok(h.sources.every(source => source.stops.length === 2));
 });
+
+test("short backing chords reach their peak before the release begins", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [60], duration: 0.002, velocity: 0.8 }, 3);
+    const envelope = h.sources[0].connections[0].gain.events;
+    assert.equal(envelope[1][2], 3.001);
+    assert.equal(envelope[2][2], 3.002);
+});
