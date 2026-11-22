@@ -30,7 +30,7 @@ a:hover { color: #fff; }
   .practice-analytics .session-meta { padding: 0 20px 18px; line-height: 1.6; }
   .practice-analytics .session-details > summary { padding: 14px 20px; }
 }
-.lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(200px, 1.7fr) minmax(230px, 1.7fr) repeat(2, minmax(95px, .7fr)) auto; align-items: end; gap: 16px; background: #243027; border-bottom: 1px solid var(--border); }
+.lesson-controls { padding: 16px 20px; display: grid; grid-template-columns: minmax(200px, 1.7fr) minmax(220px, 1.7fr) minmax(140px, .9fr) repeat(2, minmax(95px, .7fr)) auto; align-items: end; gap: 16px; background: #243027; border-bottom: 1px solid var(--border); }
 .lesson-picker { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 1.2px; }
 .lesson-picker { min-width: 0; }
 .lesson-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -100,6 +100,7 @@ canvas { display: block; width: 100%; height: clamp(96px, calc((100svh - 480px) 
 .volume-control, .tempo-control { min-width: 0; }
 .volume-label { display: flex; justify-content: space-between; gap: 6px; font-size: 10px; font-weight: 600; letter-spacing: .6px; color: var(--muted); }
 .volume-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; height: 43px; }
+.accompaniment-control select { display: block; margin-top: 8px; }
 input[type="range"] { width: 100%; min-width: 35px; height: 4px; accent-color: #bccd91; }
 output { font-variant-numeric: tabular-nums; }
 .mute-button { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; padding: 4px; border-color: transparent; background: transparent; color: #c2ccbb; }
@@ -120,13 +121,14 @@ output { font-variant-numeric: tabular-nums; }
 #midi-status, #midi-monitor { font-size: 11px; color: var(--muted); line-height: 1.7; }
 #midi-status { color: #d2dbbd; }
 @media (max-width: 1150px) {
-  .lesson-controls { grid-template-columns: minmax(160px, 1.7fr) minmax(220px, 1.7fr) repeat(2, minmax(95px, .7fr)) auto; gap: 12px; padding: 14px; }
+  .lesson-controls { grid-template-columns: minmax(160px, 1.7fr) minmax(190px, 1.7fr) minmax(140px, .9fr) repeat(2, minmax(95px, .7fr)) auto; gap: 12px; padding: 14px; }
   .start-button { min-width: 112px; padding: 0 12px; gap: 12px; }
 }
 @media (max-width: 950px) {
   main { width: calc(100% - 32px); padding: 14px 0 20px; }
   .lesson-controls { grid-template-columns: 1fr 1fr; padding: 16px; gap: 12px; }
   .lesson-picker { grid-column: 1 / -1; }
+  .accompaniment-control select { padding-inline: 8px; }
   .start-button { width: 100%; grid-column: 1 / -1; }
   .lesson-error { margin: 15px 18px 0; }
   .timeline { margin: 16px 18px 0; }

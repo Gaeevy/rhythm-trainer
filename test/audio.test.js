@@ -127,3 +127,19 @@ test("independent buses reach the output directly and metronome supports triple 
         [["target", 3, 0, 0.008], ["target", 0, 0, 0.008], ["target", 3, 0, 0.008]]);
     assert.equal(h.audio.guide.gain.value, 0.55);
 });
+
+test("backing voices play on their own bus at the requested time and stop with transport", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [69, 72], duration: 0.25, velocity: 0.8 }, 3);
+    assert.equal(h.sources.length, 8);
+    assert.deepEqual(h.sources[0].frequency.events, [["set", 440, 3]]);
+    assert.deepEqual(h.audio.backing.connections, [h.context.destination]);
+    for (const source of h.sources) {
+        assert.deepEqual(source.starts, [3]);
+        assert.deepEqual(source.stops, [3.29]);
+        assert.deepEqual(source.connections[0].connections, [h.audio.backing]);
+    }
+    h.audio.stop();
+    assert.equal(h.audio.sources.size, 0);
+    assert.ok(h.sources.every(source => source.stops.length === 2));
+});

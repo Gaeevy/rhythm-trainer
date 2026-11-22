@@ -42,7 +42,7 @@ export async function toolbarFlow(browser, url) {
         assert.equal(await page.evaluate(() => {
             const controls = [...document.querySelector(".lesson-controls").children];
             return controls.every(node => Math.abs(node.getBoundingClientRect().bottom - controls[0].getBoundingClientRect().bottom) < 2);
-        }), true, "Lesson, three sliders and transport share one desktop row");
+        }), true, "Lesson, accompaniment, mixer and transport share one desktop row");
         if (new URL(url).pathname === "/") await page.screenshot({ path: "/tmp/rhythm-toolbar-desktop.png", fullPage: true });
         // Upgrade a real old fractional override without losing the user's mixer/keys.
         const old = { ...defaultPracticeSettings(), view: "notation", countIn: false, lastBundledLessonId: "swing-ride",

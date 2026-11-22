@@ -28,9 +28,22 @@
           <label class="volume-label" for="bpm">BPM <output id="bpm-level">80</output></label>
           <div class="volume-row"><input id="bpm" type="range" min="0" max="1000" step="1" value="512" aria-valuemin="20" aria-valuemax="300" aria-valuenow="80" aria-valuetext="80 BPM"><button id="lesson-tempo" type="button" class="mute-button tempo-reset" aria-label="Restore lesson tempo" title="Restore lesson tempo" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6"/></svg></button></div>
         </div>
+        <div class="accompaniment-control">
+          <label class="volume-label" for="accompaniment">ACCOMPANIMENT</label>
+          <select id="accompaniment">
+            <option value="metronome">Metronome</option>
+            <option value="backing">Backing track</option>
+          </select>
+        </div>
         <div class="volume-control">
-          <label class="volume-label" for="metronome-volume">Metronome <output id="metronome-level">35%</output></label>
-          <div class="volume-row"><button id="metronome-mute" type="button" class="mute-button" aria-label="Mute metronome" title="Mute metronome" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="metronome-volume" type="range" min="0" max="3000" step="1" value="0" aria-valuemin="0" aria-valuemax="300" aria-valuenow="35" aria-valuetext="35%"></div>
+          <div id="metronome-control">
+            <label class="volume-label" for="metronome-volume">Metronome <output id="metronome-level">35%</output></label>
+            <div class="volume-row"><button id="metronome-mute" type="button" class="mute-button" aria-label="Mute metronome" title="Mute metronome" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="metronome-volume" type="range" min="0" max="3000" step="1" value="0" aria-valuemin="0" aria-valuemax="300" aria-valuenow="35" aria-valuetext="35%"></div>
+          </div>
+          <div id="backing-control" hidden>
+            <label class="volume-label" for="backing-volume">Backing track <output id="backing-level">55%</output></label>
+            <div class="volume-row"><button id="backing-mute" type="button" class="mute-button" aria-label="Mute backing track" title="Mute backing track" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-muted" d="m16 9 6 6m0-6-6 6"/></svg></button><input id="backing-volume" type="range" min="0" max="3000" step="1" value="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55" aria-valuetext="55%"></div>
+          </div>
         </div>
         <div class="volume-control">
           <label class="volume-label" for="guide-volume">Guide drums <output id="guide-level">55%</output></label>

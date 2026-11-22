@@ -115,7 +115,7 @@ export async function observePlayback(page) {
     await page.evaluate(async () => {
         const { Assessment } = await import("./src/assessment.js");
         const { DrumAudio } = await import("./src/audio.js");
-        window.smoke = { scheduled: [], nativeSetInterval: window.setInterval, nativeClearInterval: window.clearInterval };
+        window.smoke = { scheduled: [], chords: [], nativeSetInterval: window.setInterval, nativeClearInterval: window.clearInterval };
         const loadSamples = DrumAudio.prototype.loadSamples;
         DrumAudio.prototype.loadSamples = function (...args) {
             window.smoke.audio = this;
@@ -126,6 +126,11 @@ export async function observePlayback(page) {
             window.smoke.audio = this;
             window.smoke.scheduled.push(args);
             return schedule.apply(this, args);
+        };
+        const scheduleBacking = DrumAudio.prototype.scheduleBacking;
+        DrumAudio.prototype.scheduleBacking = function (event, time) {
+            window.smoke.chords.push({ ...event, time });
+            return scheduleBacking.call(this, event, time);
         };
         const advance = Assessment.prototype.advance;
         Assessment.prototype.advance = function (...args) {

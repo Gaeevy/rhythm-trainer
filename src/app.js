@@ -25,6 +25,7 @@ const startButton = element("start-stop");
 const bpmInput = element("bpm");
 let currentBpm = 80;
 const countInInput = element("count-in");
+const accompanimentInput = element("accompaniment");
 const toleranceInput = element("tolerance");
 const latencyInput = element("latency-offset");
 const status = element("status");
@@ -168,12 +169,20 @@ function showStatus(message, error = false) {
     status.dataset.error = String(error);
 }
 
+const volumeLabels = { guide: "guide drums", metronome: "metronome", backing: "backing track" };
+
 function updateMuteButton(bus, muted) {
     const button = element(`${bus}-mute`);
-    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : "metronome"}`;
+    const label = `${muted ? "Unmute" : "Mute"} ${volumeLabels[bus]}`;
     button.setAttribute("aria-pressed", String(muted));
     button.setAttribute("aria-label", label);
     button.title = label;
+}
+
+function updateAccompaniment() {
+    accompanimentInput.value = preferences.accompaniment;
+    element("metronome-control").hidden = preferences.accompaniment !== "metronome";
+    element("backing-control").hidden = preferences.accompaniment !== "backing";
 }
 
 function toggleTrack(instrument) {
@@ -318,6 +327,7 @@ startButton.addEventListener("click", async () => {
             playback = new Playback({
                 clock: () => context.currentTime,
                 schedule: (instrument, time, accent) => audio.schedule(instrument, time, accent),
+                scheduleBacking: (event, time) => audio.scheduleBacking(event, time),
                 cancel: () => audio.stop(),
             });
             context.addEventListener("statechange", () => {
@@ -335,7 +345,10 @@ startButton.addEventListener("click", async () => {
             : "Could not load drum recordings. Check the connection, then press Start to retry.";
         if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
         updateVolumes(false);
-        playback.start(lesson, { bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
+        playback.start(lesson, {
+            bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments,
+            backing: preferences.accompaniment === "backing",
+        });
         assessment = new Assessment(lesson, {
             origin: playback.origin,
             bpm: currentBpm,
@@ -384,6 +397,12 @@ bindSliderKeys(bpmInput, {
 countInInput.addEventListener("change", () => {
     stop("Count-in changed · Press Start to restart");
     preferences.countIn = countInInput.checked;
+    persistPractice();
+});
+accompanimentInput.addEventListener("change", () => {
+    stop("Accompaniment changed · Press Start to restart");
+    preferences.accompaniment = accompanimentInput.value;
+    updateAccompaniment();
     persistPractice();
 });
 for (const [input, setting] of [[toleranceInput, "toleranceMs"], [latencyInput, "latencyOffsetMs"]]) {
@@ -438,6 +457,7 @@ window.addEventListener("pagehide", () => { stop(); midi.disconnect(); });
 window.addEventListener("pageshow", event => { if (event.persisted) midi.connect(); });
 renderMidi(midi);
 countInInput.checked = preferences.countIn;
+updateAccompaniment();
 toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
 for (const bus of Object.keys(VOLUME_MAX)) {

@@ -7,6 +7,69 @@ import { BUNDLED_LESSONS } from "../../generated/lesson-catalog.js";
 import { runtimeRoot } from "./server.mjs";
 import { mockMidi, mockFixtureLessons, selectLesson, waitForLesson, setBpm, selectView, ready, playing, stopped, observePlayback, timedKey } from "./helpers.mjs";
 
+export async function backingFlow(browser, url) {
+    const context = await browser.newContext();
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await selectLesson(page, "swing-ride");
+        await waitForLesson(page, "swing-ride");
+        await setBpm(page, 300);
+        await observePlayback(page);
+        const mode = page.locator("#accompaniment");
+        assert.equal(await mode.inputValue(), "metronome");
+        await mode.selectOption("backing");
+        assert.equal(await page.locator("#backing-volume").isVisible(), true);
+        assert.equal(await page.locator("#metronome-volume").isVisible(), false);
+        await page.locator("#guide-mute").click();
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.length >= 9);
+        const { chords, scheduled, origin } = await page.evaluate(() => ({
+            chords: window.smoke.chords.slice(0, 9), scheduled: window.smoke.scheduled, origin: window.smoke.assessment.origin,
+        }));
+        assert.equal(chords[0].time, origin);
+        assert.equal(chords[8].time, origin + 3.2);
+        assert.deepEqual(chords[0].pitches, [50, 53, 56, 60]);
+        assert.deepEqual(chords[8].pitches, chords[0].pitches);
+        const clicks = scheduled.filter(([instrument]) => instrument === "metronome");
+        assert.equal(clicks.length, 4);
+        assert.ok(clicks.every(([, time]) => time < origin));
+        assert.ok(scheduled.some(([instrument, time]) => instrument === "ride" && time === origin + 0.8));
+        await page.locator("#backing-volume").press("End");
+        await page.locator("#backing-mute").click();
+        await page.waitForFunction(() => window.smoke.audio.backing.gain.value < 0.01);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        await mode.selectOption("metronome");
+        await stopped(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);
+        await mode.selectOption("backing");
+        await page.reload();
+        await ready(page);
+        assert.equal(await mode.inputValue(), "backing");
+        assert.equal(await page.locator("#backing-level").textContent(), "100%");
+        assert.equal(await page.locator("#backing-mute").getAttribute("aria-pressed"), "true");
+
+        await selectLesson(page, "autumn-leaves");
+        await waitForLesson(page, "autumn-leaves");
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await observePlayback(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.deepEqual(await page.evaluate(() => window.smoke.chords[0].pitches), [50, 53, 57, 60]);
+        assert.equal(await page.evaluate(() => window.smoke.scheduled.filter(([instrument]) => instrument === "metronome").length), 0);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        assert.deepEqual(errors, []);
+        console.log(`PASS backing mode, count-in, shared clock, independent cycles, lesson harmony and persistence: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 export async function practiceFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
     await mockMidi(context);
@@ -202,8 +265,10 @@ export async function trackFlow(browser, url) {
         assert.equal(await page.evaluate(() => {
             const controls = [...document.querySelector(".lesson-controls").children];
             const bottom = controls[0].getBoundingClientRect().bottom;
+            const visibleSliders = [...document.querySelectorAll('.lesson-controls input[type="range"]')]
+                .filter(slider => slider.getClientRects().length > 0);
             return controls.every(control => Math.abs(control.getBoundingClientRect().bottom - bottom) < 2)
-                && document.querySelectorAll('.lesson-controls input[type="range"]').length === 3;
+                && visibleSliders.length === 3;
         }), true);
         assert.deepEqual(errors, []);
         console.log(`PASS track controls and Space transport: ${new URL(url).pathname}`);

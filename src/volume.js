@@ -1,5 +1,5 @@
 export const VOLUME_STEPS = 3000;
-export const VOLUME_MAX = { guide: 100, metronome: 300 };
+export const VOLUME_MAX = { guide: 100, metronome: 300, backing: 100 };
 
 /** Exponential gain travel, with exact silence at the left endpoint. */
 export function volumeFromPosition(position, maximum) {

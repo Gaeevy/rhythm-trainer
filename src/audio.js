@@ -1,6 +1,11 @@
 import { DRUM_SAMPLES } from "./drum-samples.js";
 
-/** Recorded guide drums, with the original synthesized metronome. */
+// Higher piano harmonics are quieter and decay faster than the fundamental.
+const PIANO_PARTIALS = [
+    [1, 0.088, 1.1], [2.001, 0.035, 0.35], [3.004, 0.017, 0.21], [4.009, 0.009, 0.12],
+];
+
+/** Guide recordings, metronome and backing piano on the same audio clock. */
 export class DrumAudio {
     constructor(context) {
         this.context = context;
@@ -11,10 +16,13 @@ export class DrumAudio {
         this.hiHatClosures = [];
         this.guide = context.createGain();
         this.metronome = context.createGain();
+        this.backing = context.createGain();
         this.guide.gain.value = 0.55;
         this.metronome.gain.value = 0.35;
+        this.backing.gain.value = 0.55;
         this.guide.connect(context.destination);
         this.metronome.connect(context.destination);
+        this.backing.connect(context.destination);
     }
 
     /** Load once per audio context before scheduling; a failure can retry on Start. */
@@ -107,6 +115,35 @@ export class DrumAudio {
         };
         source.start(time);
         source.stop(time + 0.035 + 0.01);
+    }
+
+    scheduleBacking({ pitches, duration, velocity }, time) {
+        const release = time + duration;
+        for (const pitch of pitches) {
+            const frequency = 440 * 2 ** ((pitch - 69) / 12);
+            for (const [ratio, level, decay] of PIANO_PARTIALS) {
+                const source = this.context.createOscillator();
+                source.frequency.setValueAtTime(frequency * ratio, time);
+                const envelope = this.context.createGain();
+                const peak = level * velocity;
+                envelope.gain.setValueAtTime(0, time);
+                envelope.gain.linearRampToValueAtTime(peak, time + 0.004);
+                envelope.gain.exponentialRampToValueAtTime(
+                    Math.max(0.0001, peak * Math.exp(-(duration - 0.004) / decay)), release,
+                );
+                envelope.gain.exponentialRampToValueAtTime(0.00001, release + 0.035);
+                source.connect(envelope);
+                envelope.connect(this.backing);
+                this.sources.add(source);
+                source.onended = () => {
+                    this.sources.delete(source);
+                    source.disconnect();
+                    envelope.disconnect();
+                };
+                source.start(time);
+                source.stop(release + 0.04);
+            }
+        }
     }
 
     stop() {

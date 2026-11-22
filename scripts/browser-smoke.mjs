@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import { serve } from "./browser/server.mjs";
 import { catalogFlow, lessonMenuFlow, cacheFlow } from "./browser/lessons.mjs";
-import { practiceFlow, trackFlow, failureRecovery } from "./browser/transport.mjs";
+import { backingFlow, practiceFlow, trackFlow, failureRecovery } from "./browser/transport.mjs";
 import { midiFlow } from "./browser/midi.mjs";
 import { notationFlow, notationLifecycleFlow, scoreFollowingFlow, notationCoverageFlow, sheetLayoutFlow } from "./browser/notation.mjs";
 import { notationFeedbackFlow, noteheadMotionFlow, missedNoteFlow, severityMotionFlow, renderUpdatesFlow } from "./browser/notation-feedback.mjs";
@@ -52,6 +52,7 @@ try {
             await catalogFlow(browser, server.url);
             await lessonMenuFlow(browser, server.url);
             await practiceFlow(browser, server.url);
+            await backingFlow(browser, server.url);
             await trackFlow(browser, server.url);
             await failureRecovery(browser, server.url);
             await midiFlow(browser, server.url);

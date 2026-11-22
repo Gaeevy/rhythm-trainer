@@ -1,16 +1,19 @@
 import { validateLesson } from "./lesson.js";
+import { backingTrack } from "./backing.js";
 import { TICKS_PER_BEAT, BEATS_PER_BAR, ticksToSeconds } from "./music-time.js";
 
 /** Expand a lesson into a repeating sequence, including a separate metronome. */
-export function lessonEvents(lesson, bpm, disabledInstruments = []) {
+export function lessonEvents(lesson, bpm, disabledInstruments = [], metronome = true) {
     const events = lesson.tracks.filter(track => !disabledInstruments.includes(track.instrument)).flatMap(track => track.notes.map(tick => ({
         offset: ticksToSeconds(tick, bpm), instrument: track.instrument, accent: false,
     })));
-    for (let beat = 0; beat < lesson.bars * BEATS_PER_BAR; beat++) {
-        events.push({
-            offset: ticksToSeconds(beat * TICKS_PER_BEAT, bpm),
-            instrument: "metronome", accent: beat % BEATS_PER_BAR === 0,
-        });
+    if (metronome) {
+        for (let beat = 0; beat < lesson.bars * BEATS_PER_BAR; beat++) {
+            events.push({
+                offset: ticksToSeconds(beat * TICKS_PER_BEAT, bpm),
+                instrument: "metronome", accent: beat % BEATS_PER_BAR === 0,
+            });
+        }
     }
     return events.sort((left, right) => left.offset - right.offset);
 }
@@ -18,13 +21,14 @@ export function lessonEvents(lesson, bpm, disabledInstruments = []) {
 /** Schedule short windows against an audio clock, independently of animation. */
 export class Playback {
     constructor({
-        clock, schedule, cancel,
+        clock, schedule, scheduleBacking, cancel,
         // Browser timers must be called on the global object, not on Playback.
         setTimer = (callback, delay) => globalThis.setInterval(callback, delay),
         clearTimer = timer => globalThis.clearInterval(timer),
     }) {
         this.clock = clock;
         this.schedule = schedule;
+        this.scheduleBacking = scheduleBacking;
         this.cancel = cancel;
         this.setTimer = setTimer;
         this.clearTimer = clearTimer;
@@ -32,7 +36,7 @@ export class Playback {
         this.timer = null;
     }
 
-    start(lesson, { bpm = lesson.bpm, countIn = true, disabledInstruments = [] } = {}) {
+    start(lesson, { bpm = lesson.bpm, countIn = true, disabledInstruments = [], backing = false } = {}) {
         validateLesson(lesson);
         const secondsPerBeat = ticksToSeconds(TICKS_PER_BEAT, bpm);
         this.stop();
@@ -40,7 +44,14 @@ export class Playback {
         this.countInBeats = countIn ? BEATS_PER_BAR : 0;
         this.loopBeats = lesson.bars * BEATS_PER_BAR;
         this.loopSeconds = this.loopBeats * secondsPerBeat;
-        this.events = lessonEvents(lesson, bpm, disabledInstruments);
+        this.events = lessonEvents(lesson, bpm, disabledInstruments, !backing);
+        this.backing = backing ? backingTrack(lesson) : null;
+        if (this.backing) {
+            this.backing.loopSeconds = this.backing.bars * BEATS_PER_BAR * secondsPerBeat;
+            this.backing.events = this.backing.events.map(({ durationTicks, ...event }) => ({
+                ...event, offset: ticksToSeconds(event.tick, bpm), duration: ticksToSeconds(durationTicks, bpm),
+            }));
+        }
         this.startTime = this.clock() + 0.08;
         this.origin = this.startTime + this.countInBeats * secondsPerBeat;
         this.scheduledUntil = this.startTime;
@@ -73,17 +84,24 @@ export class Playback {
                 this.schedule("metronome", time, beat === 0);
             }
         }
-        const firstLoop = Math.max(0, Math.floor((from - this.origin) / this.loopSeconds));
-        const lastLoop = Math.floor((until - this.origin) / this.loopSeconds);
-        for (let loop = firstLoop; loop <= lastLoop; loop++) {
-            for (const event of this.events) {
-                const time = this.origin + loop * this.loopSeconds + event.offset;
-                if (time >= from && time < until) {
-                    this.schedule(event.instrument, time, event.accent);
-                }
-            }
+        this.scheduleLoop(this.events, this.loopSeconds, from, until,
+            (event, time) => this.schedule(event.instrument, time, event.accent));
+        if (this.backing) {
+            this.scheduleLoop(this.backing.events, this.backing.loopSeconds, from, until,
+                (event, time) => this.scheduleBacking(event, time));
         }
         this.scheduledUntil = until;
+    }
+
+    scheduleLoop(events, loopSeconds, from, until, schedule) {
+        const firstLoop = Math.max(0, Math.floor((from - this.origin) / loopSeconds));
+        const lastLoop = Math.floor((until - this.origin) / loopSeconds);
+        for (let loop = firstLoop; loop <= lastLoop; loop++) {
+            for (const event of events) {
+                const time = this.origin + loop * loopSeconds + event.offset;
+                if (time >= from && time < until) schedule(event, time);
+            }
+        }
     }
 
     stop() {

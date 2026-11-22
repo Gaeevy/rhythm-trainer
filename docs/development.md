@@ -50,7 +50,8 @@ one updated head does not guarantee that a later hit has rendered.
 | Area | Source |
 | --- | --- |
 | Controls / session coordination | [app.js](../src/app.js), [lesson-picker.js](../src/lesson-picker.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
-| Audio scheduling / recordings | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
+| Audio scheduling / sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
+| Backing harmony / rhythm | [backing.js](../src/backing.js) |
 | Input timestamps / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
 | Scores / panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
 | Keyboard / MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
@@ -65,6 +66,17 @@ that clock for assessment. Both views and analytics consume the same results.
 `loadLesson()` guards asynchronous success, failure and cleanup with a request
 counter, so stale requests cannot replace the active lesson or its controls.
 Its `finally` block refreshes lesson navigation after loading succeeds or fails.
+
+The backing generator builds deterministic piano events in integer ticks once
+per Start. Playback converts them at the selected BPM and schedules the piano
+and lesson loops from a shared origin. Assessment and the displayed position
+follow the drum lesson. Each backing bar gets a chord on the first beat and a
+short accent. If each repeat of the backing cycle starts at the same drum
+phase, the accent follows the last eligible offbeat kick in the second half of
+that drum bar, at least a sixteenth before its end. Otherwise, or with no
+eligible kick, it plays on the offbeat after beat three using the lesson's
+straight or swing feel. The piano and click use Web Audio oscillators, with
+their own mixer gains and the same source cancellation as the guide drums.
 
 `NotationView` caches engraving and retains six rows of independent bar copies.
 `resetSession()` clears feedback/displayed bars while retaining templates;

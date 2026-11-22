@@ -46,13 +46,44 @@ positive (practice rounds/clamps to 20–300). Meter is `[4, 4]`; length is 1–
 Each track has a unique `instrument` and sorted, unique integer `notes` from 0
 through `bars * 384 - 1`. At least one note is required across all tracks; empty
 tracks and simultaneous notes on different instruments are allowed. Unknown
-fields/instruments are rejected.
+fields/instruments are rejected. The optional `backing` block is described below.
 
 Supported instruments: `kick`, `snare`, `hi_hat_closed`, `hi_hat_open`,
 `hi_hat_pedal`, `tom_1`–`tom_4`, `crash_1`, `crash_2`, `ride`. Labels live in
 [instruments.js](../src/instruments.js); staff positions in
 [drum-key.js](../src/notation/drum-key.js). MIDI mapping is independent of lesson data.
 Version 1 uses the same base fields without `notation` and displays literal rhythms.
+
+## Backing track
+
+Either lesson version can include an optional `backing` object. Each field
+inside it is optional.
+
+```json
+{
+  "key": "D minor",
+  "progression": ["i7", "iv7", "V7", "i7"]
+}
+```
+
+| Field | Value |
+| --- | --- |
+| `key` | Tonic A–G with optional `b` or `#`, followed by `major` or `minor`. Defaults to `C minor`. |
+| `progression` | One scale degree per backing bar. Repeat a degree to use the same chord in consecutive bars. |
+| `bars` | Integer from 1 to 16. Defaults to the number of chords in `progression`, or 4 without a progression. If both fields are present, their lengths must agree. |
+
+Use Roman numerals I–VII for roots, with an optional `b` or `#` before the
+numeral to alter the scale degree. Roots follow the major or natural minor
+scale in the selected key. Uppercase gives a major triad and lowercase gives
+a minor triad. Append `7` for a minor seventh, `maj7` for a major seventh,
+`ø7` for a half-diminished seventh, or `°` for a diminished triad. For
+example, `V7` in C minor is G–B–D–F.
+
+The default progression is `iiø7 → V7 → i7 → i7` in minor and
+`ii7 → V7 → Imaj7 → Imaj7` in major. With a custom length and no progression,
+the generator cycles through those degrees and uses the tonic chord in the
+final bar. The [Autumn Leaves practice excerpt](../lessons/Songs/autumn-leaves.json)
+has an example of a custom progression for practice.
 
 ## Ticks and feel
 
