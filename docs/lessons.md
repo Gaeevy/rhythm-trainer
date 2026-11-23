@@ -72,9 +72,13 @@ use generated harmony.
    riff, include its full staff or tab, clef or tuning, and measure numbers.
    If the phrase starts before the first downbeat, include the preceding bar
    or mark the exact entrance relative to the drum loop.
-3. Prepare a MIDI clip or a WAV recording with its first bar aligned to the lesson's first bar.
-   Save it next to the JSON and enter the clip length, including any trailing
-   rests. Use the same stable filename stem for both files when practical.
+3. Align the backing file's first bar to the lesson's first bar. Save it beside
+   the JSON with a lowercase, hyphenated filename. Set `bars` to the full loop
+   length from 1 to 16, including trailing rests. The drum and backing loops
+   can have different lengths.
+4. Run `npm test`, then practice through two repeats to check the loop boundary.
+
+### WAV backing
 
 ```json
 {
@@ -83,32 +87,21 @@ use generated harmony.
 }
 ```
 
-For `audio`, use a PCM WAV with a lowercase, hyphenated filename and `bars`
-from 1 to 16. Trim the entire recording to exactly that many bars, including
-any trailing silence. The recording keeps its original pitch at its recorded
-tempo. Other practice tempos change playback speed and pitch together.
+Use a PCM WAV. Trim or pad the recording to exactly the stated number of bars
+at its recorded tempo. Use the song's original tempo to hear the recorded pitch.
 
 ### MIDI backing
 
-Use Standard MIDI File format 0 or 1, 4/4, and ticks per quarter note. The
-filename uses lowercase letters, digits and hyphens. Set `bars` to 1–16 and
-keep all pitched note starts and ends inside that loop. The drum lesson and
-the backing clip can have different lengths. Export just the pitched parts
-you want to hear. Playback uses the file's notes, timing, duration and velocity
-at the selected BPM. Use General MIDI Program Change 1 for piano, 28 for clean
-electric guitar, 31 for distortion guitar or 35 for picked electric bass. The
-entire General MIDI bass family (33–40) uses the picked bass sound in the
-trainer. Playback adds 3 dB to bass, so export new clips at their intended MIDI
-velocities. An optional `bassGainDb` from −12 to +12 adjusts the bass level for
-that lesson by the specified amount on top of the default boost. The displayed
-program numbers are one-based. The corresponding bytes are 0, 27, 30 and 32–39.
-Send Program Change on the same track and channel as its notes. Other programs
-use the piano sound.
-Pitch bend follows its channel and uses the MIDI pitch-bend sensitivity setting
-when present. Channel 10 is reserved for drums.
-If a phrase depends on pedal sustain, extend those notes before export.
-Run `npm test` to validate each referenced clip, then practice through at least
-two repeats to check the loop boundary.
+Use `midi` instead of `audio`. Export a Standard MIDI File in format 0 or 1,
+4/4, with ticks per quarter note. Keep pitched notes within the loop and extend
+any notes that depend on pedal sustain before export. Channel 10 is reserved
+for drums.
+
+Use Program Change on the same track and channel as the notes. Displayed
+General MIDI program 28 (byte 27) plays clean electric guitar. Programs 33–40
+(bytes 32–39) share the picked bass voice, with 3 dB of gain. Other programs use
+piano. Pitch bend follows its channel and uses the pitch-bend sensitivity
+setting when present.
 
 ### Generate a backing track
 
@@ -160,8 +153,7 @@ Swing exercises, version 1 lessons and exercises with an explicit progression
 use generated piano. Its default progression is `iiø7 → V7 → i7 → i7` in minor and
 `ii7 → V7 → Imaj7 → Imaj7` in major. With a custom length and no progression,
 the generator cycles through those degrees and uses the tonic chord in the
-final bar. Use either the prepared MIDI file or the generator settings in a
-lesson's `backing` object.
+final bar. Use generator settings in lessons without a prepared backing file.
 
 ### Song backing sources
 

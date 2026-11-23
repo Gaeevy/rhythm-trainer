@@ -19,10 +19,6 @@ const bassPatterns = [
 ];
 const accidental = { "": 0, b: -1, "#": 1 };
 
-export function isBassProgram(program) {
-    return program >= 32 && program <= 39;
-}
-
 function validDegree(degree) {
     return typeof degree === "string" && degreePattern.test(degree);
 }
@@ -56,32 +52,25 @@ export function validateBacking(backing, requireCondition) {
     requireCondition(backing !== null && typeof backing === "object" && !Array.isArray(backing),
         path, "must be an object");
     for (const field of Object.keys(backing)) {
-        requireCondition(["bars", "key", "progression", "midi", "audio", "bassGainDb"].includes(field), `${path}.${field}`, "is not supported");
-    }
-    if (Object.hasOwn(backing, "bassGainDb")) {
-        requireCondition(Object.hasOwn(backing, "midi"), `${path}.bassGainDb`, "requires MIDI backing");
-        requireCondition(Number.isFinite(backing.bassGainDb) && Math.abs(backing.bassGainDb) <= 12,
-            `${path}.bassGainDb`, "must be a number from -12 to 12");
+        requireCondition(["bars", "key", "progression", "midi", "audio"].includes(field), `${path}.${field}`, "is not supported");
     }
     if (Object.hasOwn(backing, "bars")) {
         requireCondition(Number.isInteger(backing.bars) && backing.bars >= 1 && backing.bars <= 16,
             `${path}.bars`, "must be an integer from 1 to 16");
     }
-    if (Object.hasOwn(backing, "midi")) {
-        requireCondition(typeof backing.midi === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*\.mid$/.test(backing.midi),
-            `${path}.midi`, "must be a lowercase .mid filename beside the lesson");
-        requireCondition(Object.hasOwn(backing, "bars"), `${path}.bars`, "is required for MIDI backing");
-        for (const field of ["key", "progression"]) {
-            requireCondition(!Object.hasOwn(backing, field), `${path}.${field}`, "cannot be used with MIDI backing");
+    const source = Object.hasOwn(backing, "audio") ? "audio" : "midi";
+    if (Object.hasOwn(backing, source)) {
+        const [extension, filename] = source === "audio"
+            ? [".wav", /^[a-z0-9]+(?:-[a-z0-9]+)*\.wav$/]
+            : [".mid", /^[a-z0-9]+(?:-[a-z0-9]+)*\.mid$/];
+        requireCondition(typeof backing[source] === "string" && filename.test(backing[source]),
+            `${path}.${source}`, `must be a lowercase ${extension} filename beside the lesson`);
+        requireCondition(Object.hasOwn(backing, "bars"), `${path}.bars`, "is required for a backing file");
+        const incompatibleFields = source === "audio" ? ["midi", "key", "progression"] : ["key", "progression"];
+        for (const field of incompatibleFields) {
+            requireCondition(!Object.hasOwn(backing, field), `${path}.${field}`, "cannot be used with a backing file");
         }
-    }
-    if (Object.hasOwn(backing, "audio")) {
-        requireCondition(typeof backing.audio === "string" && /^[a-z0-9]+(?:-[a-z0-9]+)*\.wav$/.test(backing.audio),
-            `${path}.audio`, "must be a lowercase .wav filename beside the lesson");
-        requireCondition(Object.hasOwn(backing, "bars"), `${path}.bars`, "is required for audio backing");
-        for (const field of ["midi", "key", "progression"]) {
-            requireCondition(!Object.hasOwn(backing, field), `${path}.${field}`, "cannot be used with audio backing");
-        }
+        return;
     }
     if (Object.hasOwn(backing, "key")) {
         requireCondition(typeof backing.key === "string" && keyPattern.test(backing.key),

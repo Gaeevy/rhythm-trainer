@@ -1,5 +1,5 @@
 import { validateLesson } from "./lesson.js";
-import { backingTrack, isBassProgram } from "./backing.js";
+import { backingTrack } from "./backing.js";
 import { TICKS_PER_BEAT, BEATS_PER_BAR, ticksToSeconds } from "./music-time.js";
 
 /** Expand a lesson into a repeating sequence, including a separate metronome. */
@@ -37,11 +37,12 @@ export class Playback {
     }
 
     start(lesson, {
-        bpm = lesson.bpm, countIn = true, disabledInstruments = [], backing = false, midiBacking = null, audioBacking = null,
+        bpm = lesson.bpm, countIn = true, disabledInstruments = [], backing = false, preparedBacking,
     } = {}) {
         validateLesson(lesson);
-        if (backing && lesson.backing?.midi && !midiBacking) throw new Error("MIDI backing is not loaded");
-        if (backing && lesson.backing?.audio && !audioBacking) throw new Error("Audio backing is not loaded");
+        if (backing && !preparedBacking && (lesson.backing?.midi || lesson.backing?.audio)) {
+            throw new Error("Backing file is not loaded");
+        }
         const secondsPerBeat = ticksToSeconds(TICKS_PER_BEAT, bpm);
         this.stop();
         this.secondsPerBeat = secondsPerBeat;
@@ -49,40 +50,29 @@ export class Playback {
         this.loopBeats = lesson.bars * BEATS_PER_BAR;
         this.loopSeconds = this.loopBeats * secondsPerBeat;
         this.events = lessonEvents(lesson, bpm, disabledInstruments, !backing);
-        this.backing = null;
-        if (backing && lesson.backing?.audio) {
-            const loopSeconds = lesson.backing.bars * BEATS_PER_BAR * secondsPerBeat;
-            this.backing = {
-                loopSeconds,
-                events: [{ offset: 0, buffer: audioBacking, playbackRate: audioBacking.duration / loopSeconds }],
-            };
-        } else if (backing) {
-            const track = midiBacking ?? backingTrack(lesson);
-            const ppq = track.ppq ?? TICKS_PER_BEAT;
-            const bassGain = 10 ** ((lesson.backing?.bassGainDb ?? 0) / 20);
-            this.backing = {
-                loopSeconds: track.bars * BEATS_PER_BAR * secondsPerBeat,
-                events: track.events.map(({ durationTicks, bends, ...event }) => {
-                    const timed = {
-                        ...event, offset: (event.tick / ppq) * secondsPerBeat,
-                        duration: (durationTicks / ppq) * secondsPerBeat,
-                    };
-                    if (bassGain !== 1 && isBassProgram(event.program)) timed.gain = bassGain;
-                    if (bends) {
-                        timed.bends = bends.map(({ offsetTicks, cents }) => ({
-                            offset: (offsetTicks / ppq) * secondsPerBeat, cents,
-                        }));
-                    }
-                    return timed;
-                }),
-            };
-        }
         this.startTime = this.clock() + 0.08;
         this.origin = this.startTime + this.countInBeats * secondsPerBeat;
+        this.backing = backing ? this.prepareBacking(preparedBacking ?? backingTrack(lesson)) : null;
         this.scheduledUntil = this.startTime;
         this.running = true;
         this.pump();
         this.timer = this.setTimer(() => this.pump(), 25);
+    }
+
+    prepareBacking({ bars, buffer, ppq = TICKS_PER_BEAT, events }) {
+        const loopSeconds = bars * BEATS_PER_BAR * this.secondsPerBeat;
+        if (buffer) {
+            this.scheduleBacking({ buffer, playbackRate: buffer.duration / loopSeconds }, this.origin);
+            return null;
+        }
+        const toSeconds = ticks => (ticks / ppq) * this.secondsPerBeat;
+        return {
+            loopSeconds,
+            events: events.map(({ durationTicks, bends, ...event }) => ({
+                ...event, offset: toSeconds(event.tick), duration: toSeconds(durationTicks),
+                ...(bends ? { bends: bends.map(({ offsetTicks, cents }) => ({ offset: toSeconds(offsetTicks), cents })) } : {}),
+            })),
+        };
     }
 
     get beat() {

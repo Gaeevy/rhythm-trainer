@@ -74,12 +74,27 @@ test("a MIDI backing uses file ticks and the selected BPM on the lesson clock", 
             bends: [{ offsetTicks: 120, cents: 300 }],
         }],
     };
-    h.playback.start(song, { backing: true, midiBacking: track, bpm: 120, countIn: false });
+    h.playback.start(song, { backing: true, preparedBacking: track, bpm: 120, countIn: false });
     assert.equal(h.chords[0].time, h.playback.origin + 1 / 960);
     assert.equal(h.chords[0].duration, 0.25);
     assert.equal(h.chords[0].program, 34);
     assert.deepEqual(h.chords[0].bends, [{ offset: 0.125, cents: 300 }]);
     assert.equal(h.playback.backing.loopSeconds, 4);
+});
+
+test("a WAV loop runs on the audio clock across scheduler delays and restarts after the count-in", () => {
+    const h = harness();
+    const song = { ...lesson, backing: { audio: "phrase.wav", bars: 2 } };
+    const buffer = { duration: 6 };
+    assert.throws(() => h.playback.start(song, { backing: true }), /not loaded/);
+    h.playback.start(song, { backing: true, preparedBacking: { bars: 2, buffer } });
+    const time = h.playback.origin;
+    assert.deepEqual(h.chords, [{ buffer, playbackRate: 1.5, time }]);
+    h.advance(time + 12);
+    assert.equal(h.chords.length, 1);
+    h.playback.stop();
+    h.playback.start(song, { bpm: 80, backing: true, preparedBacking: { bars: 2, buffer } });
+    assert.deepEqual(h.chords.at(-1), { buffer, playbackRate: 1, time: h.playback.origin });
 });
 
 test("repeating events retain triplets, simultaneous hits, and bar accents", () => {

@@ -104,13 +104,17 @@ export async function backingFlow(browser, url) {
         await stopped(page);
         await page.locator("#start-stop").click();
         await playing(page);
-        await page.waitForFunction(() => window.smoke.chords.length >= 2);
-        const recording = await page.evaluate(() => ({
-            origin: window.smoke.assessment.origin,
-            starts: window.smoke.chords.slice(0, 2).map(({ buffer, playbackRate, time }) =>
-                [buffer.duration, playbackRate, time]),
-        }));
-        assert.deepEqual(recording.starts, [[6, 3.75, recording.origin], [6, 3.75, recording.origin + 1.6]]);
+        await page.waitForFunction(() => window.smoke.audio.context.currentTime >= window.smoke.assessment.origin + 1.6);
+        const recording = await page.evaluate(() => {
+            const { audio, chords, assessment } = window.smoke;
+            return {
+                origin: assessment.origin,
+                starts: chords.map(({ buffer, playbackRate, time }) => [buffer.duration, playbackRate, time]),
+                looping: [...audio.sources].some(source => source.buffer === chords[0].buffer && source.loop),
+            };
+        });
+        assert.deepEqual(recording.starts, [[6, 3.75, recording.origin]]);
+        assert.ok(recording.looping);
         await page.locator("#start-stop").click();
         await stopped(page);
         assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);

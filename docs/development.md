@@ -51,7 +51,7 @@ one updated head does not guarantee that a later hit has rendered.
 | --- | --- |
 | Controls / session coordination | [app.js](../src/app.js), [lesson-picker.js](../src/lesson-picker.js), [tempo.js](../src/tempo.js), [volume.js](../src/volume.js), [slider-keys.js](../src/slider-keys.js) |
 | Audio scheduling / sounds | [playback.js](../src/playback.js), [audio.js](../src/audio.js) |
-| Backing MIDI / generated harmony | [backing-midi.js](../src/backing-midi.js), [backing.js](../src/backing.js) |
+| Backing files and generated notes | [backing-midi.js](../src/backing-midi.js), [backing.js](../src/backing.js) |
 | Input timestamps / assessment | [clock.js](../src/clock.js), [assessment.js](../src/assessment.js) |
 | Scores / panel | [analytics.js](../src/analytics.js), [analytics-view.js](../src/analytics-view.js) |
 | Keyboard / MIDI | [input.js](../src/input.js), [midi.js](../src/midi.js), [kit profile](../config/drumkits/mps-850.json) |
@@ -67,32 +67,26 @@ that clock for assessment. Both views and analytics consume the same results.
 counter, so stale requests cannot replace the active lesson or its controls.
 Its `finally` block refreshes lesson navigation after loading succeeds or fails.
 
-For a lesson with a backing file, Start in Backing track mode reads the file
-relative to the selected lesson JSON. WAV recordings decode before playback.
-Playback schedules one buffer per cycle from the shared origin and sets the
-playback rate to fit the selected tempo. MIDI preserves the file's own ticks per quarter
-note. Program Change selects the voice at each note start. The parser keeps
-channel pitch bends with the notes they affect, and playback schedules their
-offsets on the same clock as note onsets. A missing or invalid file leaves
-transport stopped and retryable.
-The generator builds deterministic pitched events in lesson ticks. Straight
-exercises without an explicit progression use a ringing guitar arpeggio and an
-alternating picked bass rhythm. The last bass note approaches the next
-bar's root, including across the loop boundary. Playback
-converts backing events at the selected BPM and schedules the backing and lesson
-loops from a shared origin. Assessment and the displayed position follow the
-drum lesson. In generated piano backing, chords play at the start of each bar
+Start in Backing track mode reads a prepared file relative to its lesson JSON.
+A missing or invalid file leaves transport stopped and retryable. A decoded WAV
+loops in Web Audio from the shared origin at the selected practice tempo. One
+buffer source runs for the session, so timer delays cannot skip a WAV repeat.
+MIDI keeps its file resolution, and Program Change and channel pitch bends
+stay attached to the affected notes. The generator uses lesson ticks. Playback
+converts both sets of pitched events to the Web Audio clock and repeats them
+from the same origin as the guide drums. Assessment and the score follow the
+drum lesson.
+
+In generated piano backing, chords play at the start of each bar
 and at each chord change. A short accent uses the chord active at its tick. A
 change on the accent tick plays once at chord-change strength. Note durations end by
 the next piano onset or bar boundary. If each repeat of the backing cycle
 starts at the same drum phase, the accent follows the last eligible offbeat kick
 in the second half of that drum bar, at least a sixteenth before its end.
 Otherwise, or with no eligible kick, it plays on the offbeat after beat three
-using the lesson's straight or swing feel. Backing instruments and click use
-Web Audio oscillators with separate backing and click mixer gains and the same
-source cancellation as the guide drums. Distortion guitar sends its sawtooth
-and octave oscillators through a shared soft clipper and band-pass cabinet
-filter before the backing mixer gain.
+using the lesson's straight or swing feel. Straight guitar and bass backing
+uses a chromatic approach to the next bass root, including across the loop.
+All backing audio uses the same mixer gain and source cancellation.
 
 `NotationView` caches engraving and retains six rows of independent bar copies.
 `resetSession()` clears feedback/displayed bars while retaining templates;

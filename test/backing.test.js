@@ -111,8 +111,6 @@ test("invalid backing metadata fails lesson validation with the field path", () 
         [{ audio: "../phrase.wav", bars: 2 }, ".audio"],
         [{ audio: "phrase.wav" }, ".bars"],
         [{ audio: "phrase.wav", midi: "phrase.mid", bars: 2 }, ".midi"],
-        [{ bassGainDb: 5 }, ".bassGainDb"],
-        ...["5", -13, 13].map(bassGainDb => [{ midi: "phrase.mid", bars: 2, bassGainDb }, ".bassGainDb"]),
         [{ midi: "phrase.mid", bars: 2, key: "C minor" }, ".key"],
         [{ midi: "phrase.mid", bars: 2, progression: ["i7", "i7"] }, ".progression"],
         ...[

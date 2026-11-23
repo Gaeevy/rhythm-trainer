@@ -14,14 +14,13 @@ function harness() {
     });
     const node = () => ({ connections: [], connect(target) { this.connections.push(target); }, disconnect() {}, gain: parameter() });
     const source = kind => {
-        const result = { ...node(), kind, frequency: parameter(), detune: parameter(), starts: [], stops: [],
+        const result = { ...node(), kind, frequency: parameter(), detune: parameter(), playbackRate: parameter(), starts: [], stops: [],
             start(time) { this.starts.push(time); }, stop(time) { this.stops.push(time); } };
         sources.push(result);
         return result;
     };
     const context = {
-        currentTime: 0, sampleRate: 100, destination: {}, createGain: node, createWaveShaper: node,
-        createBiquadFilter: () => ({ ...node(), frequency: parameter(), Q: parameter() }),
+        currentTime: 0, sampleRate: 100, destination: {}, createGain: node,
         createBuffer: () => ({ getChannelData: () => new Float32Array(100) }),
         createBufferSource: () => source("sample"), createOscillator: () => source("oscillator"),
         decodeAudioData: async () => ({ duration: 4 }),
@@ -183,19 +182,17 @@ test("the entire General MIDI bass family shares the boosted backing voice", () 
     assert.equal(peak(40), peak(0));
 });
 
-test("distorted sawtooth guitar chords share a soft clipper and cabinet filter", () => {
+test("a recorded backing loops on the backing bus and stops with transport", () => {
     const h = harness();
-    const chord = { pitches: [44, 51], duration: 1, velocity: 0.8, program: 30 };
-    h.audio.scheduleBacking(chord, 3);
-    const clipper = h.sources[0].connections[0].connections[0];
-    h.audio.scheduleBacking(chord, 4);
-    assert.ok(h.sources.every(source => source.connections[0].connections[0] === clipper));
-    assert.equal(h.sources[0].type, "sawtooth");
-    const [cabinet] = clipper.connections;
-    assert.equal(cabinet.type, "bandpass");
-    assert.deepEqual(cabinet.connections, [h.audio.backing]);
-    assert.equal(clipper.curve[512], 0);
-    assert.ok(clipper.curve[1024] < 2 * clipper.curve[768]);
-    h.audio.scheduleBacking({ ...chord, program: 34 }, 4);
-    assert.equal(h.sources.at(-1).connections[0].connections[0], h.audio.backing);
+    const buffer = { duration: 6 };
+    h.audio.scheduleBacking({ buffer, playbackRate: 1.5 }, 3);
+    const [source] = h.sources;
+    assert.equal(source.buffer, buffer);
+    assert.equal(source.loop, true);
+    assert.equal(source.playbackRate.value, 1.5);
+    assert.deepEqual(source.connections, [h.audio.backing]);
+    assert.deepEqual(source.starts, [3]);
+    h.audio.stop();
+    assert.deepEqual(source.stops, [undefined]);
+    assert.equal(h.audio.sources.size, 0);
 });

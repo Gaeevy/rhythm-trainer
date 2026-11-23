@@ -5,12 +5,13 @@ import { INSTRUMENTS } from "./instruments.js";
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
+const BACKING_DEFAULTS = { accompaniment: "metronome", backingVolume: 55, backingMuted: false };
 
 export function defaultPracticeSettings() {
     return {
         version: 1, view: "notation", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
-        accompaniment: "metronome", backingVolume: 55, backingMuted: false,
+        ...BACKING_DEFAULTS,
         keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
     };
@@ -49,9 +50,7 @@ export function loadPracticeSettings(storage) {
         // Keep existing controls and MIDI profiles when reserving Space for transport.
         if (settings?.version === 1) {
             if (!["lanes", "notation"].includes(settings.view)) settings.view = "notation";
-            settings.accompaniment ??= "metronome";
-            settings.backingVolume ??= 55;
-            settings.backingMuted ??= false;
+            for (const [key, value] of Object.entries(BACKING_DEFAULTS)) settings[key] ??= value;
             delete settings.masterVolume;
             delete settings.masterMuted;
             if (settings.tempos && typeof settings.tempos === "object" && !Array.isArray(settings.tempos)) {

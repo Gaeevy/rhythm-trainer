@@ -1,11 +1,11 @@
-# 2026-11-22 — Piano backing track
+# 2026-11-22 — Backing tracks
 
-[Practice](../practice.md#controls) describes the accompaniment and mixer.
-[Lessons](../lessons.md#backing-track) defines the harmony metadata.
+- Independent drum and backing cycles let short exercises repeat inside a longer
+  progression. A shared audio origin keeps both cycles aligned.
+- Prepared MIDI clips carry tempo-independent performances for songs. The
+  Fascination Street arrangement uses pitch bend for its bass slides.
+- Chop Suey! uses a recording of the approved Ableton guitar and bass mix to
+  preserve the Shreddage tone.
 
-- Short drum exercises use a four-bar harmony by default. Independent cycles
-  let the progression continue through drum repeats without changing the drum
-  notation or assessment.
-- Kick accents follow the original performance ticks when the drum phase
-  repeats with the harmony. A fixed offbeat gives the piano a consistent
-  rhythm when the two phases shift across repeats.
+[Practice](../practice.md#controls) covers playback and the mixer.
+[Lessons](../lessons.md#backing-track) covers the formats and backing sources.
