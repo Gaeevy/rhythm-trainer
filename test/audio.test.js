@@ -14,7 +14,7 @@ function harness() {
     });
     const node = () => ({ connections: [], connect(target) { this.connections.push(target); }, disconnect() {}, gain: parameter() });
     const source = kind => {
-        const result = { ...node(), kind, frequency: parameter(), starts: [], stops: [],
+        const result = { ...node(), kind, frequency: parameter(), detune: parameter(), playbackRate: parameter(), starts: [], stops: [],
             start(time) { this.starts.push(time); }, stop(time) { this.stops.push(time); } };
         sources.push(result);
         return result;
@@ -126,4 +126,73 @@ test("independent buses reach the output directly and metronome supports triple 
     assert.deepEqual(h.audio.metronome.gain.events,
         [["target", 3, 0, 0.008], ["target", 0, 0, 0.008], ["target", 3, 0, 0.008]]);
     assert.equal(h.audio.guide.gain.value, 0.55);
+});
+
+test("backing voices play on their own bus at the requested time and stop with transport", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [69, 72], duration: 0.25, velocity: 0.8 }, 3);
+    assert.equal(h.sources.length, 8);
+    assert.deepEqual(h.sources[0].frequency.events, [["set", 440, 3]]);
+    assert.deepEqual(h.audio.backing.connections, [h.context.destination]);
+    for (const source of h.sources) {
+        assert.deepEqual(source.starts, [3]);
+        assert.deepEqual(source.stops, [3.29]);
+        assert.deepEqual(source.connections[0].connections, [h.audio.backing]);
+    }
+    h.audio.stop();
+    assert.equal(h.audio.sources.size, 0);
+    assert.ok(h.sources.every(source => source.stops.length === 2));
+});
+
+test("short backing chords reach their peak before the release begins", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [60], duration: 0.002, velocity: 0.8 }, 3);
+    const envelope = h.sources[0].connections[0].gain.events;
+    assert.equal(envelope[1][2], 3.001);
+    assert.equal(envelope[2][2], 3.002);
+});
+
+test("backing guitar and bass use distinct timbres and apply pitch bends on the audio clock", () => {
+    const h = harness();
+    h.audio.scheduleBacking({ pitches: [60], duration: 0.25, velocity: 0.8, program: 27 }, 3);
+    const guitar = h.sources.slice();
+    h.audio.scheduleBacking({
+        pitches: [60], duration: 0.25, velocity: 0.8, program: 34,
+        bends: [{ offset: 0.125, cents: 300 }],
+    }, 3);
+    const bass = h.sources.slice(guitar.length);
+    assert.notDeepEqual(guitar.map(source => source.frequency.events), bass.map(source => source.frequency.events));
+    const guitarPeak = guitar[0].connections[0].gain.events[1][1];
+    const bassPeak = bass[0].connections[0].gain.events[1][1];
+    assert.ok(Math.abs(guitarPeak - 0.08 * 0.8) < 1e-12);
+    assert.ok(Math.abs(bassPeak - 0.15 * 0.8 * Math.SQRT2) < 1e-12);
+    assert.ok(guitar.every(source => source.detune.events.length === 0));
+    assert.ok(bass.every(source => source.detune.events[0][1] === 300 && source.detune.events[0][2] === 3.125));
+});
+
+test("the entire General MIDI bass family shares the boosted backing voice", () => {
+    const h = harness();
+    const peak = program => {
+        const first = h.sources.length;
+        h.audio.scheduleBacking({ pitches: [45], duration: 0.25, velocity: 1, program }, 3);
+        return h.sources[first].connections[0].gain.events[1][1];
+    };
+    for (let program = 32; program <= 39; program++) assert.equal(peak(program), 0.15 * Math.SQRT2);
+    assert.equal(peak(31), peak(0));
+    assert.equal(peak(40), peak(0));
+});
+
+test("a recorded backing loops on the backing bus and stops with transport", () => {
+    const h = harness();
+    const buffer = { duration: 6 };
+    h.audio.scheduleBacking({ buffer, playbackRate: 1.5 }, 3);
+    const [source] = h.sources;
+    assert.equal(source.buffer, buffer);
+    assert.equal(source.loop, true);
+    assert.equal(source.playbackRate.value, 1.5);
+    assert.deepEqual(source.connections, [h.audio.backing]);
+    assert.deepEqual(source.starts, [3]);
+    h.audio.stop();
+    assert.deepEqual(source.stops, [undefined]);
+    assert.equal(h.audio.sources.size, 0);
 });

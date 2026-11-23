@@ -2,6 +2,7 @@ import { LessonPicker } from "./lesson-picker.js";
 import { VOLUME_MAX, volumeFromPosition, positionFromVolume } from "./volume.js";
 import { practiceBpm, bpmFromPosition, positionFromBpm, MIN_BPM, MAX_BPM } from "./tempo.js";
 import { parseLesson } from "./lesson.js";
+import { parseBackingMidi } from "./backing-midi.js";
 import { DrumAudio } from "./audio.js";
 import { Playback } from "./playback.js";
 import { NotationView } from "./notation/view.js";
@@ -25,11 +26,13 @@ const startButton = element("start-stop");
 const bpmInput = element("bpm");
 let currentBpm = 80;
 const countInInput = element("count-in");
+const accompanimentInput = element("accompaniment");
 const toleranceInput = element("tolerance");
 const latencyInput = element("latency-offset");
 const status = element("status");
 const position = element("position");
 let lesson;
+let lessonUrl;
 let tracks = [];
 let audio;
 let playback;
@@ -168,12 +171,20 @@ function showStatus(message, error = false) {
     status.dataset.error = String(error);
 }
 
+const volumeLabels = { guide: "guide drums", metronome: "metronome", backing: "backing track" };
+
 function updateMuteButton(bus, muted) {
     const button = element(`${bus}-mute`);
-    const label = `${muted ? "Unmute" : "Mute"} ${bus === "guide" ? "guide drums" : "metronome"}`;
+    const label = `${muted ? "Unmute" : "Mute"} ${volumeLabels[bus]}`;
     button.setAttribute("aria-pressed", String(muted));
     button.setAttribute("aria-label", label);
     button.title = label;
+}
+
+function updateAccompaniment() {
+    accompanimentInput.value = preferences.accompaniment;
+    element("metronome-control").hidden = preferences.accompaniment !== "metronome";
+    element("backing-control").hidden = preferences.accompaniment !== "backing";
 }
 
 function toggleTrack(instrument) {
@@ -250,11 +261,13 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
         const entry = BUNDLED_LESSONS.find(entry => entry.id === id);
         if (!entry) throw new Error("Unknown bundled lesson");
         const path = entry.path.split("/").map(encodeURIComponent).join("/");
-        const response = await fetch(new URL(`../lessons/${path}`, import.meta.url));
+        const nextUrl = new URL(`../lessons/${path}`, import.meta.url);
+        const response = await fetch(nextUrl);
         if (!response.ok) throw new Error(`Could not load lesson (HTTP ${response.status})`);
         const nextLesson = parseLesson(await response.text());
         if (request !== lessonRequest) return;
         lesson = nextLesson;
+        lessonUrl = nextUrl;
         activeLessonId = id;
         if (BUNDLED_LESSONS.some(entry => entry.id === id)) preferences.lastBundledLessonId = id;
         assessment = null;
@@ -293,6 +306,19 @@ async function loadLesson(id = lessonSelect.value, { initial = false } = {}) {
     }
 }
 
+async function loadBackingFile({ midi, audio: recording, bars }, baseUrl, context) {
+    const file = recording ?? midi;
+    try {
+        const response = await fetch(new URL(file, baseUrl));
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const bytes = await response.arrayBuffer();
+        if (recording) return { bars, buffer: await context.decodeAudioData(bytes) };
+        return parseBackingMidi(new Uint8Array(bytes), bars);
+    } catch (error) {
+        throw new Error(`Could not load ${file} (${error.message}). Press Start to retry.`);
+    }
+}
+
 startButton.addEventListener("click", async () => {
     if (starting || playback?.running) {
         stop();
@@ -318,6 +344,7 @@ startButton.addEventListener("click", async () => {
             playback = new Playback({
                 clock: () => context.currentTime,
                 schedule: (instrument, time, accent) => audio.schedule(instrument, time, accent),
+                scheduleBacking: (event, time) => audio.scheduleBacking(event, time),
                 cancel: () => audio.stop(),
             });
             context.addEventListener("statechange", () => {
@@ -334,8 +361,19 @@ startButton.addEventListener("click", async () => {
         element("guide-sound-status").textContent = samplesReady ? "Guide drums: acoustic recordings."
             : "Could not load drum recordings. Check the connection, then press Start to retry.";
         if (!samplesReady) throw new Error("Drum recordings could not load. Press Start to retry.");
+        const backing = preferences.accompaniment === "backing";
+        let preparedBacking;
+        if (backing && (lesson.backing?.midi || lesson.backing?.audio)) {
+            showStatus("Loading backing track…");
+            preparedBacking = await loadBackingFile(lesson.backing, lessonUrl, audio.context);
+            if (request !== startRequest) return;
+            if (audio.context.state !== "running") throw new Error("Audio is unavailable. Try Start again.");
+        }
         updateVolumes(false);
-        playback.start(lesson, { bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments });
+        playback.start(lesson, {
+            bpm: currentBpm, countIn: countInInput.checked, disabledInstruments: preferences.disabledInstruments,
+            backing, preparedBacking,
+        });
         assessment = new Assessment(lesson, {
             origin: playback.origin,
             bpm: currentBpm,
@@ -384,6 +422,12 @@ bindSliderKeys(bpmInput, {
 countInInput.addEventListener("change", () => {
     stop("Count-in changed · Press Start to restart");
     preferences.countIn = countInInput.checked;
+    persistPractice();
+});
+accompanimentInput.addEventListener("change", () => {
+    stop("Accompaniment changed · Press Start to restart");
+    preferences.accompaniment = accompanimentInput.value;
+    updateAccompaniment();
     persistPractice();
 });
 for (const [input, setting] of [[toleranceInput, "toleranceMs"], [latencyInput, "latencyOffsetMs"]]) {
@@ -438,6 +482,7 @@ window.addEventListener("pagehide", () => { stop(); midi.disconnect(); });
 window.addEventListener("pageshow", event => { if (event.persisted) midi.connect(); });
 renderMidi(midi);
 countInInput.checked = preferences.countIn;
+updateAccompaniment();
 toleranceInput.value = preferences.toleranceMs;
 latencyInput.value = preferences.latencyOffsetMs;
 for (const bus of Object.keys(VOLUME_MAX)) {

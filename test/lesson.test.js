@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import test from "node:test";
 import { LessonValidationError, parseLesson, validateLesson } from "../src/lesson.js";
+import { parseBackingMidi } from "../src/backing-midi.js";
 
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
@@ -14,12 +16,23 @@ function example() {
 
 test("all bundled lessons parse and validate", async () => {
     const directory = new URL("../lessons/", import.meta.url);
-    const files = (await readdir(directory, { recursive: true })).filter(file => file.endsWith(".json"));
+    const entries = await readdir(directory, { recursive: true });
+    const files = entries.filter(file => file.endsWith(".json"));
     assert.deepEqual(files.sort(), BUNDLED_LESSONS.map(({ path }) => path).sort(),
         "Each lesson JSON must have exactly one entry in the generated catalog");
+    const backingFiles = new Set();
     for (const file of files) {
-        parseLesson(await readFile(new URL(`./${file}`, directory), "utf8"));
+        const url = new URL(`./${file}`, directory);
+        const lesson = parseLesson(await readFile(url, "utf8"));
+        const backingFile = lesson.backing?.midi ?? lesson.backing?.audio;
+        if (backingFile) backingFiles.add(join(dirname(file), backingFile));
+        if (lesson.backing?.midi) {
+            const bytes = await readFile(new URL(lesson.backing.midi, url));
+            parseBackingMidi(bytes, lesson.backing.bars);
+        }
     }
+    assert.deepEqual(entries.filter(file => /\.(mid|wav)$/.test(file)).sort(), [...backingFiles].sort(),
+        "Packaged backing files must match lesson references");
 });
 
 test("validation preserves data, track order, subsets, and simultaneous notes", () => {

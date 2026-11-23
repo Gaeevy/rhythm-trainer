@@ -5,11 +5,13 @@ import { INSTRUMENTS } from "./instruments.js";
 import { BUNDLED_LESSONS } from "../generated/lesson-catalog.js";
 
 export const PRACTICE_SETTINGS_KEY = "rhythm-trainer.practice.v1";
+const BACKING_DEFAULTS = { accompaniment: "metronome", backingVolume: 55, backingMuted: false };
 
 export function defaultPracticeSettings() {
     return {
         version: 1, view: "notation", countIn: true, toleranceMs: 30, latencyOffsetMs: 0,
         guideVolume: 55, guideMuted: false, metronomeVolume: 35, metronomeMuted: false,
+        ...BACKING_DEFAULTS,
         keyBindings: { ...DEFAULT_KEY_BINDINGS }, tempos: {}, disabledInstruments: [],
         lastBundledLessonId: BUNDLED_LESSONS[0].id,
     };
@@ -22,8 +24,10 @@ function inRange(value, min, max) {
 export function validPracticeSettings(settings) {
     if (!settings || settings.version !== 1 || !["lanes", "notation"].includes(settings.view) || typeof settings.countIn !== "boolean"
         || typeof settings.guideMuted !== "boolean" || typeof settings.metronomeMuted !== "boolean"
+        || !["metronome", "backing"].includes(settings.accompaniment) || typeof settings.backingMuted !== "boolean"
         || !inRange(settings.toleranceMs, 0, 150) || !inRange(settings.latencyOffsetMs, -500, 500)
         || !inRange(settings.guideVolume, 0, VOLUME_MAX.guide) || !inRange(settings.metronomeVolume, 0, VOLUME_MAX.metronome)
+        || !inRange(settings.backingVolume, 0, VOLUME_MAX.backing)
         || !BUNDLED_LESSONS.some(lesson => lesson.id === settings.lastBundledLessonId)) return false;
     if (!Array.isArray(settings.disabledInstruments)
         || settings.disabledInstruments.some(instrument => !Object.hasOwn(INSTRUMENTS, instrument))
@@ -46,6 +50,7 @@ export function loadPracticeSettings(storage) {
         // Keep existing controls and MIDI profiles when reserving Space for transport.
         if (settings?.version === 1) {
             if (!["lanes", "notation"].includes(settings.view)) settings.view = "notation";
+            for (const [key, value] of Object.entries(BACKING_DEFAULTS)) settings[key] ??= value;
             delete settings.masterVolume;
             delete settings.masterMuted;
             if (settings.tempos && typeof settings.tempos === "object" && !Array.isArray(settings.tempos)) {

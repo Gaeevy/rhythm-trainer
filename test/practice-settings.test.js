@@ -19,6 +19,7 @@ test("practice controls and per-lesson tempo overrides survive storage without t
     const settings = {
         ...defaultPracticeSettings(), countIn: false, toleranceMs: 12.5, latencyOffsetMs: -24.5,
         disabledInstruments: ["kick"], guideVolume: 20, guideMuted: true, metronomeVolume: 75, metronomeMuted: false,
+        accompaniment: "backing", backingVolume: 39, backingMuted: true,
         keyBindings: remapKey(defaultPracticeSettings().keyBindings, "snare", "KeyQ"),
         tempos: { "swing-ride": 93, "basic-straight": 110, "mixed-subdivisions": 80 },
         lastBundledLessonId: "swing-01",
@@ -121,6 +122,9 @@ test("obsolete master preferences are discarded without losing existing controls
         tempos: { "swing-ride": 90.5220994475138 }, latencyOffsetMs: 27 };
     old.masterVolume = 190;
     old.masterMuted = true;
+    delete old.accompaniment;
+    delete old.backingVolume;
+    delete old.backingMuted;
     const restored = loadPracticeSettings({ getItem: () => JSON.stringify(old) });
     assert.equal(restored.warning, "");
     assert.equal(restored.settings.view, "lanes");
@@ -130,5 +134,8 @@ test("obsolete master preferences are discarded without losing existing controls
     assert.equal(restored.settings.guideVolume, 18);
     assert.equal(restored.settings.metronomeVolume, 100);
     assert.equal(restored.settings.latencyOffsetMs, 27);
+    assert.equal(restored.settings.accompaniment, "metronome");
+    assert.equal(restored.settings.backingVolume, 55);
+    assert.equal(restored.settings.backingMuted, false);
     assert.equal(validPracticeSettings({ ...defaultPracticeSettings(), metronomeVolume: 300 }), true);
 });

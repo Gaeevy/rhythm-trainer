@@ -16,20 +16,86 @@ function harness() {
     let nextTimer = 0;
     const timers = new Map();
     const scheduled = [];
+    const chords = [];
     let cancellations = 0;
     const playback = new Playback({
         clock: () => now,
         schedule: (instrument, time, accent) => scheduled.push({ instrument, time, accent }),
+        scheduleBacking: (event, time) => chords.push({ ...event, time }),
         cancel: () => { cancellations++; },
         setTimer: callback => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimer: timer => timers.delete(timer),
     });
     return {
-        playback, timers, scheduled,
+        playback, timers, scheduled, chords,
         get cancellations() { return cancellations; },
         advance(time) { now = time; for (const callback of timers.values()) callback(); },
     };
 }
+
+test("a four-bar backing track and three-bar lesson share an origin and keep independent cycles", () => {
+    const h = harness();
+    h.playback.start({ ...lesson, bars: 3 }, { bpm: 150, backing: true, disabledInstruments: ["hi_hat_closed"] });
+    const origin = h.playback.origin;
+    for (let time = 10; time <= origin + 20; time += 0.025) h.advance(time);
+
+    const clicks = h.scheduled.filter(event => event.instrument === "metronome");
+    assert.equal(clicks.length, 4);
+    assert.ok(clicks.every(event => event.time < origin));
+    assert.ok(h.scheduled.every(event => event.instrument !== "hi_hat_closed"));
+    const drumStarts = h.scheduled.filter(event => event.instrument === "ride" && event.time >= origin
+        && Math.abs((event.time - origin) / 0.4 - Math.round((event.time - origin) / 0.4)) < 1e-8
+        && Math.round((event.time - origin) / 0.4) % 12 === 0);
+    assert.deepEqual(drumStarts.map(event => Math.round((event.time - origin) / 0.4)), [0, 12, 24, 36, 48]);
+    const chordStarts = h.chords.filter(event => event.tick === 0);
+    assert.deepEqual(chordStarts.map(event => Math.round((event.time - origin) / 0.4)), [0, 16, 32, 48]);
+    assert.equal(chordStarts[0].time, origin);
+    assert.equal(chordStarts[0].duration, 0.8);
+
+    h.playback.stop();
+    h.chords.length = 0;
+    h.playback.start(lesson, { countIn: false, backing: true });
+    assert.equal(h.chords[0].time, h.playback.origin);
+    assert.deepEqual(h.chords[0].pitches, chordStarts[0].pitches);
+    h.playback.start(lesson, { countIn: false });
+    h.chords.length = 0;
+    h.advance(h.playback.origin + 1);
+    assert.equal(h.chords.length, 0);
+});
+
+test("a MIDI backing uses file ticks and the selected BPM on the lesson clock", () => {
+    const h = harness();
+    const song = { ...lesson, backing: { midi: "phrase.mid", bars: 2 } };
+    assert.throws(() => h.playback.start(song, { backing: true }), /not loaded/);
+    const track = {
+        ppq: 480, bars: 2,
+        events: [{
+            tick: 1, durationTicks: 240, pitches: [62], velocity: 0.5, program: 34,
+            bends: [{ offsetTicks: 120, cents: 300 }],
+        }],
+    };
+    h.playback.start(song, { backing: true, preparedBacking: track, bpm: 120, countIn: false });
+    assert.equal(h.chords[0].time, h.playback.origin + 1 / 960);
+    assert.equal(h.chords[0].duration, 0.25);
+    assert.equal(h.chords[0].program, 34);
+    assert.deepEqual(h.chords[0].bends, [{ offset: 0.125, cents: 300 }]);
+    assert.equal(h.playback.backing.loopSeconds, 4);
+});
+
+test("a WAV loop runs on the audio clock across scheduler delays and restarts after the count-in", () => {
+    const h = harness();
+    const song = { ...lesson, backing: { audio: "phrase.wav", bars: 2 } };
+    const buffer = { duration: 6 };
+    assert.throws(() => h.playback.start(song, { backing: true }), /not loaded/);
+    h.playback.start(song, { backing: true, preparedBacking: { bars: 2, buffer } });
+    const time = h.playback.origin;
+    assert.deepEqual(h.chords, [{ buffer, playbackRate: 1.5, time }]);
+    h.advance(time + 12);
+    assert.equal(h.chords.length, 1);
+    h.playback.stop();
+    h.playback.start(song, { bpm: 80, backing: true, preparedBacking: { bars: 2, buffer } });
+    assert.deepEqual(h.chords.at(-1), { buffer, playbackRate: 1, time: h.playback.origin });
+});
 
 test("repeating events retain triplets, simultaneous hits, and bar accents", () => {
     const events = lessonEvents(lesson, 120);

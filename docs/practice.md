@@ -13,17 +13,26 @@ keep the previous lesson available. Reloading restores the last selected lesson.
 Set **BPM** (20–300) and press **Start loop** or **Space**. The reset icon restores
 that lesson's tempo. BPM and volume sliders use logarithmic travel for finer
 control at low values. Arrow keys change the displayed value by 1; Page Up/Down
-by 10; Home/End select the limits. Metronome volume spans 0–300%, guide drums
-0–100%; speaker icons toggle mute. Mixer and view changes preserve playback.
+by 10; Home/End select the limits. Metronome volume spans 0–300%. Backing track
+and guide drums span 0–100%. Speaker icons toggle mute. Mixer and view changes
+preserve playback.
+
+Choose **Metronome** or **Backing track** in **Accompaniment**. Backing track
+plays at your BPM. A recording changes speed and pitch together. The count-in
+uses the metronome's saved volume and mute. Guide drums have their own controls.
+The drums and backing start together after the count-in and can repeat at
+different lengths. If a backing file fails to load, the app shows its filename.
+Press Start after fixing the file, or select Metronome to practice with the
+click. [Lesson backing](lessons.md#backing-track) describes the formats and default styles.
 
 **Practice settings** contains Lanes/Notation, count-in, on-time tolerance,
 latency offset and the Drum key. **Keyboard setup** changes keys; **MIDI setup**
 shows connection/activity and retry. Notation is the default view.
 
-Changing lesson, BPM, count-in, timing settings, keys or enabled tracks stops
+Changing lesson, BPM, accompaniment, count-in, timing settings, keys or enabled tracks stops
 playback. Start resets the session; Stop freezes results. Track buttons disable
 that instrument's guide sound and assessment and dim its notes. Disabling all
-tracks permits metronome-only practice. Hiding the tab, interrupted audio or
+tracks leaves the selected accompaniment. Hiding the tab, interrupted audio or
 MIDI input loss stops playback; reconnecting leaves it stopped.
 
 The lesson menu supports Up/Down, Home/End, first-letter search and Enter/Space.
@@ -63,9 +72,9 @@ Default keys: **D/F/J/K** kick/snare/closed hi-hat/ride, **U/H** open hi-hat/ped
 **Q/W/E/R** Tom 1–4, **A/S** Crash 1–2. Remapping swaps occupied letters/digits.
 Space controls playback. Held keys, shortcuts and typing in controls are ignored.
 
-USB MIDI carries events; hear your playing through the module and the app's
-guide/metronome through your computer's audio setup. Guide drums use acoustic
-recordings; the metronome is synthesized. Closing the guide hi-hat chokes its
+USB MIDI carries events. Hear your playing through the module and the app's
+guide drums and accompaniment through your computer's audio setup. Guide drums
+use acoustic recordings. Closing the guide hi-hat chokes its
 open sound. If recordings fail to load, fix the connection and press Start to retry.
 
 ## Views and feedback
@@ -100,7 +109,7 @@ Hits retain their exact timing. Mean absolute error uses matched hits only;
 elapsed time excludes count-in. Positive latency offset subtracts milliseconds
 from hit times; negative adds them.
 
-View, keys, disabled tracks, count-in, timing, mixer, last lesson and per-lesson
+View, keys, disabled tracks, accompaniment, count-in, timing, mixer, last lesson and per-lesson
 tempo save locally. Localhost and the live site have separate storage. Storage
 failure leaves practice usable. Session activity stays in memory until reset.
 For a kit check, compare marker/audio alignment, practice simultaneous hits and

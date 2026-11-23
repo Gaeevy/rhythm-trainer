@@ -7,6 +7,144 @@ import { BUNDLED_LESSONS } from "../../generated/lesson-catalog.js";
 import { runtimeRoot } from "./server.mjs";
 import { mockMidi, mockFixtureLessons, selectLesson, waitForLesson, setBpm, selectView, ready, playing, stopped, observePlayback, timedKey } from "./helpers.mjs";
 
+export async function backingFlow(browser, url) {
+    const context = await browser.newContext();
+    await mockMidi(context);
+    try {
+        const page = await context.newPage();
+        const errors = [];
+        page.on("pageerror", error => errors.push(error.message));
+        await page.goto(url);
+        await ready(page);
+        await selectLesson(page, "swing-ride");
+        await waitForLesson(page, "swing-ride");
+        await setBpm(page, 300);
+        await observePlayback(page);
+        const mode = page.locator("#accompaniment");
+        assert.equal(await mode.inputValue(), "metronome");
+        await mode.selectOption("backing");
+        assert.equal(await page.locator("#backing-volume").isVisible(), true);
+        assert.equal(await page.locator("#metronome-volume").isVisible(), false);
+        await page.locator("#guide-mute").click();
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.length >= 9);
+        const { chords, scheduled, origin } = await page.evaluate(() => ({
+            chords: window.smoke.chords.slice(0, 9), scheduled: window.smoke.scheduled, origin: window.smoke.assessment.origin,
+        }));
+        assert.equal(chords[0].time, origin);
+        assert.equal(chords[8].time, origin + 3.2);
+        assert.deepEqual(chords[0].pitches, [50, 53, 56, 60]);
+        assert.deepEqual(chords[8].pitches, chords[0].pitches);
+        const clicks = scheduled.filter(([instrument]) => instrument === "metronome");
+        assert.equal(clicks.length, 4);
+        assert.ok(clicks.every(([, time]) => time < origin));
+        assert.ok(scheduled.some(([instrument, time]) => instrument === "ride" && time === origin + 0.8));
+        await page.locator("#backing-volume").press("End");
+        await page.locator("#backing-mute").click();
+        await page.waitForFunction(() => window.smoke.audio.backing.gain.value < 0.01);
+        assert.equal(await page.evaluate(() => window.smoke.assessment.origin), origin);
+        await mode.selectOption("metronome");
+        await stopped(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);
+        await mode.selectOption("backing");
+        await page.reload();
+        await ready(page);
+        assert.equal(await mode.inputValue(), "backing");
+        assert.equal(await page.locator("#backing-level").textContent(), "100%");
+        assert.equal(await page.locator("#backing-mute").getAttribute("aria-pressed"), "true");
+
+        await selectLesson(page, "autumn-leaves");
+        await waitForLesson(page, "autumn-leaves");
+        await setBpm(page, 300);
+        await page.locator("#practice-panel > summary").click();
+        await page.locator("#count-in").uncheck();
+        await observePlayback(page);
+        let midiRequests = 0;
+        await page.route("**/autumn-leaves.mid", route => {
+            midiRequests++;
+            if (midiRequests === 1) return route.fulfill({ status: 404 });
+            if (midiRequests === 2) return route.fulfill({ body: "invalid MIDI" });
+            return route.continue();
+        });
+        await mode.selectOption("metronome");
+        await page.locator("#start-stop").click();
+        await playing(page);
+        assert.equal(midiRequests, 0);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        await page.evaluate(() => { window.smoke.scheduled.length = 0; });
+        await mode.selectOption("backing");
+        for (const error of ["HTTP 404", "not a Standard MIDI File"]) {
+            await page.locator("#start-stop").click();
+            await page.waitForFunction(message => document.querySelector("#status").textContent.includes(message), error);
+            await stopped(page);
+        }
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.some(chord => chord.tick > 736));
+        const autumn = await page.evaluate(() => ({
+            opening: window.smoke.chords[0].pitches,
+            resolution: window.smoke.chords.filter(chord => chord.tick === 736),
+            kick: window.smoke.scheduled.find(([instrument]) => instrument === "kick")[1],
+        }));
+        assert.deepEqual(autumn.opening, [50, 53, 56, 60]);
+        assert.deepEqual(autumn.resolution.map(chord => [chord.pitches, chord.time]), [[[48, 51, 55, 58], autumn.kick]]);
+        assert.equal(await page.evaluate(() => window.smoke.scheduled.filter(([instrument]) => instrument === "metronome").length), 0);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+
+        await selectLesson(page, "chop-suey");
+        await waitForLesson(page, "chop-suey");
+        await setBpm(page, 300);
+        await page.evaluate(() => { window.smoke.chords.length = 0; });
+        await page.route("**/chop-suey.wav", route => route.fulfill({ body: "invalid WAV" }), { times: 1 });
+        await page.locator("#start-stop").click();
+        await page.waitForFunction(() => document.querySelector("#status").textContent.includes("Could not load chop-suey.wav"));
+        await stopped(page);
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.audio.context.currentTime >= window.smoke.assessment.origin + 1.6);
+        const recording = await page.evaluate(() => {
+            const { audio, chords, assessment } = window.smoke;
+            return {
+                origin: assessment.origin,
+                starts: chords.map(({ buffer, playbackRate, time }) => [buffer.duration, playbackRate, time]),
+                looping: [...audio.sources].some(source => source.buffer === chords[0].buffer && source.loop),
+            };
+        });
+        assert.deepEqual(recording.starts, [[6, 3.75, recording.origin]]);
+        assert.ok(recording.looping);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        assert.equal(await page.evaluate(() => window.smoke.audio.sources.size), 0);
+
+        await selectLesson(page, "fascination-street");
+        await waitForLesson(page, "fascination-street");
+        await setBpm(page, 300);
+        await page.evaluate(() => { window.smoke.chords.length = 0; });
+        await page.locator("#start-stop").click();
+        await playing(page);
+        await page.waitForFunction(() => window.smoke.chords.filter(note => note.tick === 0 && note.program === 34).length >= 2);
+        const fascination = await page.evaluate(() => ({
+            opening: window.smoke.chords.filter(note => note.tick === 0).slice(0, 2),
+            bassStarts: window.smoke.chords.filter(note => note.tick === 0 && note.program === 34),
+            slide: window.smoke.chords.find(note => note.program === 34 && note.bends),
+            origin: window.smoke.assessment.origin,
+        }));
+        assert.deepEqual(fascination.opening.map(note => [note.program, note.pitches]), [[27, [70]], [34, [36]]]);
+        assert.ok(fascination.bassStarts.every(note => note.gain === undefined));
+        assert.ok(fascination.opening.every(note => note.time === fascination.origin));
+        assert.equal(fascination.bassStarts[1].time, fascination.origin + 3.2);
+        assert.equal(fascination.slide.tick, 1200);
+        assert.ok(fascination.slide.bends.at(-1).cents > 290);
+        await page.locator("#start-stop").click();
+        await stopped(page);
+        assert.deepEqual(errors, []);
+        console.log(`PASS backing mode, count-in, shared clock, independent cycles, lesson harmony and persistence: ${new URL(url).pathname}`);
+    } finally { await context.close(); }
+}
+
 export async function practiceFlow(browser, url) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
     await mockMidi(context);
@@ -202,8 +340,10 @@ export async function trackFlow(browser, url) {
         assert.equal(await page.evaluate(() => {
             const controls = [...document.querySelector(".lesson-controls").children];
             const bottom = controls[0].getBoundingClientRect().bottom;
+            const visibleSliders = [...document.querySelectorAll('.lesson-controls input[type="range"]')]
+                .filter(slider => slider.getClientRects().length > 0);
             return controls.every(control => Math.abs(control.getBoundingClientRect().bottom - bottom) < 2)
-                && document.querySelectorAll('.lesson-controls input[type="range"]').length === 3;
+                && visibleSliders.length === 3;
         }), true);
         assert.deepEqual(errors, []);
         console.log(`PASS track controls and Space transport: ${new URL(url).pathname}`);

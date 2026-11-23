@@ -1,6 +1,7 @@
 import { validateNotation } from "./notation/metadata.js";
 import { TICKS_PER_BAR, BEATS_PER_BAR } from "./music-time.js";
 import { INSTRUMENTS } from "./instruments.js";
+import { validateBacking } from "./backing.js";
 
 export const SUPPORTED_INSTRUMENTS = Object.freeze(Object.keys(INSTRUMENTS));
 
@@ -15,7 +16,7 @@ function requireCondition(condition, path, reason) {
     if (!condition) throw new LessonValidationError(path, reason);
 }
 
-function validateFields(value, fields, path) {
+function validateFields(value, fields, path, optional = []) {
     requireCondition(
         value !== null && typeof value === "object" && !Array.isArray(value),
         path, "must be an object",
@@ -24,7 +25,7 @@ function validateFields(value, fields, path) {
         requireCondition(Object.hasOwn(value, field), `${path}.${field}`, "is required");
     }
     for (const field of Object.keys(value)) {
-        requireCondition(fields.includes(field), `${path}.${field}`, "is not supported");
+        requireCondition(fields.includes(field) || optional.includes(field), `${path}.${field}`, "is not supported");
     }
 }
 
@@ -32,7 +33,7 @@ function validateFields(value, fields, path) {
 export function validateLesson(lesson) {
     const fields = ["version", "title", "bpm", "time_signature", "bars", "tracks"];
     if (lesson?.version === 2) fields.push("notation");
-    validateFields(lesson, fields, "lesson");
+    validateFields(lesson, fields, "lesson", ["backing"]);
     requireCondition(lesson.version === 1 || lesson.version === 2, "lesson.version", "must be 1 or 2");
     requireCondition(
         typeof lesson.title === "string" && lesson.title.trim().length > 0,
@@ -87,6 +88,7 @@ export function validateLesson(lesson) {
         try { validateNotation(lesson.notation, lesson.tracks); }
         catch (error) { throw new LessonValidationError("lesson.notation", error.message); }
     }
+    if (Object.hasOwn(lesson, "backing")) validateBacking(lesson.backing, requireCondition);
     return lesson;
 }
 
